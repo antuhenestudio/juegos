@@ -15,6 +15,25 @@ import { Star, Home, BarChart3, ArrowLeft, RotateCcw, Sparkles } from "lucide-re
 
 // ---------- almacenamiento con fallback ----------
 const memFallback = {};
+
+// confeti de verdad: partículas que caen, livianas y sin librerías
+function lanzarConfeti(n = 14) {
+  try {
+    if (typeof document === "undefined") return;
+    const colores = ["#f43f5e", "#f59e0b", "#10b981", "#3b82f6", "#a855f7", "#facc15", "#ec4899"];
+    for (let i = 0; i < n; i++) {
+      const p = document.createElement("div");
+      p.className = "confeti";
+      p.style.left = Math.random() * 100 + "vw";
+      p.style.background = colores[i % colores.length];
+      p.style.animationDuration = 1.3 + Math.random() * 1.3 + "s";
+      p.style.animationDelay = Math.random() * 0.35 + "s";
+      p.style.width = 7 + Math.random() * 6 + "px";
+      document.body.appendChild(p);
+      setTimeout(() => { try { p.remove(); } catch (e2) { /* nada */ } }, 3000);
+    }
+  } catch (e) { /* nada */ }
+}
 async function guardar(clave, valor) {
   try { await window.storage.set(clave, JSON.stringify(valor)); }
   catch (e) { memFallback[clave] = JSON.stringify(valor); }
@@ -121,6 +140,7 @@ function sonido(nombre) {
 }
 const FRASES_FESTEJO = ["¡Muy bien!", "¡Excelente!", "¡Genial!", "¡Eso es!", "¡Perfecto!", "¡Bravo!", "¡Qué bien lo hiciste!", "¡Sos increíble!", "¡Sigue así, campeón!", "¡Lo lograste!"];
 function festejar() {
+  lanzarConfeti(10);
   sonido("acierto");
   hablar(FRASES_FESTEJO[Math.floor(Math.random() * FRASES_FESTEJO.length)], AUDIO_ON);
 }
@@ -1061,13 +1081,13 @@ function JuegoRondas({ total = 8, generar, alTerminar, colorTexto = "text-violet
       {r.pregunta}
       <div className={usarCuadrado ? "flex flex-wrap justify-center gap-3 sm:gap-4" : "flex w-full max-w-xs flex-col gap-3"}>
         {r.opciones.map((op, i) => (
-          <button key={i} onClick={() => responder(op)}
-            className={`${usarCuadrado
+          <button key={num + "-" + i} onClick={() => responder(op)} style={{ animationDelay: `${i * 70}ms` }}
+            className={`anim-pop ${usarCuadrado
               ? "relative h-16 w-16 rounded-2xl text-2xl sm:h-20 sm:w-20 sm:text-3xl"
               : "relative w-full rounded-full px-6 py-3 text-lg sm:py-4 sm:text-xl"} font-black shadow-md transition-transform active:scale-90 ${
-              marca !== null && op === r.respuesta ? "bg-green-300 text-green-900"
-              : marca === op ? "bg-red-200 text-red-800"
-              : fallidas.includes(op) ? "bg-red-50 text-red-300 line-through"
+              marca !== null && op === r.respuesta ? "anim-festejo bg-green-300 text-green-900"
+              : marca === op ? "anim-shake bg-red-200 text-red-800"
+              : fallidas.includes(op) ? "anim-shake bg-red-50 text-red-300 line-through"
               : preSel === op ? "bg-white text-slate-700 ring-4 ring-sky-300"
               : "bg-white text-slate-700"
             }`}>
@@ -3191,6 +3211,7 @@ function AppNinos({ alSelector, permisos = { mic: true, videos: true }, alRevisa
 
   const terminarJuego = (puntos, maximo) => {
     if (puntos / maximo >= 0.5) setMascotaFiesta(Date.now());
+    if (puntos / maximo >= 0.8) lanzarConfeti(32);
     const s = { juego: juegoActivo.id, area: juegoActivo.serie.area, puntos, maximo, fecha: Date.now() };
     const nuevas = [...sesiones, s];
     setSesiones(nuevas);
@@ -4180,7 +4201,7 @@ h1{color:#7c3aed;font-size:34px;margin:8px 0}.n{font-size:28px;font-weight:bold;
     return (
       <button onClick={() => { setMascotaFiesta(Date.now()); hablar(`¡Hola ${activo.nombre}! Soy Chispa. ¡Me encanta verte jugar! ¡Vamos por más!`, AUDIO_ON); }}
         aria-label="Chispa, tu mascota"
-        className={`fixed bottom-4 right-4 z-40 flex h-16 w-16 items-center justify-center rounded-full bg-orange-400 text-3xl shadow-xl transition-transform active:scale-90 ${festejando ? "animate-bounce" : "animate-pulse"}`}>
+        className={`fixed bottom-4 right-4 z-40 flex h-16 w-16 items-center justify-center rounded-full bg-orange-400 text-3xl shadow-xl transition-transform active:scale-90 ${festejando ? "animate-bounce" : "anim-flotar"}`}>
         {festejando ? "🦊✨" : "🦊"}
       </button>
     );
