@@ -132,7 +132,7 @@ const setMusicaOn = (v) => { MUSICA_ON = !!v; };
 const musicaSonando = () => !!musTimer;
 function detenerMusica() { if (musTimer) { clearInterval(musTimer); musTimer = null; } }
 function iniciarMusica(rango) {
-  if (musTimer || !AUDIO_ON || !MUSICA_ON) return;
+  if (musTimer || !MUSICA_ON) return;
   const c = ctxAudio();
   if (!c) return;
   const escalas = { "3-5": [262, 294, 330, 392, 440], "6-8": [262, 330, 392, 494, 523, 587], "9-11": [220, 262, 330, 392, 440, 523, 587] };
@@ -140,7 +140,7 @@ function iniciarMusica(rango) {
   const paso = rango === "3-5" ? 950 : rango === "6-8" ? 640 : 480;
   let i = Math.floor(Math.random() * esc.length);
   musTimer = setInterval(() => {
-    if (!AUDIO_ON || !MUSICA_ON) return;
+    if (!MUSICA_ON) return;
     const c2 = ctxAudio();
     if (!c2) return;
     const t = c2.currentTime;
@@ -882,13 +882,23 @@ const Tarjeta = ({ children }) => (
   <div className="flex flex-col items-center gap-2 rounded-3xl bg-white px-6 py-5 shadow-md sm:px-8 sm:py-6">{children}</div>
 );
 
-function JuegoRondas({ total = 8, generar, alTerminar, colorTexto = "text-violet-600", formato = "cuadrado", espera = 1000, solito = false }) {
+function JuegoRondas({ total = 8, generar, alTerminar, colorTexto = "text-violet-600", formato = "cuadrado", espera = 1000, solito = false, demo = false }) {
   const [r, setR] = useState(() => generar());
   const [num, setNum] = useState(1);
   const [puntos, setPuntos] = useState(0);
   const [marca, setMarca] = useState(null);
   const [preSel, setPreSel] = useState(null);
   const [fallidas, setFallidas] = useState([]);
+  const [dedo, setDedo] = useState(false);
+
+  // demo para docentes: un dedito muestra la respuesta y el juego se juega solo
+  useEffect(() => {
+    if (!demo || marca !== null) return;
+    setDedo(false);
+    const t1 = setTimeout(() => setDedo(true), 800);
+    const t2 = setTimeout(() => responder(r.respuesta), 1900);
+    return () => { clearTimeout(t1); clearTimeout(t2); };
+  }, [num, demo]); // eslint-disable-line
 
   // en modo Solito la app lee la consigna de cada ronda
   useEffect(() => {
@@ -919,7 +929,7 @@ function JuegoRondas({ total = 8, generar, alTerminar, colorTexto = "text-violet
     if (escuchaPrimero && preSel !== op) { setPreSel(op); sonido("tap"); decirOpcion(op); return; }
     const ok = op === r.respuesta;
     if (ok) {
-      festejar();
+      if (demo) sonido("acierto"); else festejar();
       const ganados = solito && fallidas.length > 0 ? 6 : 10;
       const nuevos = puntos + ganados;
       setPuntos(nuevos);
@@ -949,8 +959,8 @@ function JuegoRondas({ total = 8, generar, alTerminar, colorTexto = "text-violet
         {r.opciones.map((op, i) => (
           <button key={i} onClick={() => responder(op)}
             className={`${usarCuadrado
-              ? "h-16 w-16 rounded-2xl text-2xl sm:h-20 sm:w-20 sm:text-3xl"
-              : "w-full rounded-full px-6 py-3 text-lg sm:py-4 sm:text-xl"} font-black shadow-md transition-transform active:scale-90 ${
+              ? "relative h-16 w-16 rounded-2xl text-2xl sm:h-20 sm:w-20 sm:text-3xl"
+              : "relative w-full rounded-full px-6 py-3 text-lg sm:py-4 sm:text-xl"} font-black shadow-md transition-transform active:scale-90 ${
               marca !== null && op === r.respuesta ? "bg-green-300 text-green-900"
               : marca === op ? "bg-red-200 text-red-800"
               : fallidas.includes(op) ? "bg-red-50 text-red-300 line-through"
@@ -958,6 +968,9 @@ function JuegoRondas({ total = 8, generar, alTerminar, colorTexto = "text-violet
               : "bg-white text-slate-700"
             }`}>
             {String(op)}
+            {demo && dedo && marca === null && op === r.respuesta && (
+              <span className="absolute -bottom-3 -right-2 animate-bounce text-2xl">👆</span>
+            )}
           </button>
         ))}
       </div>
@@ -2513,6 +2526,16 @@ function calcularLogros(sesiones, rango) {
   };
   return MEDALLAS.map((m) => ({ ...m, ganada: !!m.check(ctx) }));
 }
+const hoyISO = () => { const f = new Date(); return `${f.getFullYear()}-${String(f.getMonth() + 1).padStart(2, "0")}-${String(f.getDate()).padStart(2, "0")}`; };
+const diasDeVacaciones = (vac) => {
+  const res = [];
+  const fin = new Date(vac.hasta + "T12:00:00");
+  for (let f = new Date(vac.desde + "T12:00:00"); f <= fin; f.setDate(f.getDate() + 1)) {
+    res.push(`${f.getFullYear()}-${String(f.getMonth() + 1).padStart(2, "0")}-${String(f.getDate()).padStart(2, "0")}`);
+  }
+  return res;
+};
+
 // ---------- tareas docentes: código compartible sin servidor ----------
 function codificarTarea(t) {
   try {
@@ -2526,7 +2549,12 @@ function decodificarTarea(codigo) {
     while (b.length % 4) b += "=";
     const t = JSON.parse(decodeURIComponent(escape(atob(b))));
     if (!t || !Array.isArray(t.s) || t.s.length === 0 || !t.s.every((id) => SERIES.some((x) => x.id === id))) return null;
-    return { titulo: String(t.t || "Tarea").slice(0, 60), docente: String(t.d || "").slice(0, 40), cant: Math.min(5, Math.max(1, Number(t.c) || 3)), series: t.s.slice(0, 8) };
+    const base = { titulo: String(t.t || "Tarea").slice(0, 60), docente: String(t.d || "").slice(0, 40), cant: Math.min(5, Math.max(1, Number(t.c) || 3)), series: t.s.slice(0, 8) };
+    if (t.v && /^\d{4}-\d{2}-\d{2}$/.test(t.v.de) && /^\d{4}-\d{2}-\d{2}$/.test(t.v.ha) && t.v.de <= t.v.ha) {
+      const dur = Math.round((new Date(t.v.ha) - new Date(t.v.de)) / 86400000) + 1;
+      if (dur >= 2 && dur <= 45) base.vac = { desde: t.v.de, hasta: t.v.ha };
+    }
+    return base;
   } catch (e) { return null; }
 }
 
@@ -2856,6 +2884,11 @@ function AppNinos({ alSelector, permisos = { mic: true, videos: true }, alRevisa
   const [planPago, setPlanPago] = useState({ tipo: "free" });
   const [codigoPromo, setCodigoPromo] = useState("");
   const [bib, setBib] = useState(null); // biblioteca docente
+  const [demoTarea, setDemoTarea] = useState(null); // paso de la demo animada
+  const [proyectos, setProyectos] = useState([]);
+  const [cursosLista, setCursosLista] = useState([]);
+  const [cursosDesde, setCursosDesde] = useState("clase");
+  const [demoJuego, setDemoJuego] = useState(null); // {serie, clave}
   const [tareas, setTareas] = useState([]);
   const [tareaCod, setTareaCod] = useState("");
   const [tareaPrev, setTareaPrev] = useState(null);
@@ -2913,6 +2946,12 @@ function AppNinos({ alSelector, permisos = { mic: true, videos: true }, alRevisa
 
   useEffect(() => { try { window.scrollTo(0, 0); } catch (e) { /* nada */ } }, [pantalla]);
   useEffect(() => {
+    if (demoTarea === null) return;
+    const t = setInterval(() => setDemoTarea((s) => (s + 1) % 7), 2300);
+    return () => clearInterval(t);
+  }, [demoTarea === null]); // eslint-disable-line
+
+  useEffect(() => {
     if (!videoActivo) return;
     const h = (ev) => {
       let dta = ev.data;
@@ -2927,11 +2966,11 @@ function AppNinos({ alSelector, permisos = { mic: true, videos: true }, alRevisa
     return () => window.removeEventListener("message", h);
   }, [videoActivo]);
   useEffect(() => {
-    const conMusica = activo && sonidoOn && musicaOn && ["menu", "serie", "juego", "logros"].includes(pantalla);
+    const conMusica = activo && musicaOn && ["menu", "serie", "juego", "logros"].includes(pantalla);
     detenerMusica();
     if (conMusica) iniciarMusica(rangoDeEdad(Math.min(Math.max(calcularEdad(activo.nacimiento), 3), 11)));
     return detenerMusica;
-  }, [pantalla, activo, sonidoOn, musicaOn]);
+  }, [pantalla, activo, musicaOn]);
 
   const alternarMusica = () => {
     const v = !musicaOn;
@@ -3113,7 +3152,25 @@ function AppNinos({ alSelector, permisos = { mic: true, videos: true }, alRevisa
     abrirNivelPorId(lista[0]);
   };
 
+  const iniciarTareaVac = (t) => {
+    const dias = diasDeVacaciones(t.vac);
+    const hechos = t.dias || {};
+    const hoy = hoyISO();
+    const idxDia = dias.findIndex((f) => f <= hoy && !hechos[f]);
+    if (idxDia < 0) return;
+    const fecha = dias[idxDia];
+    const s = SERIES.find((x) => x.id === t.series[idxDia % t.series.length] && x.edades.includes(rango))
+      || SERIES.find((x) => t.series.includes(x.id) && x.edades.includes(rango));
+    if (!s) return;
+    const mejor = mejorPorNivel();
+    const inicio2 = proximoNivel(s, mejor, rango, sesiones);
+    const lista = [];
+    for (let i = 0; i < t.cant; i++) lista.push(idNivel(s, Math.min(inicio2 + i, s.niveles)));
+    setPlan({ lista, idx: 0, tareaId: t.id, vacFecha: fecha, titulo: `${t.titulo} · Día ${idxDia + 1}` });
+    abrirNivelPorId(lista[0], true);
+  };
   const iniciarTarea = (t) => {
+    if (t.vac) { iniciarTareaVac(t); return; }
     const mejor = mejorPorNivel();
     const lista = [];
     t.series.forEach((idS) => {
@@ -3130,7 +3187,19 @@ function AppNinos({ alSelector, permisos = { mic: true, videos: true }, alRevisa
     if (!plan) return;
     const prox = plan.idx + 1;
     if (prox >= plan.lista.length) {
-      if (plan.tareaId) {
+      if (plan.tareaId && plan.vacFecha) {
+        const lista2 = tareas.map((x) => {
+          if (x.id !== plan.tareaId) return x;
+          const dias = { ...(x.dias || {}), [plan.vacFecha]: true };
+          const todos = diasDeVacaciones(x.vac).every((f) => dias[f]);
+          return { ...x, dias, completada: todos ? Date.now() : x.completada || null };
+        });
+        setTareas(lista2);
+        guardar(`pequemundo:tareas:${activo.id}`, lista2);
+        sonido("fanfarria");
+        const tv = lista2.find((x) => x.id === plan.tareaId);
+        hablar(tv && tv.completada ? "¡Completaste TODA la tarea de vacaciones! ¡Sos increíble!" : "¡Día de vacaciones completo! Mañana se abre el siguiente.", AUDIO_ON);
+      } else if (plan.tareaId) {
         const lista2 = tareas.map((x) => (x.id === plan.tareaId ? { ...x, completada: Date.now() } : x));
         setTareas(lista2);
         guardar(`pequemundo:tareas:${activo.id}`, lista2);
@@ -3277,9 +3346,63 @@ ${an.alertas.length ? `<h2>Para conversar en el próximo control pediátrico</h2
               className="rounded-3xl bg-white p-5 text-lg font-black text-slate-700 shadow-lg active:scale-95">{nom}</button>
           ))}
         </div>
-        <button onClick={() => { setBib({ q: "", etapa: "todas", area: "todas", sel: [], fase: "buscar", titulo: "", docente: "", cant: 3, codigo: null }); setPantalla("biblioteca"); }}
+        <button onClick={async () => {
+            setProyectos((await leer("mentejuego:proyectos")) || []);
+            setBib({ q: "", etapa: "todas", area: "todas", sel: [], fase: "buscar", titulo: "", docente: "", cant: 3, codigo: null, tipoTarea: "comun", desde: hoyISO(), hasta: hoyISO() });
+            setPantalla("biblioteca");
+          }}
           className="rounded-full bg-white px-6 py-2 text-sm font-black text-cyan-700 shadow active:scale-95">📚 Biblioteca docente: armar tareas</button>
+        <button onClick={async () => { setCursosLista((await leer("mentejuego:cursos")) || []); setCursosDesde("clase"); setPantalla("cursos"); }}
+          className="rounded-full bg-white px-6 py-2 text-sm font-black text-violet-700 shadow active:scale-95">🎓 Cursos y capacitaciones</button>
         <button onClick={() => setPantalla("elegirPerfil")} className="text-sm font-bold text-slate-400">← Volver</button>
+      </div>
+    );
+  }
+
+  // ---------- cursos y capacitaciones ----------
+  if (pantalla === "cursos") {
+    const CURSOS = [
+      { id: "aula", icono: "🍎", nombre: "PequeMundo en el aula", para: "Docentes de inicial y primaria", dur: "4 encuentros en vivo + material", precio: 25000,
+        desc: "Tareas y biblioteca a fondo, tareas de vacaciones, cómo leer el progreso de los alumnos, diferenciación automática y casos reales de aula." },
+      { id: "familias", icono: "👨‍👩‍👧", nombre: "Pantallas sin culpa", para: "Madres, padres y cuidadores", dur: "2 encuentros en vivo", precio: 12000,
+        desc: "Límites que funcionan, el premio responsable, acompañar sin estar encima, y cómo usar los informes de la app en el control pediátrico." },
+      { id: "psico", icono: "🧠", nombre: "Observar el desarrollo: qué mirar y cuándo derivar", para: "Psicopedagogía y equipos de orientación", dur: "6 encuentros · dictado por profesionales matriculados", precio: 35000,
+        desc: "Señales de acompañamiento (no diagnóstico), lectura crítica de los informes de la app como insumo, y trabajo articulado con pediatría y escuela." },
+      { id: "directivos", icono: "🏫", nombre: "Implementación institucional", para: "Equipos directivos", dur: "3 encuentros", precio: 30000,
+        desc: "Licencias por aula, privacidad y consentimientos con las familias, medición de resultados y comunicación a la comunidad educativa." },
+    ];
+    const anotarse = async (id) => {
+      if (cursosLista.includes(id)) return;
+      const lista = [...cursosLista, id];
+      setCursosLista(lista);
+      await guardar("mentejuego:cursos", lista);
+      sonido("acierto");
+    };
+    return (
+      <div className="min-h-screen bg-violet-50 p-3 pb-10 sm:p-4">
+        <div className="mx-auto flex max-w-lg flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <button onClick={() => setPantalla(cursosDesde === "panel" ? "panel" : "clase")}
+              className="flex items-center gap-1 rounded-full bg-white px-4 py-2 font-black text-slate-600 shadow active:scale-95"><ArrowLeft /> Volver</button>
+            <span className="text-lg font-black text-violet-700">🎓 Cursos</span>
+          </div>
+          <p className="text-center text-sm font-bold text-slate-500">Capacitaciones con certificado para sacarle TODO el jugo a Mente en Juego — y para acompañar mejor, con o sin app.</p>
+          {CURSOS.map((c) => (
+            <div key={c.id} className="rounded-3xl bg-white p-4 shadow-md">
+              <p className="text-lg font-black text-slate-800">{c.icono} {c.nombre}</p>
+              <p className="text-xs font-black text-violet-600">{c.para} · {c.dur}</p>
+              <p className="mt-1 text-sm font-bold text-slate-500">{c.desc}</p>
+              <div className="mt-2 flex items-center justify-between gap-2">
+                <span className="text-lg font-black text-slate-700">${c.precio.toLocaleString("es-AR")}</span>
+                <button onClick={() => anotarse(c.id)}
+                  className={`rounded-full px-4 py-2 text-sm font-black active:scale-95 ${cursosLista.includes(c.id) ? "bg-emerald-100 text-emerald-700" : "bg-violet-500 text-white"}`}>
+                  {cursosLista.includes(c.id) ? "✅ Anotado en la lista" : "✋ Anotarme a la lista de espera"}
+                </button>
+              </div>
+            </div>
+          ))}
+          <p className="rounded-2xl bg-white p-3 text-xs text-slate-400">Los cursos se dictan con la versión online: inscripción y pago real, cupos, certificado descargable, y los contenidos clínico-pedagógicos SIEMPRE a cargo de profesionales matriculados. Aranceles estimativos de lanzamiento, sujetos a revisión.</p>
+        </div>
       </div>
     );
   }
@@ -3293,8 +3416,35 @@ ${an.alertas.length ? `<h2>Para conversar en el próximo control pediátrico</h2
       (bib.q.trim() === "" || norm(s.nombre).includes(norm(bib.q)))
     );
     const armarCodigo = () => {
-      const codigo = codificarTarea({ t: bib.titulo.trim() || "Tarea", d: bib.docente.trim(), c: bib.cant, s: bib.sel });
-      setBib({ ...bib, fase: "codigo", codigo });
+      const base = { t: bib.titulo.trim() || "Tarea", d: bib.docente.trim(), c: bib.cant, s: bib.sel };
+      if (bib.tipoTarea === "vac") {
+        if (!bib.desde || !bib.hasta || bib.desde > bib.hasta) { sonido("error"); return; }
+        base.v = { de: bib.desde, ha: bib.hasta };
+      }
+      setBib({ ...bib, fase: "codigo", codigo: codificarTarea(base) });
+    };
+    const guardarProyecto = async () => {
+      const dur = bib.tipoTarea === "vac" ? diasDeVacaciones({ desde: bib.desde, hasta: bib.hasta }).length : null;
+      const nuevo = { id: "pr" + Date.now(), nombre: bib.titulo.trim() || "Proyecto sin nombre", sel: bib.sel, cant: bib.cant, tipoTarea: bib.tipoTarea, durDias: dur };
+      const lista = [...proyectos, nuevo].slice(-20);
+      setProyectos(lista);
+      await guardar("mentejuego:proyectos", lista);
+      sonido("acierto");
+    };
+    const usarProyecto = (pr) => {
+      const h = hoyISO();
+      let hasta = h;
+      if (pr.tipoTarea === "vac" && pr.durDias) {
+        const f = new Date(h + "T12:00:00");
+        f.setDate(f.getDate() + pr.durDias - 1);
+        hasta = `${f.getFullYear()}-${String(f.getMonth() + 1).padStart(2, "0")}-${String(f.getDate()).padStart(2, "0")}`;
+      }
+      setBib({ ...bib, sel: pr.sel.filter((id) => SERIES.some((s) => s.id === id)), cant: pr.cant, tipoTarea: pr.tipoTarea || "comun", titulo: pr.nombre, desde: h, hasta, fase: "armar" });
+    };
+    const borrarProyecto = async (id) => {
+      const lista = proyectos.filter((x) => x.id !== id);
+      setProyectos(lista);
+      await guardar("mentejuego:proyectos", lista);
     };
     const hojaTarea = () => {
       const f = new Date().toLocaleDateString("es-AR");
@@ -3324,6 +3474,22 @@ ${an.alertas.length ? `<h2>Para conversar en el próximo control pediátrico</h2
 
           {bib.fase === "buscar" && (
             <>
+              <button onClick={() => setDemoTarea(0)}
+                className="rounded-2xl bg-violet-500 py-3 font-black text-white shadow-md active:scale-95">🎬 Ver cómo funciona una tarea (demo animada)</button>
+              {proyectos.length > 0 && (
+                <div className="rounded-2xl bg-white p-3 shadow-sm">
+                  <p className="text-sm font-black text-slate-700">💾 Mis proyectos guardados <span className="font-bold text-slate-400">· para reutilizar todos los años</span></p>
+                  {proyectos.map((pr) => (
+                    <div key={pr.id} className="mt-2 flex items-center justify-between gap-2">
+                      <p className="min-w-0 truncate text-xs font-bold text-slate-600">{pr.tipoTarea === "vac" ? "🏖️" : "📚"} {pr.nombre} · {pr.sel.length} juegos × {pr.cant}{pr.durDias ? ` · ${pr.durDias} días` : ""}</p>
+                      <span className="flex shrink-0 gap-1">
+                        <button onClick={() => usarProyecto(pr)} className="rounded-full bg-cyan-600 px-3 py-1 text-xs font-black text-white active:scale-95">Usar</button>
+                        <button onClick={() => borrarProyecto(pr.id)} className="rounded-full bg-slate-200 px-2 py-1 text-xs font-black text-slate-500 active:scale-95">🗑</button>
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
               <input value={bib.q} onChange={(e) => setBib({ ...bib, q: e.target.value })} placeholder="🔍 Buscar (sumas, rimas, bullying...)"
                 className="rounded-2xl border-4 border-cyan-200 bg-white px-4 py-3 font-bold text-slate-700 outline-none focus:border-cyan-400" />
               <div className="flex flex-wrap gap-1.5">
@@ -3349,8 +3515,13 @@ ${an.alertas.length ? `<h2>Para conversar en el próximo control pediátrico</h2
                       <p className="truncate text-sm font-black text-slate-700">{s.icono} {s.nombre}</p>
                       <p className="text-[11px] font-bold text-slate-400">{AREAS[s.area].icono} {AREAS[s.area].nombre} · {s.edades.join(" y ")} años · {s.niveles} niveles</p>
                     </div>
-                    <button onClick={() => setBib({ ...bib, sel: en ? bib.sel.filter((x) => x !== s.id) : bib.sel.length < 8 ? [...bib.sel, s.id] : bib.sel })}
-                      className={`shrink-0 rounded-full px-3 py-1.5 text-sm font-black active:scale-95 ${en ? "bg-cyan-600 text-white" : "bg-cyan-500 text-white"}`}>{en ? "✓ Sacado al tocar" : "➕ Agregar"}</button>
+                    <span className="flex shrink-0 items-center gap-1">
+                      <button onClick={() => { setSemilla((Date.now() % 2147483647) || 7); setDemoJuego({ serie: s, clave: Date.now() }); }}
+                        aria-label={`Ver cómo funciona ${s.nombre}`}
+                        className="rounded-full bg-violet-100 px-3 py-1.5 text-sm font-black text-violet-700 active:scale-95">👁️ Ver</button>
+                      <button onClick={() => setBib({ ...bib, sel: en ? bib.sel.filter((x) => x !== s.id) : bib.sel.length < 8 ? [...bib.sel, s.id] : bib.sel })}
+                        className={`rounded-full px-3 py-1.5 text-sm font-black active:scale-95 ${en ? "bg-cyan-600 text-white" : "bg-cyan-500 text-white"}`}>{en ? "✓ Quitar" : "➕ Agregar"}</button>
+                    </span>
                   </div>
                 );
               })}
@@ -3371,7 +3542,25 @@ ${an.alertas.length ? `<h2>Para conversar en el próximo control pediátrico</h2
                 className="rounded-2xl border-4 border-cyan-200 px-4 py-2 font-bold text-slate-700 outline-none focus:border-cyan-400" />
               <input value={bib.docente} onChange={(e) => setBib({ ...bib, docente: e.target.value })} placeholder="Tu nombre (ej: Seño Brisa)"
                 className="rounded-2xl border-4 border-cyan-200 px-4 py-2 font-bold text-slate-700 outline-none focus:border-cyan-400" />
-              <label className="text-sm font-black text-slate-600">Niveles por juego (cada alumno juega SUS próximos niveles)</label>
+              <div className="flex gap-2">
+                <button onClick={() => setBib({ ...bib, tipoTarea: "comun" })}
+                  className={`flex-1 rounded-2xl px-3 py-2 text-sm font-black active:scale-95 ${bib.tipoTarea !== "vac" ? "bg-cyan-600 text-white" : "bg-slate-100 text-slate-600"}`}>📚 Tarea común</button>
+                <button onClick={() => setBib({ ...bib, tipoTarea: "vac" })}
+                  className={`flex-1 rounded-2xl px-3 py-2 text-sm font-black active:scale-95 ${bib.tipoTarea === "vac" ? "bg-cyan-600 text-white" : "bg-slate-100 text-slate-600"}`}>🏖️ Vacaciones (un juego por día)</button>
+              </div>
+              {bib.tipoTarea === "vac" && (
+                <div className="rounded-2xl bg-cyan-50 p-3">
+                  <p className="text-xs font-black text-slate-600">Elegí las fechas: la app abre UN juego por día (rotando los elegidos), cada día se desbloquea en su fecha y los atrasados se pueden recuperar.</p>
+                  <div className="mt-2 flex flex-wrap items-center gap-2 text-sm font-black text-slate-600">
+                    Desde <input type="date" value={bib.desde} onChange={(e) => setBib({ ...bib, desde: e.target.value })} className="rounded-xl border-2 border-cyan-300 px-2 py-1 font-bold" />
+                    hasta <input type="date" value={bib.hasta} onChange={(e) => setBib({ ...bib, hasta: e.target.value })} className="rounded-xl border-2 border-cyan-300 px-2 py-1 font-bold" />
+                  </div>
+                  {bib.desde && bib.hasta && bib.desde <= bib.hasta && (
+                    <p className="mt-1 text-xs font-bold text-cyan-700">= {diasDeVacaciones({ desde: bib.desde, hasta: bib.hasta }).length} días de tarea</p>
+                  )}
+                </div>
+              )}
+              <label className="text-sm font-black text-slate-600">Niveles por juego {bib.tipoTarea === "vac" ? "por día" : ""} (cada alumno juega SUS próximos niveles)</label>
               <div className="flex gap-2">
                 {[1, 2, 3, 4, 5].map((n) => (
                   <button key={n} onClick={() => setBib({ ...bib, cant: n })}
@@ -3392,12 +3581,153 @@ ${an.alertas.length ? `<h2>Para conversar en el próximo control pediátrico</h2
               <button onClick={() => { try { navigator.clipboard.writeText(bib.codigo); sonido("acierto"); } catch (e) { /* nada */ } }}
                 className="rounded-full bg-cyan-600 py-3 font-black text-white active:scale-95">📋 Copiar código</button>
               <button onClick={hojaTarea} className="rounded-full bg-emerald-500 py-3 font-black text-white active:scale-95">🖨️ Descargar hoja para las familias</button>
+              <button onClick={guardarProyecto} className="rounded-full bg-cyan-100 py-3 font-black text-cyan-700 active:scale-95">💾 Guardar como proyecto (para otros años)</button>
               <p className="rounded-xl bg-emerald-50 p-2 text-xs font-bold text-emerald-700">🤝 Tu tarea funciona COMPLETA para todos tus alumnos, tengan o no suscripción paga: en la escuela nadie queda afuera.</p>
               <p className="text-xs text-slate-400">Compartí el código por WhatsApp o en papel. Las familias lo cargan en Padres → «📚 Tarea de la seño», y a cada peque la app le propone SUS próximos niveles de esos juegos. Cuando el peque la completa, en el panel de su familia figura ✅ con fecha.</p>
               <button onClick={() => setBib({ ...bib, fase: "buscar", sel: [], codigo: null })} className="text-sm font-bold text-slate-400">➕ Armar otra tarea</button>
             </div>
           )}
         </div>
+
+        {demoJuego && (() => {
+          const s = demoJuego.serie;
+          const banda = s.edades[0];
+          const k = Math.max(1, Math.ceil(s.niveles / 2));
+          const params = paramsNivel(s, k);
+          const esMC = !!GENERADORES[s.motor];
+          const CUSTOM = { memoria: JuegoMemoria, atrapa: JuegoAtrapa, alcancia: JuegoAlcancia, pronuncia: JuegoPronuncia, trazar: JuegoTrazar, ajedrez: JuegoAjedrez, balanza: JuegoBalanza };
+          const Comp = CUSTOM[s.motor];
+          const repetirDemo = () => { setSemilla((Date.now() % 2147483647) || 7); setDemoJuego({ serie: s, clave: Date.now() }); };
+          return (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-3" onClick={() => setDemoJuego(null)}>
+              <div className="max-h-[92vh] w-full max-w-md overflow-y-auto rounded-3xl bg-sky-50 p-4 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <p className="font-black text-slate-800">{s.icono} {s.nombre}</p>
+                    <p className="text-[11px] font-bold text-slate-400">{AREAS[s.area].icono} {AREAS[s.area].nombre} · {s.edades.join(" y ")} años · {s.niveles} niveles · mostrando el nivel {k}</p>
+                  </div>
+                  <button onClick={() => setDemoJuego(null)} className="rounded-full bg-white px-3 py-1 text-sm font-black text-slate-500 shadow active:scale-95">✕</button>
+                </div>
+                <p className={`mt-2 rounded-xl p-2 text-center text-[11px] font-black ${esMC ? "bg-violet-100 text-violet-700" : "bg-emerald-100 text-emerald-700"}`}>
+                  {esMC ? "▶️ Se juega solo, en loop: el dedito 👆 te muestra cómo responde un alumno" : "👆 Este juego es táctil: ¡probalo vos misma acá!"}
+                </p>
+                <div className="mt-3 rounded-3xl bg-white p-3 shadow-inner sm:p-4">
+                  {esMC ? (
+                    <JuegoRondas key={demoJuego.clave} total={4} demo
+                      generar={GENERADORES[s.motor](params, banda)}
+                      colorTexto={s.colorTexto || "text-violet-600"}
+                      alTerminar={repetirDemo} />
+                  ) : Comp ? (
+                    <Comp key={demoJuego.clave} params={params} edad={banda} solito={false} permitirMic={false} alTerminar={repetirDemo} />
+                  ) : null}
+                </div>
+                <p className="mt-2 text-center text-[10px] font-bold text-slate-400">Tus alumnos lo juegan de verdad, cada uno en SU nivel · tocá afuera para cerrar</p>
+              </div>
+            </div>
+          );
+        })()}
+
+        {demoTarea !== null && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setDemoTarea(null)}>
+            <div className="w-full max-w-sm rounded-3xl bg-white p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-black text-violet-700">🎬 Así funciona tu tarea</p>
+                <button onClick={() => setDemoTarea(null)} className="rounded-full bg-slate-100 px-3 py-1 text-sm font-black text-slate-500 active:scale-95">✕</button>
+              </div>
+
+              <div className="mt-3 flex min-h-[15rem] flex-col items-center justify-center gap-2 rounded-2xl bg-slate-50 p-4 text-center">
+                {demoTarea === 0 && (
+                  <>
+                    <span className="animate-bounce text-5xl">👩‍🏫</span>
+                    <p className="font-black text-slate-700">1 · Armás la tarea y compartís el código</p>
+                    <p className="rounded-xl border-2 border-dashed border-cyan-400 bg-cyan-50 px-3 py-1 font-mono text-[10px] font-bold text-slate-500">TAREA-eyJ0IjoiVGFyZWEg…</p>
+                    <p className="text-xs font-bold text-slate-400">Por WhatsApp o en papel, a las familias</p>
+                  </>
+                )}
+                {demoTarea === 1 && (
+                  <>
+                    <span className="text-5xl">📱</span>
+                    <p className="font-black text-slate-700">2 · La familia lo pega en su panel</p>
+                    <div className="w-full max-w-[14rem] rounded-2xl bg-white p-3 shadow">
+                      <p className="text-left text-[10px] font-black text-slate-600">📚 Tarea de la seño</p>
+                      <p className="mt-1 animate-pulse rounded-lg bg-amber-100 px-2 py-1 text-left font-mono text-[9px] text-slate-500">TAREA-eyJ0Ijoi… ✅</p>
+                    </div>
+                  </>
+                )}
+                {demoTarea === 2 && (
+                  <>
+                    <span className="text-5xl">🧒</span>
+                    <p className="font-black text-slate-700">3 · Al peque le aparece su tarjeta</p>
+                    <div className="w-full max-w-[14rem] animate-pulse rounded-2xl bg-amber-400 p-3 text-left shadow">
+                      <p className="text-sm font-black text-amber-900">📚 Tarea: Tarea del lunes</p>
+                      <p className="text-[10px] font-bold text-amber-800">De la seño Brisa · 2 juegos × 3 niveles</p>
+                    </div>
+                  </>
+                )}
+                {demoTarea === 3 && (
+                  <>
+                    <p className="font-black text-slate-700">4 · Juega con todo el sistema</p>
+                    <p className="text-lg font-black text-violet-700">¿Cuánto es 3 + 4? 🤔</p>
+                    <div className="flex gap-2">
+                      <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-white font-black text-slate-700 shadow">6</span>
+                      <span className="relative flex h-11 w-11 items-center justify-center rounded-xl bg-white font-black text-slate-700 shadow ring-4 ring-sky-300">7
+                        <span className="absolute -bottom-4 -right-3 animate-bounce text-2xl">👆</span>
+                      </span>
+                      <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-white font-black text-slate-700 shadow">8</span>
+                    </div>
+                    <p className="text-[10px] font-bold text-slate-400">🎧 En Modo Solito la app le lee todo y las opciones suenan</p>
+                  </>
+                )}
+                {demoTarea === 4 && (
+                  <>
+                    <p className="font-black text-slate-700">4 · ¡Y el sistema festeja cada logro!</p>
+                    <div className="flex gap-2">
+                      <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-white font-black text-slate-400 shadow">6</span>
+                      <span className="flex h-11 w-11 animate-bounce items-center justify-center rounded-xl bg-green-300 font-black text-green-900 shadow">7</span>
+                      <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-white font-black text-slate-400 shadow">8</span>
+                    </div>
+                    <p className="text-lg font-black text-green-600">🎉 ¡Muy bien! +10 ⭐</p>
+                    <p className="text-[10px] font-bold text-slate-400">Con voz, sonidos, y reintentos amables si se equivoca</p>
+                  </>
+                )}
+                {demoTarea === 5 && (
+                  <>
+                    <p className="font-black text-slate-700">5 · La MISMA tarea, al nivel de cada uno</p>
+                    <div className="flex gap-3">
+                      <div className="rounded-2xl bg-white p-3 shadow">
+                        <p className="text-2xl">👧</p>
+                        <p className="text-[10px] font-black text-slate-600">Juli, 4 años</p>
+                        <p className="text-xs font-black text-sky-600">Sumas · Nivel 3</p>
+                      </div>
+                      <div className="rounded-2xl bg-white p-3 shadow">
+                        <p className="text-2xl">🧑</p>
+                        <p className="text-[10px] font-black text-slate-600">Sofi, 9 años</p>
+                        <p className="text-xs font-black text-violet-600">Sumas · Nivel 21</p>
+                      </div>
+                    </div>
+                    <p className="text-[10px] font-bold text-emerald-600">Diferenciación automática: cada alumno juega SUS próximos niveles</p>
+                  </>
+                )}
+                {demoTarea === 6 && (
+                  <>
+                    <span className="animate-bounce text-5xl">✅</span>
+                    <p className="font-black text-slate-700">6 · Completada, con registro para la familia</p>
+                    <p className="w-full max-w-[15rem] rounded-xl bg-emerald-50 px-3 py-2 text-left text-[11px] font-bold text-emerald-700">✅ Tarea del lunes · Seño Brisa · completada el 7/9</p>
+                    <p className="text-xs font-bold text-slate-500">Qué esperar: 10-15 min por tarea · reintentos sin frustración · funciona igual para TODOS, con o sin suscripción 🤝</p>
+                  </>
+                )}
+              </div>
+
+              <div className="mt-3 flex items-center justify-center gap-1.5">
+                {[0, 1, 2, 3, 4, 5, 6].map((i) => (
+                  <button key={i} onClick={() => setDemoTarea(i)}
+                    className={`h-2.5 rounded-full transition-all ${demoTarea === i ? "w-6 bg-violet-500" : "w-2.5 bg-slate-200"}`} aria-label={`Paso ${i + 1}`} />
+                ))}
+              </div>
+              <p className="mt-2 text-center text-[10px] font-bold text-slate-400">▶️ Avanza sola y vuelve a empezar · tocá los puntitos para ir a un paso · tocá afuera para cerrar</p>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -4096,6 +4426,12 @@ h1{color:#b45309;letter-spacing:2px}h2{font-size:40px;margin:12px 0;color:#1e293
             </p>
           </div>
 
+          <button onClick={async () => { setCursosLista((await leer("mentejuego:cursos")) || []); setCursosDesde("panel"); setPantalla("cursos"); }}
+            className="w-full rounded-3xl bg-violet-500 p-4 text-left shadow-md active:scale-[0.99]">
+            <span className="text-lg font-black text-white">🎓 Cursos para adultos</span>
+            <p className="text-xs font-bold text-white/80">Para familias, seños, psicopedagogía y directivos · con certificado · tocá para ver el catálogo</p>
+          </button>
+
           <div className="w-full rounded-3xl bg-white p-5 shadow-md sm:p-6">
             <h3 className="text-lg font-black text-slate-800 sm:text-xl">💎 Suscripción</h3>
             <p className={`mt-2 rounded-2xl p-3 text-sm font-black ${esPremium ? "bg-violet-100 text-violet-700" : "bg-slate-100 text-slate-600"}`}>
@@ -4147,7 +4483,9 @@ h1{color:#b45309;letter-spacing:2px}h2{font-size:40px;margin:12px 0;color:#1e293
               <div className="mt-2 flex flex-col gap-1">
                 {tareas.slice(-4).map((t) => (
                   <p key={t.id} className={`rounded-xl px-3 py-2 text-sm font-bold ${t.completada ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>
-                    {t.completada ? "✅" : "⏳"} {t.titulo}{t.docente ? ` · ${t.docente}` : ""}{t.completada ? ` · completada el ${new Date(t.completada).toLocaleDateString("es-AR")}` : " · pendiente"}
+                    {t.completada ? "✅" : "⏳"} {t.vac ? "🏖️ " : ""}{t.titulo}{t.docente ? ` · ${t.docente}` : ""}
+                    {t.vac && !t.completada ? ` · día ${diasDeVacaciones(t.vac).filter((f) => (t.dias || {})[f]).length}/${diasDeVacaciones(t.vac).length}` : ""}
+                    {t.completada ? ` · completada el ${new Date(t.completada).toLocaleDateString("es-AR")}` : t.vac ? "" : " · pendiente"}
                   </p>
                 ))}
               </div>
@@ -4161,7 +4499,8 @@ h1{color:#b45309;letter-spacing:2px}h2{font-size:40px;margin:12px 0;color:#1e293
               </div>
             ) : (
               <div className="mt-3 rounded-2xl bg-amber-50 p-4">
-                <p className="font-black text-amber-800">📚 {tareaPrev.titulo}{tareaPrev.docente ? ` — ${tareaPrev.docente}` : ""}</p>
+                <p className="font-black text-amber-800">{tareaPrev.vac ? "🏖️" : "📚"} {tareaPrev.titulo}{tareaPrev.docente ? ` — ${tareaPrev.docente}` : ""}</p>
+                {tareaPrev.vac && <p className="text-xs font-bold text-orange-700">Vacaciones: un juego por día, del {tareaPrev.vac.desde.split("-").reverse().join("/")} al {tareaPrev.vac.hasta.split("-").reverse().join("/")} ({diasDeVacaciones(tareaPrev.vac).length} días)</p>}
                 {tareaPrev.series.map((id) => { const s = SERIES.find((x) => x.id === id); return <p key={id} className="text-sm font-bold text-slate-600">{s.icono} {s.nombre} · {tareaPrev.cant} niveles</p>; })}
                 <div className="mt-2 flex gap-2">
                   <button onClick={() => {
@@ -4234,8 +4573,10 @@ h1{color:#b45309;letter-spacing:2px}h2{font-size:40px;margin:12px 0;color:#1e293
               <span className="text-xs">Tocá para cambiar</span>
             </button>
             <p className="mt-2 text-xs text-slate-400">
-              Apaga SOLO la música gamer de fondo: los festejos con voz, las consignas habladas y los efectos de los juegos
-              siguen funcionando igual (esos hacen a la experiencia de los peques). El botón 🔊 del menú, en cambio, silencia todo.
+              Los dos audios son independientes y se controlan por separado, acá o con los botones del menú de los peques:
+              🎵 apaga SOLO la música gamer de fondo, y 🔊 apaga SOLO las voces y efectos (festejos, consignas habladas, sonidos
+              de los juegos). Pueden combinar como quieran: música sin voces, voces sin música, todo o nada. Los botones 🔊 de
+              escuchar consignas funcionan siempre, porque son parte de la lección.
             </p>
           </div>
 
@@ -4387,8 +4728,10 @@ h1{color:#b45309;letter-spacing:2px}h2{font-size:40px;margin:12px 0;color:#1e293
               className="rounded-full bg-white px-3 py-2 text-xs font-black text-slate-600 shadow active:scale-95 sm:text-sm">🏅 Logros</button>
             <button onClick={() => setModalModo("solito")} aria-label="Modo de lectura: tocá para ver qué hace"
               className={`rounded-full px-3 py-2 text-xs font-black shadow active:scale-95 sm:text-sm ${modoSolito ? "bg-sky-500 text-white" : "bg-white text-slate-600"}`}>{modoSolito ? "🎧 Solito" : "📖 Acompañado"}</button>
-            <button onClick={() => setModalModo("sonido")} aria-label="Sonido: tocá para ver qué hace"
-              className={`rounded-full px-3 py-2 text-xs font-black shadow active:scale-95 sm:text-sm ${sonidoOn ? "bg-white text-slate-600" : "bg-slate-600 text-white"}`}>{sonidoOn ? "🔊 Sonido" : "🔇 Silencio"}</button>
+            <button onClick={alternarMusica} aria-label={musicaOn ? "Apagar la música de fondo" : "Prender la música de fondo"}
+              className={`rounded-full px-3 py-2 text-xs font-black shadow active:scale-95 sm:text-sm ${musicaOn ? "bg-white text-slate-600" : "bg-slate-600 text-white"}`}>{musicaOn ? "🎵 Música" : "🚫 Música"}</button>
+            <button onClick={alternarSonido} aria-label={sonidoOn ? "Apagar voces y efectos" : "Prender voces y efectos"}
+              className={`rounded-full px-3 py-2 text-xs font-black shadow active:scale-95 sm:text-sm ${sonidoOn ? "bg-white text-slate-600" : "bg-slate-600 text-white"}`}>{sonidoOn ? "🔊 Voces" : "🔇 Voces"}</button>
             <button onClick={() => setPantalla("elegirPerfil")}
               className="rounded-full bg-white px-3 py-2 text-xs font-black text-slate-600 shadow active:scale-95 sm:text-sm">👤 Peques</button>
           </div>
@@ -4427,22 +4770,7 @@ h1{color:#b45309;letter-spacing:2px}h2{font-size:40px;margin:12px 0;color:#1e293
                     <button onClick={() => setModalModo(null)} className="rounded-full bg-slate-200 px-5 py-3 font-black text-slate-600 active:scale-95">Cerrar</button>
                   </div>
                 </>
-              ) : (
-                <>
-                  <p className="text-xl font-black text-slate-800">{sonidoOn ? "🔊 Sonido encendido" : "🔇 Silencio total"}</p>
-                  <p className="mt-2 text-sm font-bold text-slate-600">
-                    {sonidoOn
-                      ? "Este botón silencia TODO de una vez: la música de fondo, los festejos con voz, las consignas habladas y los efectos. Útil en el colectivo, la sala de espera o a la noche."
-                      : "Todo está en silencio: música, voces y efectos. Tocá «Activar» para que la app vuelva a festejar y leer en voz alta."}
-                  </p>
-                  <p className="mt-2 rounded-xl bg-amber-50 p-2 text-xs font-bold text-slate-500">💡 Los botones 🔊 de escuchar consignas funcionan siempre. Y si solo molesta la música de fondo, los papás pueden apagarla sola desde el panel 🎵 (los festejos y voces siguen).</p>
-                  <div className="mt-4 flex gap-2">
-                    <button onClick={() => { alternarSonido(); setModalModo(null); }}
-                      className={`flex-1 rounded-full py-3 font-black text-white active:scale-95 ${sonidoOn ? "bg-slate-600" : "bg-emerald-500"}`}>{sonidoOn ? "🔇 Silenciar todo" : "🔊 Activar sonido"}</button>
-                    <button onClick={() => setModalModo(null)} className="rounded-full bg-slate-200 px-5 py-3 font-black text-slate-600 active:scale-95">Cerrar</button>
-                  </div>
-                </>
-              )}
+              ) : null}
             </div>
           </div>
         )}
@@ -4454,13 +4782,35 @@ h1{color:#b45309;letter-spacing:2px}h2{font-size:40px;margin:12px 0;color:#1e293
           </div>
         )}
 
-        {tareas.filter((t) => !t.completada).map((t) => (
-          <button key={t.id} onClick={() => iniciarTarea(t)}
-            className="rounded-3xl bg-amber-400 p-4 text-left shadow-md transition-transform active:scale-95">
-            <span className="text-lg font-black text-amber-900">📚 Tarea: {t.titulo}</span>
-            <p className="text-xs font-bold text-amber-800">{t.docente ? `De la seño ${t.docente} · ` : ""}{t.series.length} {t.series.length === 1 ? "juego" : "juegos"} × {t.cant} niveles a TU medida. ¡Tocá para empezar!</p>
-          </button>
-        ))}
+        {tareas.filter((t) => !t.completada).map((t) => {
+          if (!t.vac) return (
+            <button key={t.id} onClick={() => iniciarTarea(t)}
+              className="rounded-3xl bg-amber-400 p-4 text-left shadow-md transition-transform active:scale-95">
+              <span className="text-lg font-black text-amber-900">📚 Tarea: {t.titulo}</span>
+              <p className="text-xs font-bold text-amber-800">{t.docente ? `De la seño ${t.docente} · ` : ""}{t.series.length} {t.series.length === 1 ? "juego" : "juegos"} × {t.cant} niveles a TU medida. ¡Tocá para empezar!</p>
+            </button>
+          );
+          const dias = diasDeVacaciones(t.vac);
+          const hechos = t.dias || {};
+          const cuantosHechos = dias.filter((f) => hechos[f]).length;
+          const hoy = hoyISO();
+          const hayPendienteHoy = dias.some((f) => f <= hoy && !hechos[f]);
+          const antes = hoy < t.vac.desde;
+          return (
+            <button key={t.id} onClick={() => hayPendienteHoy && iniciarTarea(t)}
+              className={`rounded-3xl p-4 text-left shadow-md transition-transform active:scale-95 ${hayPendienteHoy ? "bg-orange-400" : "bg-orange-200"}`}>
+              <span className="text-lg font-black text-orange-900">🏖️ Vacaciones: {t.titulo}</span>
+              <span className="mt-1 flex flex-wrap gap-1">
+                {dias.map((f, i) => (
+                  <span key={f} className={`flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-black ${hechos[f] ? "bg-emerald-500 text-white" : f <= hoy ? "bg-white text-orange-600" : "bg-orange-100 text-orange-300"}`}>{hechos[f] ? "✓" : i + 1}</span>
+                ))}
+              </span>
+              <p className="mt-1 text-xs font-bold text-orange-900">
+                {antes ? `Arranca el ${dias[0].split("-").reverse().slice(0, 2).join("/")} 🌅` : hayPendienteHoy ? `Día ${cuantosHechos + 1} de ${dias.length}: ¡un juego por día, tocá y dale! ` : `¡Hoy ya está! ✓ ${cuantosHechos}/${dias.length} · mañana se abre el siguiente 🌙`}
+              </p>
+            </button>
+          );
+        })}
 
         <button onClick={() => { setDuelo({ fase: "elegir" }); setPantalla("duelo"); }}
           className="rounded-3xl bg-fuchsia-500 p-4 text-left shadow-md transition-transform active:scale-95">
