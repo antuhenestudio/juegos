@@ -1737,6 +1737,54 @@ function areasAdelantadas(sesiones, rango) {
   return res;
 }
 
+// Punto de partida según la edad: en series que abarcan varias etapas, el niño
+// de la etapa mayor NO arranca del nivel 1 (calibrado para los más chicos),
+// sino más adelante. Los niveles previos quedan abiertos para repasar o reforzar.
+function nivelInicial(serie, rango) {
+  if (!rango || !serie.edades.includes(rango)) return 1;
+  const menores = serie.edades.filter((e) => (ORDEN_BANDA[e] || 0) < (ORDEN_BANDA[rango] || 0));
+  if (menores.length === 0) return 1;
+  return Math.max(1, Math.floor(serie.niveles * (menores.length / serie.edades.length) * 0.85));
+}
+function progresoSerie(s, mejor) {
+  let c = 0;
+  for (let k = 1; k <= s.niveles; k++) if (mejor[idNivel(s, k)] != null) c++;
+  return c / s.niveles;
+}
+function nivelDesbloqueado(s, k, mejor, rango) {
+  if (k <= nivelInicial(s, rango)) return true;
+  if (mejor[idNivel(s, k - 1)] != null) return true;
+  return k >= 3 && mejor[idNivel(s, k - 2)] != null && mejor[idNivel(s, k - 2)] >= 0.85; // ⭐⭐⭐ saltea un nivel
+}
+// Próximo nivel recomendado, con REFUERZO automático: si los dos últimos intentos
+// en la serie salieron muy flojos, baja 3 niveles para encontrar el punto seguro
+// y desde ahí volver a subir.
+function proximoNivel(s, mejor, rango, sesiones) {
+  const inicio = nivelInicial(s, rango);
+  let base = null;
+  for (let k = inicio; k <= s.niveles; k++) {
+    if (nivelDesbloqueado(s, k, mejor, rango) && mejor[idNivel(s, k)] == null) { base = k; break; }
+  }
+  if (base == null) {
+    for (let k = 1; k <= s.niveles; k++) if (mejor[idNivel(s, k)] == null) return k;
+    return inicio;
+  }
+  if (sesiones) {
+    const ult = sesiones.filter((x) => String(x.juego).startsWith(s.id + "-n")).slice(-2);
+    if (ult.length === 2 && ult.every((x) => x.puntos / x.maximo < 0.4)) return Math.max(1, base - 3);
+  }
+  return base;
+}
+// Áreas en refuerzo: últimas 5 partidas del área con menos del 45% de acierto.
+function areasEnRefuerzo(sesiones) {
+  const res = [];
+  Object.keys(AREAS).forEach((a) => {
+    const del = sesiones.filter((s) => s.area === a).slice(-5);
+    if (del.length >= 5 && del.reduce((x, s) => x + s.puntos / s.maximo, 0) / del.length < 0.45) res.push(a);
+  });
+  return res;
+}
+
 // ============================================================
 // Análisis de progreso (lectura honesta, sin promesas)
 // ============================================================
@@ -1828,7 +1876,8 @@ function analizarProgreso(sesiones, seriesDisp, rango, edadAnios) {
       alertas.push(`En ${AREAS[a].nombre} (${AREAS[a].desc.toLowerCase()}), los primeros niveles de su etapa le están costando de forma sostenida: ${d.prom}% de acierto en ${d.jugadas} partidas, sin mejora clara todavía.`);
     }
   });
-  return { porArea, racha, ritmo, cubiertos, total, frases, alertas, jugadas: sesiones.length };
+  const refuerzos = areasEnRefuerzo(sesiones);
+  return { porArea, racha, ritmo, cubiertos, total, frases, alertas, refuerzos, jugadas: sesiones.length };
 }
 
 function ResultadoPlan({ puntos, maximo, siguiente, ultimo, onSeguir, onSalir }) {
@@ -2037,6 +2086,7 @@ function AppNinos({ alSelector, permisos = { mic: true, videos: true }, alRevisa
   const [videoActivo, setVideoActivo] = useState(null);
   const [maxInput, setMaxInput] = useState(2);
   const [sonidoOn, setSonidoOn] = useState(true);
+  const [demoNoti, setDemoNoti] = useState(null);
 
   const [nombreInput, setNombreInput] = useState("");
   const [nacInput, setNacInput] = useState("");
@@ -2139,20 +2189,6 @@ function AppNinos({ alSelector, permisos = { mic: true, videos: true }, alRevisa
     sesiones.forEach((s) => { const r = s.puntos / s.maximo; if (m[s.juego] == null || r > m[s.juego]) m[s.juego] = r; });
     return m;
   };
-  const progresoSerie = (s, mejor) => {
-    let c = 0;
-    for (let k = 1; k <= s.niveles; k++) if (mejor[idNivel(s, k)] != null) c++;
-    return c / s.niveles;
-  };
-  const nivelDesbloqueado = (s, k, mejor) =>
-    k === 1 || mejor[idNivel(s, k - 1)] != null ||
-    (k >= 3 && mejor[idNivel(s, k - 2)] != null && mejor[idNivel(s, k - 2)] >= 0.85); // aprendizaje rápido: saltea un nivel
-  const proximoNivel = (s, mejor) => {
-    for (let k = 1; k <= s.niveles; k++) {
-      if (nivelDesbloqueado(s, k, mejor) && mejor[idNivel(s, k)] == null) return k;
-    }
-    return 1 + Math.floor(Math.random() * s.niveles);
-  };
   const alternarSonido = () => {
     const v = !sonidoOn;
     setSonidoOn(v);
@@ -2188,7 +2224,7 @@ function AppNinos({ alSelector, permisos = { mic: true, videos: true }, alRevisa
     while (lista.length < cuantos && i < 80) {
       const area = areas[i % areas.length];
       const cand = seriesDisp.filter((s) => s.area === area && !usadas.has(s.id)).sort((a, b) => progresoSerie(a, mejor) - progresoSerie(b, mejor));
-      if (cand.length > 0) { const s = cand[0]; usadas.add(s.id); lista.push(idNivel(s, proximoNivel(s, mejor))); }
+      if (cand.length > 0) { const s = cand[0]; usadas.add(s.id); lista.push(idNivel(s, proximoNivel(s, mejor, rango, sesiones))); }
       i++;
     }
     if (lista.length === 0) return;
@@ -2234,6 +2270,7 @@ th{background:#f1f5f9}.caja{background:#fef9c3;border-radius:12px;padding:14px;f
 <table><tr><th>Área</th><th>Partidas</th><th>Acierto promedio</th><th>Tendencia</th></tr>${filas}</table>
 <h2>Lectura del progreso</h2>
 ${an.frases.map((x) => `<p>• ${x}</p>`).join("")}
+${an.refuerzos.length ? `<h2>Ajuste automático de dificultad</h2><p>En ${an.refuerzos.map((a) => AREAS[a].nombre).join(", ")} la app bajó automáticamente la dificultad para encontrar el punto donde ${activo.nombre} responde con seguridad, y desde ahí volver a subir de a poco. Es una adaptación del juego, no un diagnóstico.</p>` : ""}
 ${an.alertas.length ? `<h2>Para conversar en el próximo control pediátrico</h2>${an.alertas.map((x) => `<p>• ${x}</p>`).join("")}<p><b>Importante:</b> esto no es un diagnóstico ni una detección de retraso madurativo — ninguna app puede hacer eso. Las evaluaciones del desarrollo las realiza el pediatra con controles y herramientas validadas. Es una observación del juego para conversar en el control, junto con lo que la familia observa en casa.</p>` : ""}
 <h2>Cómo seguir en casa</h2>
 <p>Sesiones cortas y frecuentes (10-15 minutos), jugar juntos cuando se pueda, elogiar el esfuerzo y la estrategia, leer juntos todos los días y llevar el área Ahorrar a la vida real con una alcancía física. La guía completa está en el panel de padres de la app.</p>
@@ -2620,6 +2657,18 @@ ${an.alertas.length ? `<h2>Para conversar en el próximo control pediátrico</h2
                       className="rounded-full bg-slate-500 px-5 py-2 font-black text-white shadow active:scale-95">🔏 Privacidad y consentimiento</button>
                   )}
                 </div>
+                {an.refuerzos.length > 0 && (
+                  <div className="mt-3 rounded-2xl border-4 border-sky-200 bg-sky-50 p-4">
+                    <p className="font-black text-sky-700">🔎 Ajuste automático de dificultad activado</p>
+                    <p className="mt-2 text-sm text-slate-600">
+                      En <b>{an.refuerzos.map((a) => AREAS[a].nombre).join(", ")}</b> los últimos niveles le costaron a {activo.nombre},
+                      así que la app <b>bajó sola la dificultad</b>: va a proponerle niveles más fáciles hasta encontrar el punto
+                      donde se sienta seguro, y desde ahí volver a subir de a poquito. Para {activo.nombre} esto es invisible —
+                      solo nota que "le sale" — y para ustedes es información: si en casa también notan que algo cuesta,
+                      es un buen tema para el pediatra.
+                    </p>
+                  </div>
+                )}
                 {an.alertas.length > 0 && (
                   <div className="mt-3 rounded-2xl border-4 border-rose-200 bg-rose-50 p-4">
                     <p className="font-black text-rose-700">👀 Para conversar en el próximo control pediátrico</p>
@@ -2640,6 +2689,70 @@ ${an.alertas.length ? `<h2>Para conversar en el próximo control pediátrico</h2
               </div>
             );
           })()}
+
+          <div className="w-full rounded-3xl bg-white p-5 shadow-md sm:p-6">
+            <h3 className="text-lg font-black text-slate-800 sm:text-xl">🔔 Modelos de notificaciones (vista de prueba)</h3>
+            <p className="mt-1 text-xs text-slate-400">Así se ven los tres tipos de aviso que el sistema genera automáticamente cuando corresponde. Tocá para previsualizar cada uno.</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button onClick={() => setDemoNoti(demoNoti === "adelantado" ? null : "adelantado")}
+                className={`rounded-full px-4 py-2 text-sm font-black active:scale-95 ${demoNoti === "adelantado" ? "bg-indigo-500 text-white" : "bg-indigo-100 text-indigo-700"}`}>🚀 Va adelantado</button>
+              <button onClick={() => setDemoNoti(demoNoti === "convivir" ? null : "convivir")}
+                className={`rounded-full px-4 py-2 text-sm font-black active:scale-95 ${demoNoti === "convivir" ? "bg-rose-500 text-white" : "bg-rose-100 text-rose-700"}`}>💛 Reforzar cercanía</button>
+              <button onClick={() => setDemoNoti(demoNoti === "refuerzo" ? null : "refuerzo")}
+                className={`rounded-full px-4 py-2 text-sm font-black active:scale-95 ${demoNoti === "refuerzo" ? "bg-sky-500 text-white" : "bg-sky-100 text-sky-700"}`}>🔎 Bajamos la dificultad</button>
+            </div>
+            {demoNoti === "adelantado" && (
+              <div className="mt-3 rounded-2xl border-4 border-indigo-200 bg-indigo-50 p-4">
+                <p className="font-black text-indigo-700">🚀 ¡{activo.nombre} va adelantado!</p>
+                <p className="mt-2 text-sm text-slate-600">
+                  Con {edadAnios} años, dominó su etapa en <b>Pensar</b> y está superando niveles de la etapa <b>6-8</b> —
+                  contenido pensado para chicos más grandes — con un 88% de acierto. La app ya le abrió esos desafíos.
+                </p>
+                <p className="mt-2 text-sm text-slate-600">
+                  <b>¿Puede beneficiarlo a futuro?</b> Las habilidades que está ejercitando (memoria de trabajo, autocontrol,
+                  razonamiento) están asociadas en estudios poblacionales de largo plazo — como el estudio de Dunedin — con
+                  mejores resultados académicos, financieros y de salud en la adultez. Son <b>tendencias generales de la
+                  investigación, no una promesa sobre {activo.nombre}</b>: nadie puede predecir el futuro de un niño. Lo que sí
+                  está en sus manos hoy: alimentarle la curiosidad, celebrar el esfuerzo y acompañarlo en desafíos a su medida.
+                </p>
+              </div>
+            )}
+            {demoNoti === "convivir" && (
+              <div className="mt-3 rounded-2xl border-4 border-rose-200 bg-rose-50 p-4">
+                <p className="font-black text-rose-700">💛 Una oportunidad para reforzar la cercanía</p>
+                <p className="mt-2 text-sm text-slate-600">
+                  En el área <b>Convivir</b> (modales, normas de la casa, palabras mágicas), a {activo.nombre} le están costando
+                  las últimas partidas. Esto <b>no dice nada malo de {activo.nombre}</b>: las normas se aprenden sobre todo en el
+                  vínculo, no en una pantalla.
+                </p>
+                <p className="mt-2 text-sm text-slate-600">
+                  <b>Qué puede ayudar en casa:</b> jugar juntos estos niveles y conversar cada situación ("¿y vos qué harías?"),
+                  anticipar las normas con calma antes de que pasen las cosas, usar ustedes mismos las palabras mágicas (los chicos
+                  imitan mucho más de lo que obedecen) y celebrar cada vez que colabora. Diez minutos de juego compartido valen más
+                  que cualquier repetición. Si además en casa o en el jardín notan dificultades sostenidas con las normas,
+                  es un buen tema para conversar con el pediatra — sin alarma: cada niño tiene su ritmo.
+                </p>
+              </div>
+            )}
+            {demoNoti === "refuerzo" && (
+              <div className="mt-3 rounded-2xl border-4 border-sky-200 bg-sky-50 p-4">
+                <p className="font-black text-sky-700">🔎 Bajamos la dificultad para encontrar su punto justo</p>
+                <p className="mt-2 text-sm text-slate-600">
+                  Para la edad de {activo.nombre} ({edadAnios} años), los niveles que le tocaban le están costando más de lo
+                  esperado. El sistema activó el <b>modo de refuerzo</b>: automáticamente le va a proponer niveles más fáciles
+                  hasta encontrar el punto donde responde con seguridad, y desde ahí volverá a subir la dificultad de a poco,
+                  a su ritmo. {activo.nombre} no ve nada de esto — solo siente que "le sale", que es exactamente lo que necesita
+                  para no frustrarse.
+                </p>
+                <p className="mt-2 text-sm text-slate-600">
+                  <b>Qué significa y qué no:</b> puede ser cansancio, desinterés o simplemente su ritmo — <b>no es un diagnóstico</b>
+                  ni una detección de retraso: eso solo lo evalúa el pediatra con herramientas validadas. Les avisaremos cuando
+                  retome el ritmo. Si en casa observan algo que les preocupe, llévenlo a la próxima consulta junto con el informe
+                  descargable de la app.
+                </p>
+              </div>
+            )}
+          </div>
 
           <PanelPadres sesiones={sesiones} perfil={activo} edadAnios={edadAnios} />
 
@@ -2744,10 +2857,9 @@ ${an.alertas.length ? `<h2>Para conversar en el próximo control pediátrico</h2
     const s = serieAbierta;
     const mejor = mejorPorNivel();
     const estrellasDe = (r) => (r >= 0.8 ? 3 : r >= 0.5 ? 2 : 1);
-    let siguiente = null;
-    for (let k = 1; k <= s.niveles; k++) {
-      if (nivelDesbloqueado(s, k, mejor) && mejor[idNivel(s, k)] == null) { siguiente = k; break; }
-    }
+    const inicio = nivelInicial(s, rango);
+    const quedanIncompletos = [...Array(s.niveles)].some((_, i) => mejor[idNivel(s, i + 1)] == null);
+    const siguiente = quedanIncompletos ? proximoNivel(s, mejor, rango, sesiones) : null;
     const completados = Object.keys(mejor).filter((id) => id.startsWith(s.id + "-n")).length;
     return (
       <div className="min-h-screen bg-sky-100 p-3 pb-10 sm:p-4">
@@ -2759,7 +2871,7 @@ ${an.alertas.length ? `<h2>Para conversar en el próximo control pediátrico</h2
             <span className="text-base font-black text-slate-700 sm:text-lg">{s.icono} {s.nombre}</span>
           </div>
           <div className="rounded-3xl bg-white p-4 shadow-md">
-            <p className="text-sm font-bold text-slate-500">{completados} de {s.niveles} niveles superados. La dificultad sube de a poco y cada nivel es único. Con ⭐⭐⭐ ¡salteás un nivel! 🚀</p>
+            <p className="text-sm font-bold text-slate-500">{completados} de {s.niveles} niveles superados. La dificultad sube de a poco y cada nivel es único. Con ⭐⭐⭐ ¡salteás un nivel! 🚀{inicio > 1 ? ` Por tu edad arrancás en el nivel ${inicio}: los celestes de antes son de la etapa más chica y quedan abiertos para repasar.` : ""}</p>
             {siguiente && (
               <button onClick={() => abrirNivel(s, siguiente)}
                 className="mt-3 w-full rounded-full bg-emerald-500 py-3 text-lg font-black text-white shadow-md active:scale-95">
@@ -2771,12 +2883,15 @@ ${an.alertas.length ? `<h2>Para conversar en el próximo control pediátrico</h2
             {[...Array(s.niveles)].map((_, i) => {
               const k = i + 1;
               const r = mejor[idNivel(s, k)];
-              const desb = nivelDesbloqueado(s, k, mejor);
+              const desb = nivelDesbloqueado(s, k, mejor, rango);
+              const previa = desb && r == null && k < inicio;
               return (
                 <button key={k} disabled={!desb} onClick={() => abrirNivel(s, k)}
                   className={`flex aspect-square flex-col items-center justify-center rounded-2xl text-sm font-black shadow transition-transform active:scale-90 ${
                     r != null ? "bg-emerald-400 text-white"
-                    : desb ? (k === siguiente ? "bg-white text-slate-700 ring-4 ring-emerald-300" : "bg-white text-slate-700")
+                    : k === siguiente ? "bg-white text-slate-700 ring-4 ring-emerald-300"
+                    : previa ? "bg-sky-50 text-slate-300"
+                    : desb ? "bg-white text-slate-700"
                     : "bg-slate-200 text-slate-400"
                   }`}>
                   <span>{desb ? k : "🔒"}</span>
@@ -2869,7 +2984,7 @@ ${an.alertas.length ? `<h2>Para conversar en el próximo control pediátrico</h2
               {Object.keys(AREAS).flatMap((clave) => {
                 const cand = disponibles.filter((s) => s.area === clave).sort((a, b) => progresoSerie(a, mejorMenu) - progresoSerie(b, mejorMenu)).slice(0, 2);
                 return cand.map((s) => {
-                  const k = proximoNivel(s, mejorMenu);
+                  const k = proximoNivel(s, mejorMenu, rango, sesiones);
                   return (
                     <button key={s.id} onClick={() => abrirNivel(s, k)}
                       className={`flex flex-col gap-1 rounded-2xl ${AREAS[clave].suave} p-3 text-left shadow-sm transition-transform active:scale-95`}>
