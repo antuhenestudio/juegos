@@ -3013,6 +3013,10 @@ function AppNinos({ alSelector, permisos = { mic: true, videos: true }, alRevisa
   const [mascotaFiesta, setMascotaFiesta] = useState(0);
   const [panelTab, setPanelTab] = useState("progreso");
   const [tour, setTour] = useState(null); // {tipo, paso}
+  const [dispositivo, setDispositivo] = useState(null); // {ninoId} → dispositivo bloqueado para un peque
+  const [codigoFamilia, setCodigoFamilia] = useState("");
+  const [codFamiliaInput, setCodFamiliaInput] = useState("");
+  const [codFamiliaNuevo, setCodFamiliaNuevo] = useState("");
   const [codigoPromo, setCodigoPromo] = useState("");
   const [bib, setBib] = useState(null); // biblioteca docente
   const [demoTarea, setDemoTarea] = useState(null); // paso de la demo animada
@@ -3073,6 +3077,15 @@ function AppNinos({ alSelector, permisos = { mic: true, videos: true }, alRevisa
       if (pr) setPremio(pr);
       if (pp) setPinPadres(pp);
       setPerfiles(lista);
+      const cf = await leer("mentejuego:codigoFamilia");
+      if (cf) setCodigoFamilia(cf);
+      const disp = await leer("mentejuego:dispositivo");
+      const pDisp = disp && lista.find((x) => x.id === disp.ninoId);
+      if (pDisp) {
+        setDispositivo(disp);
+        activar(pDisp); // sesión permanente del peque: sin PIN, directo a su menú
+        return;
+      }
       setPantalla(lista.length > 0 ? "elegirPerfil" : "nuevoPerfil");
     })();
   }, []);
@@ -4045,6 +4058,67 @@ h1{color:#7c3aed;font-size:34px;margin:8px 0}.n{font-size:28px;font-weight:bold;
   const guiado = premio.guiado !== false;
 
   // ---------- pantalla de juego ----------
+  // ---------- recorridos guiados ----------
+  const TOURS = {
+    padres: [
+      { e: "👋", t: "¡Bienvenidos al panel!", x: "Acá está TODO el control de la experiencia, ahora ordenado en 4 pestañas para que nada se pierda. Les mostramos qué hay en cada una (dura 1 minuto)." },
+      { e: "📊", t: "Pestaña Progreso", x: "La lectura honesta del avance: cómo va comparado consigo mismo, los avisos de adelanto o refuerzo, la señal para el pediatra si hiciera falta (nunca un diagnóstico), y el informe descargable." },
+      { e: "🎮", t: "Pestaña Juego y premios", x: "Los videos premio (cuántos niveles cuesta cada uno y el máximo diario), el canje de puntos por momentos en familia, la música de fondo y el modo guiado o explorador." },
+      { e: "🏫", t: "Pestaña Escuela", x: "Peguen acá el código de tarea que manda la seño (común o de vacaciones): a su peque le aparece como tarjeta y la juega A SU nivel. También los amigos a distancia y los cursos para adultos." },
+      { e: "⚙️", t: "Pestaña Familia y ajustes", x: "Los nombres de ambos adultos (salen en los certificados), la suscripción y sus precios, el contenido de cuidado del cuerpo (ESI) con su interruptor, y los PIN de cada peque." },
+      { e: "❓", t: "¡Listo!", x: "Pueden volver a ver este recorrido cuando quieran con el botón ❓ de arriba. Y recuerden: las tareas de la seño y lo esencial funcionan SIEMPRE, con o sin suscripción. 💛" },
+    ],
+    nino: [
+      { e: "🦊", t: "¡Hola! Soy Chispa", x: "¡Te muestro tu mundo en un minuto! Tocá la flecha para seguir." },
+      { e: "✨", t: "Tus juegos de hoy", x: "Arriba están los ELEGIDOS PARA VOS. Tocá uno ¡y a jugar! Cada estrella que ganás me pone muy feliz." },
+      { e: "🎧", t: "Los botones de arriba", x: "Solito hace que te lea todo con mi voz. Con 🎵 apagás la música y con 🔊 las voces, como más te guste." },
+      { e: "🎁", t: "Tus puntos y tareas", x: "Jugando ganás puntos que canjeás con tu familia por lo que VOS elijas. Y si tu seño manda tarea, aparece en una tarjeta amarilla." },
+      { e: "👥", t: "¡Y hay más!", x: "Podés jugar duelos con tu hermano o tus amigos, ganar medallas y diplomas... ¡Yo te acompaño siempre desde acá abajo! ¡A jugar!" },
+    ],
+  };
+  const cerrarTour = () => { if (tour) guardar(`mentejuego:tour:${tour.tipo}`, true); setTour(null); };
+  const TourGuiado = () => {
+    if (!tour) return null;
+    const pasos = TOURS[tour.tipo];
+    const p2 = pasos[tour.paso];
+    const ultimo = tour.paso === pasos.length - 1;
+    return (
+      <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/50 p-4 sm:items-center">
+        <div className="w-full max-w-sm rounded-3xl bg-white p-5 shadow-2xl">
+          <div className="text-center text-5xl">{p2.e}</div>
+          <p className="mt-2 text-center text-xl font-black text-slate-800">{p2.t}</p>
+          <p className="mt-1 text-center text-sm font-bold text-slate-600">{p2.x}</p>
+          <div className="mt-3 flex items-center justify-center gap-1.5">
+            {pasos.map((_, i) => <span key={i} className={`h-2 rounded-full ${i === tour.paso ? "w-5 bg-violet-500" : "w-2 bg-slate-200"}`} />)}
+          </div>
+          <div className="mt-4 flex gap-2">
+            {tour.paso > 0 && (
+              <button onClick={() => setTour({ ...tour, paso: tour.paso - 1 })}
+                className="rounded-full bg-slate-200 px-4 py-3 font-black text-slate-600 active:scale-95">←</button>
+            )}
+            <button onClick={() => (ultimo ? cerrarTour() : setTour({ ...tour, paso: tour.paso + 1 }))}
+              className="flex-1 rounded-full bg-violet-500 py-3 font-black text-white active:scale-95">{ultimo ? "¡Entendido! 👍" : "Siguiente →"}</button>
+            {!ultimo && <button onClick={cerrarTour} className="rounded-full bg-slate-100 px-4 py-3 text-xs font-black text-slate-400 active:scale-95">Saltar</button>}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // ---------- mascota flotante (ejemplo v1: a futuro con animaciones profesionales) ----------
+  const MascotaChispa = () => {
+    const festejando = Date.now() - mascotaFiesta < 3000;
+    if (!["menu", "serie", "juego", "logros"].includes(pantalla)) return null;
+    return (
+      <button onClick={() => { setMascotaFiesta(Date.now()); hablar(`¡Hola ${activo.nombre}! Soy Chispa. ¡Me encanta verte jugar! ¡Vamos por más!`, AUDIO_ON); }}
+        aria-label="Chispa, tu mascota"
+        className={`fixed bottom-4 right-4 z-40 flex h-16 w-16 items-center justify-center rounded-full bg-orange-400 text-3xl shadow-xl transition-transform active:scale-90 ${festejando ? "animate-bounce" : "animate-pulse"}`}>
+        {festejando ? "🦊✨" : "🦊"}
+      </button>
+    );
+  };
+
+
   if (pantalla === "juego" && juegoActivo) {
     const motor = juegoActivo.serie.motor;
     return (
@@ -4407,66 +4481,6 @@ h1{color:#b45309;letter-spacing:2px}h2{font-size:40px;margin:12px 0;color:#1e293
       </div>
     );
   }
-
-  // ---------- recorridos guiados ----------
-  const TOURS = {
-    padres: [
-      { e: "👋", t: "¡Bienvenidos al panel!", x: "Acá está TODO el control de la experiencia, ahora ordenado en 4 pestañas para que nada se pierda. Les mostramos qué hay en cada una (dura 1 minuto)." },
-      { e: "📊", t: "Pestaña Progreso", x: "La lectura honesta del avance: cómo va comparado consigo mismo, los avisos de adelanto o refuerzo, la señal para el pediatra si hiciera falta (nunca un diagnóstico), y el informe descargable." },
-      { e: "🎮", t: "Pestaña Juego y premios", x: "Los videos premio (cuántos niveles cuesta cada uno y el máximo diario), el canje de puntos por momentos en familia, la música de fondo y el modo guiado o explorador." },
-      { e: "🏫", t: "Pestaña Escuela", x: "Peguen acá el código de tarea que manda la seño (común o de vacaciones): a su peque le aparece como tarjeta y la juega A SU nivel. También los amigos a distancia y los cursos para adultos." },
-      { e: "⚙️", t: "Pestaña Familia y ajustes", x: "Los nombres de ambos adultos (salen en los certificados), la suscripción y sus precios, el contenido de cuidado del cuerpo (ESI) con su interruptor, y los PIN de cada peque." },
-      { e: "❓", t: "¡Listo!", x: "Pueden volver a ver este recorrido cuando quieran con el botón ❓ de arriba. Y recuerden: las tareas de la seño y lo esencial funcionan SIEMPRE, con o sin suscripción. 💛" },
-    ],
-    nino: [
-      { e: "🦊", t: "¡Hola! Soy Chispa", x: "¡Te muestro tu mundo en un minuto! Tocá la flecha para seguir." },
-      { e: "✨", t: "Tus juegos de hoy", x: "Arriba están los ELEGIDOS PARA VOS. Tocá uno ¡y a jugar! Cada estrella que ganás me pone muy feliz." },
-      { e: "🎧", t: "Los botones de arriba", x: "Solito hace que te lea todo con mi voz. Con 🎵 apagás la música y con 🔊 las voces, como más te guste." },
-      { e: "🎁", t: "Tus puntos y tareas", x: "Jugando ganás puntos que canjeás con tu familia por lo que VOS elijas. Y si tu seño manda tarea, aparece en una tarjeta amarilla." },
-      { e: "👥", t: "¡Y hay más!", x: "Podés jugar duelos con tu hermano o tus amigos, ganar medallas y diplomas... ¡Yo te acompaño siempre desde acá abajo! ¡A jugar!" },
-    ],
-  };
-  const cerrarTour = () => { if (tour) guardar(`mentejuego:tour:${tour.tipo}`, true); setTour(null); };
-  const TourGuiado = () => {
-    if (!tour) return null;
-    const pasos = TOURS[tour.tipo];
-    const p2 = pasos[tour.paso];
-    const ultimo = tour.paso === pasos.length - 1;
-    return (
-      <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/50 p-4 sm:items-center">
-        <div className="w-full max-w-sm rounded-3xl bg-white p-5 shadow-2xl">
-          <div className="text-center text-5xl">{p2.e}</div>
-          <p className="mt-2 text-center text-xl font-black text-slate-800">{p2.t}</p>
-          <p className="mt-1 text-center text-sm font-bold text-slate-600">{p2.x}</p>
-          <div className="mt-3 flex items-center justify-center gap-1.5">
-            {pasos.map((_, i) => <span key={i} className={`h-2 rounded-full ${i === tour.paso ? "w-5 bg-violet-500" : "w-2 bg-slate-200"}`} />)}
-          </div>
-          <div className="mt-4 flex gap-2">
-            {tour.paso > 0 && (
-              <button onClick={() => setTour({ ...tour, paso: tour.paso - 1 })}
-                className="rounded-full bg-slate-200 px-4 py-3 font-black text-slate-600 active:scale-95">←</button>
-            )}
-            <button onClick={() => (ultimo ? cerrarTour() : setTour({ ...tour, paso: tour.paso + 1 }))}
-              className="flex-1 rounded-full bg-violet-500 py-3 font-black text-white active:scale-95">{ultimo ? "¡Entendido! 👍" : "Siguiente →"}</button>
-            {!ultimo && <button onClick={cerrarTour} className="rounded-full bg-slate-100 px-4 py-3 text-xs font-black text-slate-400 active:scale-95">Saltar</button>}
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  // ---------- mascota flotante (ejemplo v1: a futuro con animaciones profesionales) ----------
-  const MascotaChispa = () => {
-    const festejando = Date.now() - mascotaFiesta < 3000;
-    if (!["menu", "serie", "juego", "logros"].includes(pantalla)) return null;
-    return (
-      <button onClick={() => { setMascotaFiesta(Date.now()); hablar(`¡Hola ${activo.nombre}! Soy Chispa. ¡Me encanta verte jugar! ¡Vamos por más!`, AUDIO_ON); }}
-        aria-label="Chispa, tu mascota"
-        className={`fixed bottom-4 right-4 z-40 flex h-16 w-16 items-center justify-center rounded-full bg-orange-400 text-3xl shadow-xl transition-transform active:scale-90 ${festejando ? "animate-bounce" : "animate-pulse"}`}>
-        {festejando ? "🦊✨" : "🦊"}
-      </button>
-    );
-  };
 
   // ---------- guía para padres ----------
   if (pantalla === "guia") {
@@ -4962,6 +4976,38 @@ h1{color:#b45309;letter-spacing:2px}h2{font-size:40px;margin:12px 0;color:#1e293
           </div>
 
           <div className={carta("ajustes")}>
+            <h3 className="text-lg font-black text-slate-800 sm:text-xl">📱 Modo dispositivo del peque</h3>
+            <p className="mt-1 text-sm text-slate-500">Para el celular o tablet que usa SOLO un hijo: la sesión queda siempre abierta en su perfil, sin cambio de peques y con el panel de padres bajo llave. Los chicos nunca tienen acceso de administrador.</p>
+            {!codigoFamilia && (
+              <div className="mt-2 rounded-2xl bg-amber-50 p-3">
+                <p className="text-sm font-black text-amber-700">1° creen su código de familia (la llave del panel):</p>
+                <div className="mt-2 flex items-center gap-2">
+                  <CampoPin valor={codFamiliaNuevo} setValor={setCodFamiliaNuevo} placeholder="4 números" />
+                  <button onClick={() => { if (codFamiliaNuevo.length >= 4) { setCodigoFamilia(codFamiliaNuevo); guardar("mentejuego:codigoFamilia", codFamiliaNuevo); setCodFamiliaNuevo(""); sonido("acierto"); } }}
+                    className="rounded-full bg-amber-500 px-4 py-2 font-black text-white active:scale-95">Crear</button>
+                </div>
+              </div>
+            )}
+            {codigoFamilia && !dispositivo && (
+              <div className="mt-2 flex flex-col gap-2">
+                <p className="text-xs font-black text-emerald-600">✅ Código de familia creado. Ahora elijan de quién es este dispositivo:</p>
+                {perfiles.map((x) => (
+                  <button key={x.id} onClick={() => { const dNew = { ninoId: x.id, fecha: Date.now() }; setDispositivo(dNew); guardar("mentejuego:dispositivo", dNew); sonido("fanfarria"); }}
+                    className="rounded-2xl bg-sky-50 p-3 text-left font-black text-slate-700 active:scale-95">📱 Bloquear este dispositivo para {x.avatar} {x.nombre}</button>
+                ))}
+                <p className="text-[10px] text-slate-400">En la versión con cuentas: el padre se loguea con Google/Apple en SU teléfono, da de alta a sus hijos, y en el dispositivo del peque solo ingresa un código de vinculación de un solo uso. Este modo local es el mismo concepto, listo para migrar.</p>
+              </div>
+            )}
+            {dispositivo && (
+              <div className="mt-2 rounded-2xl bg-emerald-50 p-3">
+                <p className="text-sm font-black text-emerald-700">🔒 Este dispositivo está bloqueado para {(perfiles.find((x) => x.id === dispositivo.ninoId) || {}).nombre}: su sesión queda siempre abierta y el panel pide el código de familia.</p>
+                <button onClick={() => { setDispositivo(null); guardar("mentejuego:dispositivo", null); sonido("tap"); }}
+                  className="mt-2 rounded-full bg-slate-200 px-4 py-2 text-sm font-black text-slate-600 active:scale-95">🔓 Quitar el modo dispositivo</button>
+              </div>
+            )}
+          </div>
+
+          <div className={carta("ajustes")}>
             <h3 className="text-lg font-black text-slate-800 sm:text-xl">👨‍👩‍👧‍👦 Peques del dispositivo</h3>
             <div className="mt-3 flex flex-col gap-2">
               {perfiles.map((p) => (
@@ -5090,9 +5136,9 @@ h1{color:#b45309;letter-spacing:2px}h2{font-size:40px;margin:12px 0;color:#1e293
             <p className="font-bold text-slate-500">{edadAnios} años · {nivelesEtapa.toLocaleString("es-AR")} niveles para tu edad</p>
           </div>
           <div className="flex gap-2">
-            <button onClick={abrirPanel}
+            <button onClick={() => { if (dispositivo && codigoFamilia) { setCodFamiliaInput(""); setModalModo("familia"); } else abrirPanel(); }}
               className="flex items-center gap-2 rounded-full bg-white px-4 py-2 font-black text-slate-600 shadow active:scale-95">
-              <BarChart3 /> Padres
+              <BarChart3 /> {dispositivo ? "🔒 " : ""}Padres
             </button>
             <button onClick={() => setPantalla("logros")}
               className="rounded-full bg-white px-3 py-2 text-xs font-black text-slate-600 shadow active:scale-95 sm:text-sm">🏅 Logros</button>
@@ -5102,8 +5148,10 @@ h1{color:#b45309;letter-spacing:2px}h2{font-size:40px;margin:12px 0;color:#1e293
               className={`rounded-full px-3 py-2 text-xs font-black shadow active:scale-95 sm:text-sm ${musicaOn ? "bg-white text-slate-600" : "bg-slate-600 text-white"}`}>{musicaOn ? "🎵 Música" : "🚫 Música"}</button>
             <button onClick={alternarSonido} aria-label={sonidoOn ? "Apagar voces y efectos" : "Prender voces y efectos"}
               className={`rounded-full px-3 py-2 text-xs font-black shadow active:scale-95 sm:text-sm ${sonidoOn ? "bg-white text-slate-600" : "bg-slate-600 text-white"}`}>{sonidoOn ? "🔊 Voces" : "🔇 Voces"}</button>
-            <button onClick={() => setPantalla("elegirPerfil")}
-              className="rounded-full bg-white px-3 py-2 text-xs font-black text-slate-600 shadow active:scale-95 sm:text-sm">👤 Peques</button>
+            {!dispositivo && (
+              <button onClick={() => setPantalla("elegirPerfil")}
+                className="rounded-full bg-white px-3 py-2 text-xs font-black text-slate-600 shadow active:scale-95 sm:text-sm">👤 Peques</button>
+            )}
           </div>
         </header>
 
@@ -5112,7 +5160,18 @@ h1{color:#b45309;letter-spacing:2px}h2{font-size:40px;margin:12px 0;color:#1e293
         {modalModo && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setModalModo(null)}>
             <div className="w-full max-w-sm rounded-3xl bg-white p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-              {modalModo === "limite" ? (
+              {modalModo === "familia" ? (
+                <>
+                  <p className="text-xl font-black text-slate-800">🔒 Solo para la familia</p>
+                  <p className="mt-2 text-sm font-bold text-slate-600">Este dispositivo es de {activo.nombre}. Para entrar al panel de padres, un adulto ingresa el código de familia:</p>
+                  <div className="mt-3 flex justify-center"><CampoPin valor={codFamiliaInput} setValor={setCodFamiliaInput} placeholder="Código de familia" /></div>
+                  <div className="mt-4 flex gap-2">
+                    <button onClick={() => { if (codFamiliaInput === codigoFamilia) { setModalModo(null); abrirPanel(); } else { sonido("error"); setCodFamiliaInput(""); } }}
+                      className="flex-1 rounded-full bg-sky-500 py-3 font-black text-white active:scale-95">Entrar</button>
+                    <button onClick={() => setModalModo(null)} className="rounded-full bg-slate-200 px-5 py-3 font-black text-slate-600 active:scale-95">Cerrar</button>
+                  </div>
+                </>
+              ) : modalModo === "limite" ? (
                 <>
                   <p className="text-xl font-black text-slate-800">{jugadasHoy >= LIMITE_FREE ? "🌙 ¡Cuánto jugaste hoy!" : "💎 Función Premium"}</p>
                   <p className="mt-2 text-sm font-bold text-slate-600">
