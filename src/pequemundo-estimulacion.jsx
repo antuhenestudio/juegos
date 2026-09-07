@@ -2135,6 +2135,114 @@ function JuegoTrazar({ params, alTerminar }) {
   );
 }
 
+// ---------- Plataformas con física real (Phaser 3): la aventura de Chispa ----------
+function generarNivelPlataforma(p) {
+  const W = 360, H = 420;
+  const n = Math.max(3, Math.round(p.estrellas || 3));
+  const plataformas = [{ x: W / 2, y: H - 10, w: W, suelo: true }];
+  const estrellas = [];
+  let x = 70, y = H - 78, dir = 1;
+  for (let i = 0; i < n; i++) {
+    plataformas.push({ x, y, w: 92 });
+    estrellas.push({ x, y: y - 36, orden: i + 1 });
+    y = Math.max(48, y - (55 + azar(35))); // salto vertical ≤ 90px (alcanzable con la física)
+    x += dir * (85 + azar(55));            // salto horizontal ≤ 140px
+    if (x < 58) { x = 58; dir = 1; }
+    if (x > W - 58) { x = W - 58; dir = -1; }
+  }
+  const movibles = Math.min(Math.round(p.mov || 0), n - 1);
+  for (let i = 0; i < movibles; i++) plataformas[plataformas.length - 1 - i].mov = true;
+  return { W, H, plataformas, estrellas, n };
+}
+function JuegoPlataforma({ params, alTerminar, solito }) {
+  const cajaRef = useRef(null);
+  const teclasRef = useRef({ izq: false, der: false, salto: false });
+  const [nivel] = useState(() => generarNivelPlataforma(params));
+  const [juntadas, setJuntadas] = useState(0);
+  const [puntos, setPuntos] = useState(nivel.n * 2);
+  useEffect(() => {
+    if (solito) { const t = setTimeout(() => hablar(`¡Ayudá a Chispa! Saltá por las plataformas y juntá los números en orden: primero el 1, después el 2...`, AUDIO_ON, 0.95), 400); return () => clearTimeout(t); }
+  }, []); // eslint-disable-line
+  useEffect(() => {
+    const Ph = typeof window !== "undefined" && window.Phaser;
+    if (!Ph || !cajaRef.current) return;
+    let vivos = nivel.n, siguiente = 1, pts = nivel.n * 2;
+    const esc = {
+      create() {
+        this.physics.world.setBounds(0, 0, nivel.W, nivel.H);
+        const suelos = this.physics.add.staticGroup();
+        const moviles = [];
+        nivel.plataformas.forEach((pl) => {
+          const r = this.add.rectangle(pl.x, pl.y, pl.w, 14, pl.suelo ? 0x94a3b8 : 0x38bdf8).setStrokeStyle(2, 0xffffff);
+          if (pl.mov) {
+            this.physics.add.existing(r);
+            r.body.setAllowGravity(false); r.body.setImmovable(true); r.body.setVelocityX(40);
+            moviles.push(r);
+          } else suelos.add(r);
+        });
+        this.moviles = moviles;
+        this.chispa = this.add.text(34, nivel.H - 46, "🦊", { fontSize: "30px" });
+        this.physics.add.existing(this.chispa);
+        this.chispa.body.setCollideWorldBounds(true).setSize(26, 28).setOffset(3, 4);
+        this.physics.add.collider(this.chispa, suelos);
+        moviles.forEach((m) => this.physics.add.collider(this.chispa, m));
+        const KEYCAPS = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣"];
+        this.grupoEstrellas = nivel.estrellas.map((e) => {
+          const t = this.add.text(e.x - 13, e.y - 13, KEYCAPS[e.orden - 1], { fontSize: "24px" });
+          t.orden = e.orden;
+          this.physics.add.existing(t);
+          t.body.setAllowGravity(false);
+          this.physics.add.overlap(this.chispa, t, () => {
+            if (!t.active) return;
+            if (t.orden === siguiente) {
+              siguiente += 1; vivos -= 1; t.destroy(); sonido("estrella"); setJuntadas(nivel.n - vivos);
+              if (vivos === 0) { sonido("fanfarria"); lanzarConfeti(26); this.time.delayedCall(600, () => alTerminar(pts, nivel.n * 2)); }
+            } else if (!t.frio) {
+              t.frio = true; this.time.delayedCall(900, () => { t.frio = false; });
+              sonido("error"); pts = Math.max(nivel.n, pts - 1); setPuntos(pts);
+              this.tweens.add({ targets: t, angle: { from: -15, to: 15 }, duration: 90, yoyo: true, repeat: 2, onComplete: () => t.setAngle(0) });
+            }
+          });
+          return t;
+        });
+        this.cursores = this.input.keyboard.createCursorKeys();
+      },
+      update() {
+        const b = this.chispa.body, k = teclasRef.current, c = this.cursores;
+        const izq = k.izq || c.left.isDown, der = k.der || c.der || c.right.isDown;
+        b.setVelocityX(izq ? -165 : der ? 165 : 0);
+        if ((k.salto || c.up.isDown || c.space.isDown) && b.blocked.down) { b.setVelocityY(-455); k.salto = false; sonido("tap"); }
+        this.moviles.forEach((m) => { if (m.x < 70) m.body.setVelocityX(45); if (m.x > nivel.W - 70) m.body.setVelocityX(-45); });
+      },
+    };
+    const juego = new Ph.Game({
+      type: Ph.AUTO, parent: cajaRef.current, width: nivel.W, height: nivel.H, backgroundColor: "#e0f2fe",
+      physics: { default: "arcade", arcade: { gravity: { y: 900 } } },
+      scale: { mode: Ph.Scale.FIT, autoCenter: Ph.Scale.CENTER_HORIZONTALLY },
+      scene: esc,
+    });
+    return () => juego.destroy(true);
+  }, []); // eslint-disable-line
+  const boton = "flex h-14 w-14 items-center justify-center rounded-2xl bg-sky-500 text-2xl font-black text-white shadow-md active:scale-90 select-none";
+  return (
+    <div className="flex flex-col items-center gap-3">
+      <Consigna>¡Juntá los números en orden! 🦊</Consigna>
+      <p className="text-sm font-black text-slate-500">⭐ {juntadas} de {nivel.n} · Puntos: {puntos}</p>
+      <div ref={cajaRef} className="w-full max-w-sm overflow-hidden rounded-2xl shadow-md" style={{ aspectRatio: "360/420" }}>
+        {!(typeof window !== "undefined" && window.Phaser) && <p className="p-6 text-center text-sm font-bold text-slate-400">Cargando el motor de física…</p>}
+      </div>
+      <div className="flex w-full max-w-sm items-center justify-between">
+        <div className="flex gap-2">
+          <button className={boton} onPointerDown={() => { teclasRef.current.izq = true; }} onPointerUp={() => { teclasRef.current.izq = false; }} onPointerLeave={() => { teclasRef.current.izq = false; }}>◀️</button>
+          <button className={boton} onPointerDown={() => { teclasRef.current.der = true; }} onPointerUp={() => { teclasRef.current.der = false; }} onPointerLeave={() => { teclasRef.current.der = false; }}>▶️</button>
+        </div>
+        <button className={boton + " w-24"} onPointerDown={() => { teclasRef.current.salto = true; }}>🆙</button>
+      </div>
+      <p className="text-[10px] font-bold text-slate-400">En compu también podés usar las flechas del teclado ⌨️</p>
+    </div>
+  );
+}
+
 // ---------- Ajedrez: aprender cómo mueve cada pieza ----------
 const PIEZAS_AJEDREZ = {
   torre: { e: "♖", regla: "La torre mueve en línea recta: horizontal o vertical, tantas casillas como quiera (sin saltar árboles)." },
@@ -2531,6 +2639,7 @@ S("gra-pre", "El predicado de la oración", "🧑‍🏫", "lenguaje", "lengua",
 
 // --- Pensar · ajedrez y lógica física ---
 S("aje-1", "Ajedrez: cómo mueve cada pieza", "♟️", "cognitiva", "ajedrez", ["6-8", "9-11"], 30, { nPiezas: 1, obst: 0 }, { nPiezas: 6, obst: 3 });
+S("pla-fx", "La aventura de Chispa (¡con física!)", "🦊", "psicomotor", "plataforma", ["6-8", "9-11"], 20, { estrellas: 3, mov: 0 }, { estrellas: 7, mov: 2 });
 S("bal-1", "La balanza mágica", "⚖️", "cognitiva", "balanza", ["3-5", "6-8"], 25, { max: 5, nPesas: 2 }, { max: 18, nPesas: 4 });
 
 // --- Pensar · técnicas de estudio ---
@@ -3886,7 +3995,7 @@ h1{color:#7c3aed;font-size:34px;margin:8px 0}.n{font-size:28px;font-weight:bold;
           const k = Math.max(1, Math.ceil(s.niveles / 2));
           const params = paramsNivel(s, k);
           const esMC = !!GENERADORES[s.motor];
-          const CUSTOM = { memoria: JuegoMemoria, atrapa: JuegoAtrapa, alcancia: JuegoAlcancia, pronuncia: JuegoPronuncia, trazar: JuegoTrazar, ajedrez: JuegoAjedrez, balanza: JuegoBalanza };
+          const CUSTOM = { memoria: JuegoMemoria, atrapa: JuegoAtrapa, alcancia: JuegoAlcancia, pronuncia: JuegoPronuncia, trazar: JuegoTrazar, ajedrez: JuegoAjedrez, balanza: JuegoBalanza, plataforma: JuegoPlataforma };
           const Comp = CUSTOM[s.motor];
           const repetirDemo = () => { setSemilla((Date.now() % 2147483647) || 7); setDemoJuego({ serie: s, clave: Date.now() }); };
           return (
@@ -4247,7 +4356,8 @@ h1{color:#7c3aed;font-size:34px;margin:8px 0}.n{font-size:28px;font-weight:bold;
                 {motor === "trazar" && <JuegoTrazar params={juegoActivo.params} alTerminar={terminarJuego} />}
                 {motor === "ajedrez" && <JuegoAjedrez params={juegoActivo.params} alTerminar={terminarJuego} solito={modoSolito} />}
                 {motor === "balanza" && <JuegoBalanza params={juegoActivo.params} alTerminar={terminarJuego} solito={modoSolito} />}
-                {motor !== "memoria" && motor !== "atrapa" && motor !== "alcancia" && motor !== "pronuncia" && motor !== "trazar" && motor !== "ajedrez" && motor !== "balanza" && (
+                {motor === "plataforma" && <JuegoPlataforma params={juegoActivo.params} alTerminar={terminarJuego} solito={modoSolito} />}
+                {motor !== "memoria" && motor !== "atrapa" && motor !== "alcancia" && motor !== "pronuncia" && motor !== "trazar" && motor !== "ajedrez" && motor !== "balanza" && motor !== "plataforma" && (
                   <JuegoRondas
                     generar={GENERADORES[motor](juegoActivo.params, rango)}
                     colorTexto={juegoActivo.serie.colorTexto}
