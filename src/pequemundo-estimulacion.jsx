@@ -125,6 +125,28 @@ function festejar() {
   hablar(FRASES_FESTEJO[Math.floor(Math.random() * FRASES_FESTEJO.length)], AUDIO_ON);
 }
 
+// ---------- música de fondo gamer (generativa, según la edad) ----------
+let musTimer = null;
+function detenerMusica() { if (musTimer) { clearInterval(musTimer); musTimer = null; } }
+function iniciarMusica(rango) {
+  if (musTimer || !AUDIO_ON) return;
+  const c = ctxAudio();
+  if (!c) return;
+  const escalas = { "3-5": [262, 294, 330, 392, 440], "6-8": [262, 330, 392, 494, 523, 587], "9-11": [220, 262, 330, 392, 440, 523, 587] };
+  const esc = escalas[rango] || escalas["6-8"];
+  const paso = rango === "3-5" ? 950 : rango === "6-8" ? 640 : 480;
+  let i = Math.floor(Math.random() * esc.length);
+  musTimer = setInterval(() => {
+    if (!AUDIO_ON) return;
+    const c2 = ctxAudio();
+    if (!c2) return;
+    const t = c2.currentTime;
+    i = Math.max(0, Math.min(esc.length - 1, i + (Math.floor(Math.random() * 3) - 1)));
+    tono(c2, esc[i], t, (paso / 1000) * 0.85, "triangle", 0.032);
+    if (rango !== "3-5" && Math.random() < 0.45) tono(c2, esc[i] / 2, t, paso / 1000, "sine", 0.026);
+  }, paso);
+}
+
 // ---------- edad a partir de la fecha de nacimiento ----------
 function calcularEdad(isoNacimiento) {
   const hoy = new Date();
@@ -431,6 +453,8 @@ const AREAS = {
     habilidad: "Ejercita coordinación ojo-mano y velocidad de respuesta, vinculadas con la motricidad fina que después requiere la escritura." },
   convivir: { nombre: "Convivir", icono: "💛", color: "bg-rose-500", suave: "bg-rose-100", texto: "text-rose-700", desc: "Modales, palabras mágicas y ayudar en casa",
     habilidad: "Ejercita habilidades socioemocionales: reconocer conductas positivas, usar las palabras mágicas (por favor, gracias, perdón), colaborar en el hogar y tratar con cariño. Los programas de aprendizaje socioemocional en la infancia muestran, en la investigación educativa, asociaciones con mejor convivencia y clima familiar y escolar." },
+  descubrir: { nombre: "Descubrir", icono: "🦁", color: "bg-cyan-500", suave: "bg-cyan-100", texto: "text-cyan-700", desc: "Animales, ciencia, geografía e historia",
+    habilidad: "Conocimiento del mundo: datos de animales e insectos, nociones de ciencia y del sistema solar, capitales y banderas, e historia argentina básica. El conocimiento general amplio está asociado, en la investigación educativa, con mejor comprensión lectora: cuanto más sabés del mundo, más entendés lo que leés." },
   idiomas: { nombre: "Idiomas", icono: "🌍", color: "bg-indigo-500", suave: "bg-indigo-100", texto: "text-indigo-700", desc: "Inglés, francés, portugués, chino y árabe",
     habilidad: "Primeras palabras en otros idiomas: colores, números, saludos y familia, siempre con audio. Aprender idiomas es valioso en sí mismo (comunicación, cultura); sobre ventajas cognitivas adicionales del bilingüismo la evidencia científica está en debate, y por eso no las prometemos. Este módulo se habilita desde los 6 años: la exposición natural temprana a otros idiomas (canciones, juego en familia) es positiva según la investigación sobre bilingüismo, pero las lecciones estructuradas en pantalla rinden mejor cuando el niño ya afianzó la pronunciación de su propia lengua." },
   economia: { nombre: "Ahorrar", icono: "💰", color: "bg-pink-500", suave: "bg-pink-100", texto: "text-pink-700", desc: "Dinero, precios, ahorro y decisiones",
@@ -511,6 +535,82 @@ const SITUACIONES = [
   { e: "💔", q: "Rompiste sin querer algo de tu papá.", ops: ["Le cuento la verdad y pido perdón", "Lo escondo", "Culpo a mi hermano"], ok: 0, por: "La verdad más perdón es la fórmula que arregla casi todo." },
   { e: "👵", q: "Tu abuela cuenta una historia larga.", ops: ["La escucho con atención", "Miro el celular", "La interrumpo"], ok: 0, por: "Escuchar a los abuelos es un regalo para ellos y para vos." },
   { e: "🤫", q: "Un amigo te pide hacer algo que sabés que está mal.", ops: ["Digo que no y aviso a un grande si hace falta", "Lo hago para que no se enoje", "Lo hago si nadie mira"], ok: 0, por: "Decir «no» a lo que está mal es de valientes, aunque cueste." },
+];
+
+// ---------- datos de Descubrir ----------
+const B_QUIZ_ANIMALES = [
+  { e: "🐮", q: "¿Qué come la vaca?", ops: ["Pasto", "Carne", "Pescado"], ok: 0, por: "La vaca es herbívora: come pasto y hierbas." },
+  { e: "🐟", q: "¿Dónde vive el pez?", ops: ["En el agua", "En los árboles", "Bajo tierra"], ok: 0, por: "Los peces respiran en el agua con sus branquias." },
+  { e: "🦒", q: "¿Cuál es el animal más alto del mundo?", ops: ["La jirafa", "El caballo", "El oso"], ok: 0, por: "La jirafa puede medir más de 5 metros." },
+  { e: "🐔", q: "¿Qué animal pone huevos?", ops: ["La gallina", "La vaca", "El perro"], ok: 0, por: "Las aves, como la gallina, nacen de huevos." },
+  { e: "🐄", q: "¿Cómo se llama la cría de la vaca?", ops: ["Ternero", "Cachorro", "Pollito"], ok: 0, por: "El ternero es el bebé de la vaca." },
+  { e: "🐻", q: "¿Qué animal duerme casi todo el invierno?", ops: ["El oso", "La vaca", "El caballo"], ok: 0, por: "Se llama hibernar: el oso descansa hasta la primavera." },
+  { e: "🦇", q: "¿Cuál de estos vuela?", ops: ["El murciélago", "El perro", "La tortuga"], ok: 0, por: "El murciélago es el único mamífero que vuela de verdad." },
+  { e: "🐝", q: "¿Qué hacen las abejas al visitar las flores?", ops: ["Llevan polen de flor en flor", "Se las comen", "Las riegan"], ok: 0, por: "Eso se llama polinizar, y gracias a eso crecen frutas y semillas." },
+  { e: "🕷️", q: "¿Cuántas patas tiene una araña?", ops: ["8", "6", "4"], ok: 0, por: "Las arañas tienen 8 patas: por eso no son insectos." },
+  { e: "🐜", q: "¿Cuántas patas tienen los insectos?", ops: ["6", "8", "10"], ok: 0, por: "Todos los insectos tienen 6 patas, como la hormiga." },
+  { e: "🍯", q: "¿Qué producen las abejas?", ops: ["Miel", "Leche", "Lana"], ok: 0, por: "Las abejas fabrican miel con el néctar de las flores." },
+  { e: "🐆", q: "¿Cuál es el animal terrestre más veloz?", ops: ["El guepardo", "La tortuga", "El elefante"], ok: 0, por: "El guepardo corre más de 100 km por hora, ¡pero se cansa rápido!" },
+  { e: "🐋", q: "La ballena es…", ops: ["Un mamífero", "Un pez", "Un insecto"], ok: 0, por: "Aunque vive en el mar, respira aire y amamanta a sus crías." },
+  { e: "🐛", q: "¿En qué se convierte la oruga?", ops: ["En mariposa", "En araña", "En pez"], ok: 0, por: "Se transforma dentro del capullo: se llama metamorfosis." },
+];
+const B_QUIZ_CIENCIA = [
+  { e: "☀️", q: "¿Qué es el Sol?", ops: ["Una estrella", "Un planeta", "Una luna"], ok: 0, por: "El Sol es la estrella más cercana a la Tierra." },
+  { e: "🌍", q: "¿En qué planeta vivimos?", ops: ["La Tierra", "Marte", "La Luna"], ok: 0, por: "La Tierra es nuestro hogar, el planeta azul." },
+  { e: "🪐", q: "¿Cuál es el planeta más cercano al Sol?", ops: ["Mercurio", "Júpiter", "Saturno"], ok: 0, por: "Mercurio es el primero y el más chiquito." },
+  { e: "📅", q: "¿Cuánto tarda la Tierra en dar la vuelta al Sol?", ops: ["Un año", "Un día", "Una semana"], ok: 0, por: "365 días: ¡por eso cumplís años una vez por año!" },
+  { e: "🧊", q: "El agua muy fría se convierte en…", ops: ["Hielo", "Vapor", "Arena"], ok: 0, por: "Al congelarse, el agua se vuelve sólida: hielo." },
+  { e: "💨", q: "El agua muy caliente se convierte en…", ops: ["Vapor", "Hielo", "Piedra"], ok: 0, por: "Al hervir, el agua se evapora y sube como vapor." },
+  { e: "🌱", q: "¿Qué necesitan las plantas para crecer?", ops: ["Agua, luz y tierra", "Solo música", "Caramelos"], ok: 0, por: "Con agua, luz del sol y nutrientes de la tierra, crecen fuertes." },
+  { e: "🌙", q: "¿Qué vemos de noche girando alrededor de la Tierra?", ops: ["La Luna", "El Sol", "Otro planeta"], ok: 0, por: "La Luna es el satélite natural de la Tierra." },
+  { e: "🌈", q: "¿Cuándo aparece el arcoíris?", ops: ["Con sol y lluvia a la vez", "Solo de noche", "Cuando nieva"], ok: 0, por: "La luz del sol se separa en colores al pasar por las gotitas." },
+  { e: "🫁", q: "¿Qué usamos para respirar?", ops: ["Los pulmones", "El estómago", "Las orejas"], ok: 0, por: "Los pulmones llevan el aire a todo el cuerpo." },
+  { e: "❤️", q: "¿Qué órgano bombea la sangre?", ops: ["El corazón", "El cerebro", "La nariz"], ok: 0, por: "El corazón late todo el día para mover la sangre." },
+  { e: "🦴", q: "¿Qué sostiene nuestro cuerpo por dentro?", ops: ["Los huesos", "El pelo", "La ropa"], ok: 0, por: "El esqueleto tiene más de 200 huesos que nos sostienen." },
+];
+const B_QUIZ_HISTORIA = [
+  { e: "🐎", q: "¿Quién cruzó los Andes para ayudar a liberar países?", ops: ["San Martín", "Belgrano", "Sarmiento"], ok: 0, por: "José de San Martín cruzó la cordillera con su ejército." },
+  { e: "🇦🇷", q: "¿Quién creó la bandera argentina?", ops: ["Belgrano", "San Martín", "Colón"], ok: 0, por: "Manuel Belgrano la creó a orillas del río Paraná." },
+  { e: "🎩", q: "¿Qué recordamos el 25 de Mayo?", ops: ["El Primer Gobierno Patrio de 1810", "Un mundial de fútbol", "La llegada del tren"], ok: 0, por: "En 1810 se formó el primer gobierno propio en Buenos Aires." },
+  { e: "📜", q: "¿Qué se declaró el 9 de Julio de 1816?", ops: ["La Independencia", "El inicio de las vacaciones", "La primavera"], ok: 0, por: "En Tucumán se declaró la Independencia de Argentina." },
+  { e: "🎨", q: "¿De qué colores es la bandera argentina?", ops: ["Celeste y blanca", "Roja y verde", "Negra y amarilla"], ok: 0, por: "Celeste y blanca, con un sol dorado en el medio." },
+  { e: "📚", q: "¿Qué prócer impulsó las escuelas y fue presidente?", ops: ["Sarmiento", "Belgrano", "San Martín"], ok: 0, por: "Domingo F. Sarmiento fundó cientos de escuelas." },
+  { e: "☀️", q: "¿Qué tiene la bandera argentina en el centro?", ops: ["Un sol", "Una estrella", "Una luna"], ok: 0, por: "Es el Sol de Mayo, símbolo de la patria." },
+  { e: "🏫", q: "¿Dónde se declaró la Independencia en 1816?", ops: ["En Tucumán", "En la playa", "En la Luna"], ok: 0, por: "En la Casa de Tucumán, que todavía se puede visitar." },
+];
+const B_QUIZ_ESTUDIO = [
+  { e: "📅", q: "¿Qué funciona mejor para recordar lo que estudiás?", ops: ["Repasar un poco varios días", "Todo junto la última noche", "Leer una sola vez"], ok: 0, por: "Se llama práctica espaciada y es de lo más probado por la ciencia del aprendizaje." },
+  { e: "🤫", q: "Antes de estudiar conviene…", ops: ["Preparar el lugar y alejar distracciones", "Prender la tele", "Tener el celu al lado"], ok: 0, por: "Un lugar tranquilo hace que el mismo tiempo rinda el doble." },
+  { e: "🗣️", q: "Después de leer un texto, ¿qué ayuda a fijarlo?", ops: ["Contarlo con tus palabras", "Cerrar el libro y ya", "Mirarlo de lejos"], ok: 0, por: "Explicarlo con tus palabras es de las técnicas más poderosas." },
+  { e: "😴", q: "¿Dormir bien ayuda a aprender?", ops: ["Sí: la memoria se guarda al dormir", "No, es tiempo perdido", "Solo a los adultos"], ok: 0, por: "Mientras dormís, el cerebro ordena y guarda lo aprendido." },
+  { e: "🙋", q: "Si algo no lo entendés…", ops: ["Preguntar está buenísimo", "Mejor disimular", "Abandonar"], ok: 0, por: "Preguntar es de valientes y es el camino más corto para entender." },
+  { e: "🎧", q: "¿Estudiar con música con letra a todo volumen?", ops: ["Suele distraer", "Ayuda siempre", "Es obligatorio"], ok: 0, por: "La letra compite con lo que leés. Música suave sin letra molesta menos." },
+  { e: "📝", q: "Un buen resumen tiene…", ops: ["Las ideas principales con tus palabras", "Todo copiado igual", "Solo dibujitos"], ok: 0, por: "Elegir qué es lo importante ya es estudiar." },
+  { e: "❓", q: "Hacerte preguntas a vos mismo sobre lo estudiado…", ops: ["Ayuda un montón a fijarlo", "No sirve", "Da mala suerte"], ok: 0, por: "Autoevaluarse es más efectivo que releer mil veces." },
+  { e: "⏸️", q: "¿Qué conviene hacer cada 25-30 minutos de estudio?", ops: ["Una pausa cortita", "Seguir 5 horas sin parar", "Dormirse"], ok: 0, por: "Las pausas breves ayudan a la concentración." },
+];
+const B_CAPITALES = [
+  { pais: "Argentina", cap: "Buenos Aires", e: "🇦🇷" }, { pais: "Chile", cap: "Santiago", e: "🇨🇱" },
+  { pais: "Uruguay", cap: "Montevideo", e: "🇺🇾" }, { pais: "Perú", cap: "Lima", e: "🇵🇪" },
+  { pais: "Colombia", cap: "Bogotá", e: "🇨🇴" }, { pais: "Paraguay", cap: "Asunción", e: "🇵🇾" },
+  { pais: "Brasil", cap: "Brasilia", e: "🇧🇷" }, { pais: "México", cap: "Ciudad de México", e: "🇲🇽" },
+  { pais: "España", cap: "Madrid", e: "🇪🇸" }, { pais: "Francia", cap: "París", e: "🇫🇷" },
+  { pais: "Italia", cap: "Roma", e: "🇮🇹" }, { pais: "Estados Unidos", cap: "Washington", e: "🇺🇸" },
+  { pais: "Japón", cap: "Tokio", e: "🇯🇵" }, { pais: "China", cap: "Pekín", e: "🇨🇳" },
+];
+const B_LECTURAS = [
+  { t: "Luna es una gata blanca. Todas las mañanas toma su leche y después se duerme arriba del sillón.", q: "¿Qué hace Luna después de tomar la leche?", ops: ["Se duerme en el sillón", "Sale a pasear", "Juega con la pelota"], ok: 0 },
+  { t: "Tomi tiene una bici roja. Los sábados va a la plaza con su papá y andan juntos hasta que se esconde el sol.", q: "¿Cuándo va Tomi a la plaza?", ops: ["Los sábados", "Todos los días", "Los lunes"], ok: 0 },
+  { t: "En el jardín de Emma hay tres flores amarillas y una roja. Cada tarde las riega con su regadera verde.", q: "¿De qué color es la regadera de Emma?", ops: ["Verde", "Roja", "Amarilla"], ok: 0 },
+  { t: "Bruno perdió un diente. Lo guardó abajo de la almohada y a la mañana encontró una moneda.", q: "¿Dónde guardó Bruno el diente?", ops: ["Abajo de la almohada", "En la mochila", "En el jardín"], ok: 0 },
+  { t: "La maestra pidió llevar una fruta. Sofía llevó una manzana, Leo una banana y Vera llevó uvas.", q: "¿Qué fruta llevó Leo?", ops: ["Una banana", "Una manzana", "Uvas"], ok: 0 },
+  { t: "El perro Rocco ladra cuando suena el timbre, pero mueve la cola cuando llega la abuela.", q: "¿Qué hace Rocco cuando llega la abuela?", ops: ["Mueve la cola", "Ladra fuerte", "Se esconde"], ok: 0 },
+  { t: "Sofi guardó el paraguas en la mochila antes de salir. Al volver, tenía el pelo seco aunque todos llegaban empapados.", q: "¿Por qué Sofi tenía el pelo seco?", ops: ["Porque usó el paraguas", "Porque no salió de su casa", "Porque hacía calor"], ok: 0, dif: true },
+  { t: "Nico miró el cielo gris, cerró las ventanas y entró la ropa que estaba colgada afuera.", q: "¿Qué pensó Nico que iba a pasar?", ops: ["Que iba a llover", "Que iba a salir el sol", "Que era de noche"], ok: 0, dif: true },
+  { t: "Cata sopló las velitas, todos aplaudieron y después repartieron la torta en pedacitos.", q: "¿Qué estaban festejando?", ops: ["Un cumpleaños", "Un partido", "La Navidad"], ok: 0, dif: true },
+  { t: "El semáforo se puso verde, pero Julián esperó: un señor mayor todavía estaba cruzando despacio.", q: "¿Por qué esperó Julián?", ops: ["Para cuidar al señor que cruzaba", "Porque estaba cansado", "Porque el semáforo estaba roto"], ok: 0, dif: true },
+  { t: "Mara metió la mano en el bolsillo y encontró arena. Sonrió acordándose del fin de semana.", q: "¿Dónde estuvo Mara el fin de semana?", ops: ["En la playa", "En el cine", "En la nieve"], ok: 0, dif: true },
+  { t: "Apenas terminó de comer, Fede llevó su plato, agarró la mochila y se puso la campera del club.", q: "¿A dónde iba Fede probablemente?", ops: ["A entrenar al club", "A dormir la siesta", "Al médico"], ok: 0, dif: true },
 ];
 
 // ---------- datos de Idiomas ----------
@@ -631,24 +731,59 @@ const Tarjeta = ({ children }) => (
   <div className="flex flex-col items-center gap-2 rounded-3xl bg-white px-6 py-5 shadow-md sm:px-8 sm:py-6">{children}</div>
 );
 
-function JuegoRondas({ total = 8, generar, alTerminar, colorTexto = "text-violet-600", formato = "cuadrado", espera = 1000 }) {
+function JuegoRondas({ total = 8, generar, alTerminar, colorTexto = "text-violet-600", formato = "cuadrado", espera = 1000, solito = false }) {
   const [r, setR] = useState(() => generar());
   const [num, setNum] = useState(1);
   const [puntos, setPuntos] = useState(0);
   const [marca, setMarca] = useState(null);
+  const [preSel, setPreSel] = useState(null);
+  const [fallidas, setFallidas] = useState([]);
+
+  // en modo Solito la app lee la consigna de cada ronda
+  useEffect(() => {
+    if (!solito) return;
+    const t = setTimeout(() => {
+      if (r.decir) r.decir();
+      else if (r.dice) hablar(r.dice, AUDIO_ON, 0.95);
+    }, 400);
+    return () => clearTimeout(t);
+  }, [num]); // eslint-disable-line
+
+  const decirOpcion = (op) => {
+    if (r.hablarOpcion) r.hablarOpcion(op);
+    else hablar(String(op), AUDIO_ON, 0.95);
+  };
+
+  const avanzar = (nuevos) => {
+    setTimeout(() => {
+      if (num >= total) alTerminar(nuevos, total * 10);
+      else { setNum(num + 1); setR(generar()); setMarca(null); setPreSel(null); setFallidas([]); }
+    }, r.explicacion ? espera + 700 : espera);
+  };
 
   const responder = (op) => {
     if (marca !== null) return;
+    if (fallidas.includes(op)) { decirOpcion(op); return; }
+    if (solito && preSel !== op) { setPreSel(op); sonido("tap"); decirOpcion(op); return; }
     const ok = op === r.respuesta;
-    if (ok) festejar(); else sonido("error");
-    setMarca(op);
-    const nuevos = ok ? puntos + 1 : puntos;
-    if (ok) setPuntos(nuevos);
-    const ms = r.explicacion ? espera + 700 : espera;
-    setTimeout(() => {
-      if (num >= total) alTerminar(nuevos, total);
-      else { setNum(num + 1); setR(generar()); setMarca(null); }
-    }, ms);
+    if (ok) {
+      festejar();
+      const ganados = solito && fallidas.length > 0 ? 6 : 10;
+      const nuevos = puntos + ganados;
+      setPuntos(nuevos);
+      setMarca(op);
+      avanzar(nuevos);
+    } else if (solito) {
+      // reintentar hasta que salga bien
+      sonido("error");
+      hablar(["Probá otra vez", "Casi... probá otra", "¡Vos podés! Otra vez"][Math.floor(Math.random() * 3)], AUDIO_ON);
+      setFallidas([...fallidas, op]);
+      setPreSel(null);
+    } else {
+      sonido("error");
+      setMarca(op);
+      avanzar(puntos);
+    }
   };
 
   const esCorta = (op) => String(op).length <= 3;
@@ -665,12 +800,18 @@ function JuegoRondas({ total = 8, generar, alTerminar, colorTexto = "text-violet
               ? "h-16 w-16 rounded-2xl text-2xl sm:h-20 sm:w-20 sm:text-3xl"
               : "w-full rounded-full px-6 py-3 text-lg sm:py-4 sm:text-xl"} font-black shadow-md transition-transform active:scale-90 ${
               marca !== null && op === r.respuesta ? "bg-green-300 text-green-900"
-              : marca === op ? "bg-red-200 text-red-800" : "bg-white text-slate-700"
+              : marca === op ? "bg-red-200 text-red-800"
+              : fallidas.includes(op) ? "bg-red-50 text-red-300 line-through"
+              : preSel === op ? "bg-white text-slate-700 ring-4 ring-sky-300"
+              : "bg-white text-slate-700"
             }`}>
             {String(op)}
           </button>
         ))}
       </div>
+      {solito && marca === null && (
+        <p className="text-xs font-bold text-slate-400">🎧 Tocá para escuchar · tocá de nuevo para elegir</p>
+      )}
       {marca !== null && r.explicacion && (
         <p className={`max-w-sm text-center text-base font-bold sm:text-lg ${marca === r.respuesta ? "text-green-700" : "text-amber-700"}`}>
           {marca === r.respuesta ? "✅ " : "💡 "}{r.explicacion}
@@ -715,6 +856,7 @@ const GENERADORES = {
     return {
       pregunta: (<><Consigna>Resolvé 🧮</Consigna><Tarjeta><p className="text-4xl font-black text-slate-800 sm:text-5xl">{texto}</p></Tarjeta></>),
       opciones: opcionesNum(resp, 3, disp), respuesta: resp,
+      dice: "¿Cuánto es " + texto.replace("−", " menos ").replace("×", " por ").replace("÷", " dividido ").replace("+", " más ") + "?",
     };
   },
 
@@ -727,7 +869,7 @@ const GENERADORES = {
         <div className="flex items-center gap-3 text-4xl">
           <span>{em.repeat(a)}</span><span className="font-black text-slate-500">+</span><span>{em.repeat(b)}</span>
         </div></Tarjeta></>),
-      opciones: opcionesNum(resp, 3, 2, 1), respuesta: resp,
+      opciones: opcionesNum(resp, 3, 2, 1), respuesta: resp, dice: "¿Cuántos hay en total?",
     };
   },
 
@@ -739,7 +881,7 @@ const GENERADORES = {
         <div className="flex max-w-xs flex-wrap justify-center gap-1 text-3xl sm:text-4xl">
           {[...Array(n)].map((_, i) => <span key={i}>{em}</span>)}
         </div></Tarjeta></>),
-      opciones: opcionesNum(n, 3, 2, 1), respuesta: n,
+      opciones: opcionesNum(n, 3, 2, 1), respuesta: n, dice: "¿Cuántos hay?",
     };
   },
 
@@ -751,7 +893,7 @@ const GENERADORES = {
     const resp = p.modo === "menor" ? Math.min(...arr) : Math.max(...arr);
     return {
       pregunta: (<><Consigna>¿Cuál es el número más {p.modo === "menor" ? "chico" : "grande"}? 🤔</Consigna></>),
-      opciones: mezclar(arr), respuesta: resp,
+      opciones: mezclar(arr), respuesta: resp, dice: `¿Cuál es el número más ${p.modo === "menor" ? "chico" : "grande"}?`,
     };
   },
 
@@ -759,7 +901,7 @@ const GENERADORES = {
     const n = azar(99) + 1;
     return {
       pregunta: (<><Consigna>¿El número es par o impar?</Consigna><Tarjeta><p className="text-5xl font-black text-slate-800">{n}</p></Tarjeta></>),
-      opciones: ["Par", "Impar"], respuesta: n % 2 === 0 ? "Par" : "Impar",
+      opciones: ["Par", "Impar"], respuesta: n % 2 === 0 ? "Par" : "Impar", dice: `¿El número ${n} es par o impar?`,
       explicacion: n % 2 === 0 ? `${n} se puede repartir en dos partes iguales: es par.` : `${n} no se reparte en dos partes iguales: es impar.`,
     };
   },
@@ -772,7 +914,7 @@ const GENERADORES = {
     return {
       pregunta: (<><Consigna>¿Qué número sigue? ➡️</Consigna><Tarjeta>
         <p className="text-3xl font-black text-slate-800 sm:text-4xl">{sec.join(" · ")} · <span className="text-violet-500">?</span></p></Tarjeta></>),
-      opciones: opcionesNum(resp, 3, Math.max(2, paso)), respuesta: resp,
+      opciones: opcionesNum(resp, 3, Math.max(2, paso)), respuesta: resp, dice: "¿Qué número sigue?",
     };
   },
 
@@ -783,7 +925,7 @@ const GENERADORES = {
     return {
       pregunta: (<><Consigna>¿Qué número falta? 🔍</Consigna><Tarjeta>
         <p className="text-3xl font-black text-slate-800 sm:text-4xl">{sec.join(" · ")}</p></Tarjeta></>),
-      opciones: opcionesNum(falta, 3, 2, 1), respuesta: falta,
+      opciones: opcionesNum(falta, 3, 2, 1), respuesta: falta, dice: "¿Qué número falta?",
     };
   },
 
@@ -805,7 +947,7 @@ const GENERADORES = {
           {sec.map((f, i) => <span key={i} className="text-3xl sm:text-4xl">{f}</span>)}
           <span className="flex h-10 w-10 items-center justify-center rounded-xl border-4 border-dashed border-violet-300 text-xl font-black text-violet-400">?</span>
         </div></>),
-      opciones: mezclar([...ops]), respuesta: resp,
+      opciones: mezclar([...ops]), respuesta: resp, dice: "¿Qué sigue en la fila?",
     };
   },
 
@@ -821,7 +963,7 @@ const GENERADORES = {
             ? <Figura id={item.id} edad={edad} className="h-full w-full" />
             : <span className="text-7xl sm:text-8xl">{item.e}</span>}
         </div></>),
-      opciones: mezclar([...ops]), respuesta: item.p,
+      opciones: mezclar([...ops]), respuesta: item.p, dice: "¿Cómo se llama esto?",
     };
   },
 
@@ -915,7 +1057,7 @@ const GENERADORES = {
             </div>
           ))}
         </div></>),
-      opciones: ["A", "B"], respuesta: resp,
+      opciones: ["A", "B"], respuesta: resp, dice: `¿Dónde hay ${p.modo === "menos" ? "menos" : "más"}: en A o en B?`,
       explicacion: `A tiene ${a} y B tiene ${b}: hay ${p.modo === "menos" ? "menos" : "más"} en ${resp}.`,
     };
   },
@@ -929,7 +1071,7 @@ const GENERADORES = {
           <span className="max-w-xs text-center text-xl font-black text-slate-700">{it.t}</span></Tarjeta></>),
         opciones: ["Está bien 😊", "Está mal 😕"],
         respuesta: it.ok ? "Está bien 😊" : "Está mal 😕",
-        explicacion: it.por,
+        explicacion: it.por, dice: `${it.t}. ¿Está bien o está mal?`,
       };
     }
     const banco = p.tipo === "magicas" ? MAGICAS : p.tipo === "ayudar" ? AYUDAR : SITUACIONES;
@@ -939,7 +1081,7 @@ const GENERADORES = {
         <Tarjeta><span className="text-5xl">{it.e}</span>
         <span className="max-w-xs text-center text-lg font-black text-slate-700">{it.q}</span></Tarjeta></>),
       opciones: mezclar([...it.ops]), respuesta: it.ops[it.ok],
-      explicacion: it.por,
+      explicacion: it.por, dice: it.q,
     };
   },
 
@@ -949,7 +1091,21 @@ const GENERADORES = {
     const it = items[azar(items.length)];
     const idi = IDIOMAS[p.idioma];
     const palabra = it[p.idioma];
-    const inverso = azar(100) < (p.pInv || 0);
+    const sorteo = azar(100);
+    if (sorteo < (p.pAud || 0)) {
+      // ESCUCHÁ Y ELEGÍ: suena la palabra, el niño toca el dibujito
+      const ops = new Set([it.e]);
+      while (ops.size < 3) ops.add(items[azar(items.length)].e);
+      return {
+        pregunta: (<><Consigna>Escuchá y tocá el dibujito 👂 {idi.bandera}</Consigna>
+          <Tarjeta><button onClick={() => hablarIdioma(palabra, idi.lang)}
+            className="rounded-full bg-indigo-500 px-8 py-4 text-2xl font-black text-white shadow-md active:scale-95">🔊 Escuchar</button></Tarjeta></>),
+        opciones: mezclar([...ops]), respuesta: it.e,
+        explicacion: `«${palabra}» es ${it.es} en ${idi.nombre.toLowerCase()}.`,
+        decir: () => hablarIdioma(palabra, idi.lang),
+      };
+    }
+    const inverso = sorteo < (p.pAud || 0) + (p.pInv || 0);
     const boton = (
       <button onClick={() => hablarIdioma(palabra, idi.lang)}
         className="rounded-full bg-indigo-100 px-5 py-2 text-lg font-black text-indigo-700 active:scale-95">🔊 Escuchar</button>
@@ -962,6 +1118,7 @@ const GENERADORES = {
           <Tarjeta><span className="text-3xl font-black text-indigo-700 sm:text-4xl">{palabra}</span>{boton}</Tarjeta></>),
         opciones: mezclar([...ops]), respuesta: it.es,
         explicacion: `«${palabra}» significa ${it.es} en ${idi.nombre.toLowerCase()}.`,
+        decir: () => hablarIdioma(palabra, idi.lang),
       };
     }
     const ops = new Set([palabra]);
@@ -972,6 +1129,62 @@ const GENERADORES = {
         <span className="text-2xl font-black text-slate-700">{it.es}</span>{boton}</Tarjeta></>),
       opciones: mezclar([...ops]), respuesta: palabra,
       explicacion: `${it.es} se dice «${palabra}» en ${idi.nombre.toLowerCase()}. ¡Tocá 🔊 y repetilo!`,
+      dice: `¿Cómo se dice ${it.es} en ${idi.nombre.toLowerCase()}?`,
+      hablarOpcion: (op) => hablarIdioma(String(op), idi.lang),
+    };
+  },
+
+  quiz: (p) => () => {
+    const it = p.banco[azar(p.banco.length)];
+    return {
+      pregunta: (<><Consigna>{p.titulo || "¿Sabés la respuesta? 🤔"}</Consigna>
+        <Tarjeta><span className="text-5xl">{it.e}</span>
+        <span className="max-w-xs text-center text-lg font-black text-slate-700">{it.q}</span></Tarjeta></>),
+      opciones: mezclar([...it.ops]), respuesta: it.ops[it.ok],
+      explicacion: it.por, dice: it.q,
+    };
+  },
+
+  lectura: (p) => () => {
+    const banco = B_LECTURAS.filter((x) => (p.dif ? x.dif : !x.dif));
+    const it = banco[azar(banco.length)];
+    return {
+      pregunta: (<><Consigna>Leé con atención 📖</Consigna>
+        <Tarjeta><p className="max-w-sm text-left text-base font-bold leading-relaxed text-slate-700 sm:text-lg">{it.t}</p>
+        <p className="mt-1 max-w-sm text-center text-lg font-black text-slate-800">{it.q}</p></Tarjeta></>),
+      opciones: mezclar([...it.ops]), respuesta: it.ops[it.ok],
+      dice: it.t + " … " + it.q,
+    };
+  },
+
+  capitales: (p) => () => {
+    const it = B_CAPITALES[azar(B_CAPITALES.length)];
+    const modo = p.modo === "bandera" ? "bandera" : azar(2) === 0 ? "capital" : "pais";
+    if (modo === "bandera") {
+      const ops = new Set([it.pais]);
+      while (ops.size < 3) ops.add(B_CAPITALES[azar(B_CAPITALES.length)].pais);
+      return {
+        pregunta: (<><Consigna>¿De qué país es esta bandera? 🏳️</Consigna>
+          <Tarjeta><span className="text-7xl">{it.e}</span></Tarjeta></>),
+        opciones: mezclar([...ops]), respuesta: it.pais, dice: "¿De qué país es esta bandera?",
+      };
+    }
+    if (modo === "capital") {
+      const ops = new Set([it.cap]);
+      while (ops.size < 3) ops.add(B_CAPITALES[azar(B_CAPITALES.length)].cap);
+      return {
+        pregunta: (<><Consigna>Capitales del mundo 🗺️</Consigna>
+          <Tarjeta><span className="text-5xl">{it.e}</span>
+          <span className="text-xl font-black text-slate-700">¿Cuál es la capital de {it.pais}?</span></Tarjeta></>),
+        opciones: mezclar([...ops]), respuesta: it.cap, dice: `¿Cuál es la capital de ${it.pais}?`,
+      };
+    }
+    const ops = new Set([it.pais]);
+    while (ops.size < 3) ops.add(B_CAPITALES[azar(B_CAPITALES.length)].pais);
+    return {
+      pregunta: (<><Consigna>Capitales del mundo 🗺️</Consigna>
+        <Tarjeta><span className="text-xl font-black text-slate-700">¿De qué país es capital {it.cap}?</span></Tarjeta></>),
+      opciones: mezclar([...ops]), respuesta: it.pais, dice: `¿De qué país es capital ${it.cap}?`,
     };
   },
 
@@ -986,7 +1199,7 @@ const GENERADORES = {
           {elegidas.map((v, i) => <Dinero key={i} valor={v} edad={edad} chico />)}
         </div></Tarjeta></>),
       opciones: opcionesNum(resp, 3, Math.max(3, Math.round(resp / 4)), 1).map((n) => `$${n}`),
-      respuesta: `$${resp}`,
+      respuesta: `$${resp}`, dice: `¿Cuánta ${TXT.plata} hay?`,
     };
   },
 
@@ -1001,6 +1214,7 @@ const GENERADORES = {
         <p className="text-center text-xl font-black text-slate-800 sm:text-2xl">Pagás con <span className="text-green-600">${paga}</span></p>
         <p className="text-center text-lg font-bold text-slate-500">¿Cuánto te devuelven?</p></Tarjeta></>),
       opciones: opcionesNum(resp, 3, 4, 0).map((n) => `$${n}`), respuesta: `$${resp}`,
+      dice: `Cuesta ${cuesta} pesos y pagás con ${paga}. ¿Cuánto te devuelven?`,
     };
   },
 
@@ -1022,7 +1236,7 @@ const GENERADORES = {
             </div>
           ))}
         </div></>),
-      opciones: mezclar(items.map((it) => it.p)), respuesta: resp.p,
+      opciones: mezclar(items.map((it) => it.p)), respuesta: resp.p, dice: `¿Cuál es ${p.modo === "barato" ? "el más barato" : "el más caro"}?`,
       explicacion: `${resp.p} cuesta $${resp.precio}: es ${p.modo === "barato" ? "el precio más bajo" : "el precio más alto"}.`,
     };
   },
@@ -1036,7 +1250,7 @@ const GENERADORES = {
         <span className="text-xl font-black text-slate-700">{item.p}</span></Tarjeta></>),
       opciones: ["Lo necesito", "Lo quiero"],
       respuesta: item.tipo === "necesito" ? "Lo necesito" : "Lo quiero",
-      explicacion: item.por,
+      explicacion: item.por, dice: `${item.p}. ¿Es algo que necesitás o algo que querés?`,
     };
   },
 
@@ -1049,7 +1263,7 @@ const GENERADORES = {
         <p className="text-center text-lg font-black text-slate-800 sm:text-xl">Querés juntar <span className="text-pink-600">${meta}</span></p>
         <p className="text-center text-lg font-black text-slate-800 sm:text-xl">Ahorrás <span className="text-green-600">${porSemana}</span> por semana</p>
         <p className="text-center font-bold text-slate-500">¿Cuántas semanas necesitás?</p></Tarjeta></>),
-      opciones: opcionesNum(semanas, 3, 2, 1), respuesta: semanas,
+      opciones: opcionesNum(semanas, 3, 2, 1), respuesta: semanas, dice: `Querés juntar ${meta} pesos y ahorrás ${porSemana} por semana. ¿Cuántas semanas necesitás?`,
       explicacion: `${semanas} semanas × $${porSemana} = $${meta}. ¡Ahorrar es esperar con un plan!`,
     };
   },
@@ -1088,7 +1302,7 @@ const GENERADORES = {
         <p className="text-center text-lg font-black text-slate-800 sm:text-xl">Tenés <span className="text-green-600">${tengo}</span></p>
         <p className="text-center text-lg font-black text-slate-800 sm:text-xl">Lo que querés cuesta <span className="text-pink-600">${cuesta}</span></p></Tarjeta></>),
       opciones: ["Sí, me alcanza", "No me alcanza"],
-      respuesta: si ? "Sí, me alcanza" : "No me alcanza",
+      respuesta: si ? "Sí, me alcanza" : "No me alcanza", dice: `Tenés ${tengo} pesos y lo que querés cuesta ${cuesta}. ¿Te alcanza?`,
       explicacion: si
         ? (dif === 0 ? "Justo: gastás todo lo que tenés." : `Te alcanza y te sobran $${dif}.`)
         : `Te faltan $${dif}. Podés ahorrar hasta juntarlos.`,
@@ -1693,11 +1907,25 @@ S("cvv-mg", "Las palabras mágicas", "✨", "convivir", "convivir", ["3-5", "6-8
 S("cvv-ay", "Ayudo en mi casa", "🏠", "convivir", "convivir", ["3-5", "6-8"], 20, { tipo: "ayudar" });
 S("cvv-sc", "¿Qué hago si...?", "🤗", "convivir", "convivir", ["6-8", "9-11"], 20, { tipo: "situaciones" });
 
+// --- Descubrir: animales, ciencia, geografía e historia ---
+S("des-ani", "Animales increíbles", "🦁", "descubrir", "quiz", ["3-5", "6-8"], 25, { banco: B_QUIZ_ANIMALES, titulo: "Animales increíbles 🦁" }, null, "text-cyan-700");
+S("des-cie", "Ciencia y planetas", "🔭", "descubrir", "quiz", ["6-8", "9-11"], 25, { banco: B_QUIZ_CIENCIA, titulo: "Ciencia y planetas 🔭" }, null, "text-cyan-700");
+S("des-his", "Historia argentina", "🎩", "descubrir", "quiz", ["6-8", "9-11"], 20, { banco: B_QUIZ_HISTORIA, titulo: "Historia argentina 🎩" }, null, "text-cyan-700");
+S("des-ban", "Banderas del mundo", "🏳️", "descubrir", "capitales", ["6-8", "9-11"], 20, { modo: "bandera" }, null, "text-cyan-700");
+S("des-cap", "Capitales del mundo", "🗺️", "descubrir", "capitales", ["9-11"], 25, {}, null, "text-cyan-700");
+
+// --- Hablar · lectocomprensión ---
+S("lec-1", "Leo y comprendo", "📖", "lenguaje", "lectura", ["6-8"], 20, {});
+S("lec-2", "Leo y comprendo: detective", "🕵️", "lenguaje", "lectura", ["9-11"], 20, { dif: true });
+
+// --- Pensar · técnicas de estudio ---
+S("est-1", "Aprendo a estudiar", "🎓", "cognitiva", "quiz", ["9-11"], 15, { banco: B_QUIZ_ESTUDIO, titulo: "Aprendo a estudiar 🎓" });
+
 // --- Idiomas (desde los 6: primero se afianza la propia lengua) ---
 Object.keys(IDIOMAS).forEach((l) => {
   Object.keys(VOCAB_IDIOMAS).forEach((cat) => {
     S(`idi-${l}-${cat}`, `${IDIOMAS[l].bandera} ${VOCAB_IDIOMAS[cat].nombre} en ${IDIOMAS[l].nombre.toLowerCase()}`,
-      IDIOMAS[l].bandera, "idiomas", "idioma", ["6-8", "9-11"], 20, { idioma: l, cat, pInv: 0 }, { pInv: 60 });
+      IDIOMAS[l].bandera, "idiomas", "idioma", ["6-8", "9-11"], 20, { idioma: l, cat, pInv: 0, pAud: 15 }, { pInv: 45, pAud: 35 });
   });
 });
 
@@ -1713,7 +1941,10 @@ function buscarSeriePorNivel(id) {
 }
 function nombreDeJuego(id) {
   const r = buscarSeriePorNivel(id);
-  return r ? `${r.serie.icono} ${r.serie.nombre} · Nivel ${r.nivel}` : String(id);
+  if (r) return `${r.serie.icono} ${r.serie.nombre} · Nivel ${r.nivel}`;
+  const m = String(id).match(/^(.*)-inf$/);
+  if (m) { const s = SERIES.find((x) => x.id === m[1]); if (s) return `${s.icono} ${s.nombre} · ∞ Práctica libre`; }
+  return String(id);
 }
 
 // Desbloqueo adelantado: si domina su etapa en un área (15+ niveles con 80%+
@@ -1775,6 +2006,47 @@ function proximoNivel(s, mejor, rango, sesiones) {
   }
   return base;
 }
+// ---------- medallas y diplomas ----------
+const MEDALLAS = [
+  { id: "primera", icono: "🐣", nombre: "¡Primer nivel!", desc: "Superá tu primer nivel", check: (c) => c.completados >= 1 },
+  { id: "diez", icono: "🎖️", nombre: "Diez al hilo", desc: "Superá 10 niveles", check: (c) => c.completados >= 10 },
+  { id: "coleccion", icono: "🏅", nombre: "Coleccionista", desc: "Superá 25 niveles", check: (c) => c.completados >= 25 },
+  { id: "cien", icono: "🏆", nombre: "Gran Explorador", desc: "Superá 100 niveles", check: (c) => c.completados >= 100, diploma: "Gran Explorador: 100 niveles superados" },
+  { id: "racha3", icono: "🔥", nombre: "Rachita", desc: "Jugá 3 días seguidos", check: (c) => c.racha >= 3 },
+  { id: "racha7", icono: "🌟", nombre: "Semana perfecta", desc: "Jugá 7 días seguidos", check: (c) => c.racha >= 7, diploma: "Constancia: una semana entera de práctica" },
+  { id: "estrellas", icono: "⭐", nombre: "Estrella brillante", desc: "Lográ ⭐⭐⭐ en 10 niveles", check: (c) => c.tresEstrellas >= 10 },
+  { id: "escritor", icono: "✍️", nombre: "Manos a la letra", desc: "Superá 5 niveles de escritura", check: (c) => c.porPrefijo("tra-") >= 5 },
+  { id: "lector", icono: "📖", nombre: "Pequeño lector", desc: "Superá 5 lecturas", check: (c) => c.porPrefijo("lec-") >= 5 },
+  { id: "mundo", icono: "🌍", nombre: "Ciudadano del mundo", desc: "Superá 10 niveles de idiomas", check: (c) => c.porPrefijo("idi-") >= 10 },
+  { id: "corazon", icono: "💛", nombre: "Buen compañero", desc: "Superá 10 niveles de Convivir", check: (c) => c.porPrefijo("cvv-") >= 10 },
+  { id: "cohete", icono: "🚀", nombre: "Adelantado", desc: "Jugá niveles de la etapa siguiente", check: (c) => c.adelantado },
+];
+function calcularLogros(sesiones, rango) {
+  const mejor = {};
+  sesiones.forEach((s) => { const r = s.puntos / s.maximo; if (mejor[s.juego] == null || r > mejor[s.juego]) mejor[s.juego] = r; });
+  const ids = Object.keys(mejor);
+  const dias = new Set(sesiones.map((s) => new Date(s.fecha).toDateString()));
+  let racha = 0;
+  for (let i = 0; i < 400; i++) {
+    const d = new Date(); d.setDate(d.getDate() - i);
+    if (dias.has(d.toDateString())) racha++;
+    else if (i === 0) continue;
+    else break;
+  }
+  const ctx = {
+    completados: ids.length,
+    tresEstrellas: ids.filter((id) => mejor[id] >= 0.8).length,
+    racha,
+    porPrefijo: (p) => ids.filter((id) => id.startsWith(p)).length,
+    adelantado: rango ? sesiones.some((s) => {
+      const r = buscarSeriePorNivel(s.juego);
+      return r && !r.serie.edades.includes(rango) && r.serie.edades.some((e) => (ORDEN_BANDA[e] || 0) > (ORDEN_BANDA[rango] || 0));
+    }) : false,
+  };
+  return MEDALLAS.map((m) => ({ ...m, ganada: !!m.check(ctx) }));
+}
+const isoParaEdad = (a) => { const d = new Date(); d.setFullYear(d.getFullYear() - a); d.setDate(d.getDate() - 40); return d.toISOString().slice(0, 10); };
+
 // Áreas en refuerzo: últimas 5 partidas del área con menos del 45% de acierto.
 function areasEnRefuerzo(sesiones) {
   const res = [];
@@ -2087,6 +2359,9 @@ function AppNinos({ alSelector, permisos = { mic: true, videos: true }, alRevisa
   const [maxInput, setMaxInput] = useState(2);
   const [sonidoOn, setSonidoOn] = useState(true);
   const [demoNoti, setDemoNoti] = useState(null);
+  const [demoBrisa, setDemoBrisa] = useState(null);
+  const [leeInput, setLeeInput] = useState("no");
+  const [pinEdit, setPinEdit] = useState(null); // {id, val}
 
   const [nombreInput, setNombreInput] = useState("");
   const [nacInput, setNacInput] = useState("");
@@ -2128,6 +2403,14 @@ function AppNinos({ alSelector, permisos = { mic: true, videos: true }, alRevisa
     })();
   }, []);
 
+  useEffect(() => { try { window.scrollTo(0, 0); } catch (e) { /* nada */ } }, [pantalla]);
+  useEffect(() => {
+    const conMusica = activo && sonidoOn && ["menu", "serie", "juego", "logros"].includes(pantalla);
+    detenerMusica();
+    if (conMusica) iniciarMusica(rangoDeEdad(Math.min(Math.max(calcularEdad(activo.nacimiento), 3), 11)));
+    return detenerMusica;
+  }, [pantalla, activo, sonidoOn]);
+
   const activar = async (p) => {
     const s = (await leer(`pequemundo:sesiones:${p.id}`)) || [];
     const v = await leer(`pequemundo:vistos:${p.id}`);
@@ -2159,6 +2442,7 @@ function AppNinos({ alSelector, permisos = { mic: true, videos: true }, alRevisa
       nombre: nombreInput.trim(),
       nacimiento: nacInput,
       pin: pinNuevo || null,
+      solito: leeInput === "no",
       avatar: AVATARES[perfiles.length % AVATARES.length],
     };
     const lista = [...perfiles, p];
@@ -2213,7 +2497,18 @@ function AppNinos({ alSelector, permisos = { mic: true, videos: true }, alRevisa
     setPantalla("juego");
   };
   const abrirNivelPorId = (id) => { const r = buscarSeriePorNivel(id); if (r) abrirNivel(r.serie, r.nivel); };
-  const repetir = () => { setSemilla(semillaDe(juegoActivo.id)); setResultado(null); setClaveJuego((c) => c + 1); };
+  const abrirInfinito = (s) => {
+    setSemilla(Date.now() % 2147483647);
+    setJuegoActivo({ serie: s, nivel: "∞", id: `${s.id}-inf`, params: paramsNivel(s, s.niveles) });
+    setResultado(null);
+    setClaveJuego((c) => c + 1);
+    setPantalla("juego");
+  };
+  const repetir = () => {
+    setSemilla(juegoActivo.nivel === "∞" ? Date.now() % 2147483647 : semillaDe(juegoActivo.id));
+    setResultado(null);
+    setClaveJuego((c) => c + 1);
+  };
 
   const iniciarPlan = (seriesDisp, cuantos) => {
     const mejor = mejorPorNivel();
@@ -2349,7 +2644,28 @@ ${an.alertas.length ? `<h2>Para conversar en el próximo control pediátrico</h2
             <span className="font-black">Nuevo peque</span>
           </button>
         </div>
+        <button onClick={() => setPantalla("clase")}
+          className="rounded-full bg-white px-6 py-2 text-sm font-black text-slate-600 shadow active:scale-95">🏫 Modo clase (para la seño)</button>
         <button onClick={alSelector} className="text-sm font-bold text-slate-400">← Volver al inicio</button>
+      </div>
+    );
+  }
+
+  // ---------- modo clase: elegir etapa ----------
+  if (pantalla === "clase") {
+    const etapas = [["3-5", 4, "Salita (3 a 5)"], ["6-8", 7, "Primer ciclo (6 a 8)"], ["9-11", 10, "Segundo ciclo (9 a 11)"]];
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-5 bg-sky-100 p-4">
+        <span className="text-6xl">🏫</span>
+        <h2 className="text-2xl font-black text-slate-700">Modo clase</h2>
+        <p className="max-w-sm text-center text-sm font-bold text-slate-500">Para jugar entre todos con proyector o pantalla: la seño elige, los chicos responden a mano alzada ✋. El progreso de la clase se guarda aparte.</p>
+        <div className="flex w-full max-w-sm flex-col gap-3">
+          {etapas.map(([r, edadRep, nom]) => (
+            <button key={r} onClick={() => activar({ id: "clase-" + r, nombre: "Mi clase", avatar: "🏫", nacimiento: isoParaEdad(edadRep), solito: r === "3-5" })}
+              className="rounded-3xl bg-white p-5 text-lg font-black text-slate-700 shadow-lg active:scale-95">{nom}</button>
+          ))}
+        </div>
+        <button onClick={() => setPantalla("elegirPerfil")} className="text-sm font-bold text-slate-400">← Volver</button>
       </div>
     );
   }
@@ -2389,6 +2705,13 @@ ${an.alertas.length ? `<h2>Para conversar en el próximo control pediátrico</h2
           <input type="date" value={nacInput} onChange={(e) => setNacInput(e.target.value)}
             className="rounded-2xl border-4 border-sky-200 px-4 py-3 text-lg font-bold text-slate-700 outline-none focus:border-sky-400" />
           <p className="text-xs text-slate-400">Con la fecha de nacimiento los juegos se eligen solos para su edad y se renuevan automáticamente con cada cumpleaños.</p>
+          <label className="text-base font-black text-slate-700 sm:text-lg">¿Ya lee sin ayuda?</label>
+          <div className="flex gap-2">
+            <button type="button" onClick={() => setLeeInput("no")}
+              className={`flex-1 rounded-2xl px-3 py-3 text-sm font-black active:scale-95 ${leeInput === "no" ? "bg-sky-500 text-white" : "bg-slate-100 text-slate-600"}`}>🎧 Todavía no<br /><span className="text-[10px] font-bold opacity-80">la app le lee todo</span></button>
+            <button type="button" onClick={() => setLeeInput("si")}
+              className={`flex-1 rounded-2xl px-3 py-3 text-sm font-black active:scale-95 ${leeInput === "si" ? "bg-emerald-500 text-white" : "bg-slate-100 text-slate-600"}`}>📖 Sí, ya lee<br /><span className="text-[10px] font-bold opacity-80">o juega con un adulto</span></button>
+          </div>
           <label className="text-base font-black text-slate-700 sm:text-lg">PIN del peque (opcional)</label>
           <CampoPin valor={pinNuevo} setValor={setPinNuevo} placeholder="4 números" />
           <p className="text-xs text-slate-400">Útil en tablets compartidas: cada peque entra a su propio perfil con su PIN y el progreso no se mezcla.</p>
@@ -2444,6 +2767,17 @@ ${an.alertas.length ? `<h2>Para conversar en el próximo control pediátrico</h2
 
   const edadAnios = calcularEdad(activo.nacimiento);
   const rango = rangoDeEdad(Math.min(Math.max(edadAnios, 3), 11));
+  const modoSolito = activo.solito != null ? !!activo.solito : edadAnios <= 5;
+  const esClase = String(activo.id).startsWith("clase");
+  const alternarLectura = () => {
+    const v = !modoSolito;
+    const nuevoP = { ...activo, solito: v };
+    setActivo(nuevoP);
+    const lista = perfiles.map((x) => (x.id === nuevoP.id ? nuevoP : x));
+    setPerfiles(lista);
+    guardar("pequemundo:perfiles", lista);
+    hablar(v ? "Modo Solito activado: yo te leo todo." : "Modo Acompañado: listo para leer.", true);
+  };
   const cumple = esCumpleHoy(activo.nacimiento);
   const jugadasHoy = sesiones.filter((s) => esHoy(s.fecha)).length;
   const metaVideo = premio.meta || 5;          // niveles para ganar CADA video
@@ -2494,6 +2828,7 @@ ${an.alertas.length ? `<h2>Para conversar en el próximo control pediátrico</h2
                   <JuegoRondas
                     generar={GENERADORES[motor](juegoActivo.params, rango)}
                     colorTexto={juegoActivo.serie.colorTexto}
+                    solito={modoSolito}
                     alTerminar={terminarJuego}
                   />
                 )}
@@ -2590,6 +2925,65 @@ ${an.alertas.length ? `<h2>Para conversar en el próximo control pediátrico</h2
               <p className="mt-1 font-bold text-slate-500">Mañana hay más. Ahora, ¡a jugar sin pantalla un rato! 🏃💨</p>
             </div>
           )}
+        </div>
+      </div>
+    );
+  }
+
+  // ---------- mis logros ----------
+  if (pantalla === "logros") {
+    const logros = calcularLogros(sesiones, rango);
+    const ganadas = logros.filter((l) => l.ganada).length;
+    const diplomas = logros.filter((l) => l.ganada && l.diploma);
+    const descargarDiploma = (l) => {
+      const f = new Date().toLocaleDateString("es-AR");
+      const html = `<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><title>Diploma — ${activo.nombre}</title>
+<style>body{font-family:Georgia,serif;display:flex;min-height:100vh;align-items:center;justify-content:center;background:#fef9c3;margin:0}
+.d{background:#fff;border:10px double #d97706;border-radius:18px;padding:48px 56px;text-align:center;max-width:640px}
+h1{color:#b45309;letter-spacing:2px}h2{font-size:40px;margin:12px 0;color:#1e293b}p{color:#475569}</style></head><body>
+<div class="d"><h1>🎓 DIPLOMA · MENTE EN JUEGO</h1><p>Se otorga con orgullo a</p><h2>${activo.nombre}</h2>
+<p><b>${l.icono} ${l.nombre}</b> — ${l.diploma}</p><p>⭐ ⭐ ⭐</p><p>${f}</p>
+<p style="font-size:12px;color:#94a3b8">Un logro de práctica y constancia. ¡Seguí así!</p></div></body></html>`;
+      try {
+        const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `diploma-${activo.nombre.toLowerCase().replace(/\s+/g, "-")}-${l.id}.html`;
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      } catch (e) { /* sin descarga */ }
+    };
+    return (
+      <div className="min-h-screen bg-sky-100 p-3 pb-10 sm:p-4">
+        <div className="mx-auto flex max-w-lg flex-col gap-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <button onClick={() => setPantalla("menu")} className="flex items-center gap-1 rounded-full bg-white px-4 py-2 font-black text-slate-600 shadow active:scale-95">
+              <ArrowLeft /> Volver
+            </button>
+            <span className="text-lg font-black text-slate-700">🏅 Mis logros · {ganadas}/{logros.length}</span>
+          </div>
+          <div className="grid grid-cols-3 gap-2 sm:gap-3">
+            {logros.map((l) => (
+              <div key={l.id} className={`flex flex-col items-center gap-1 rounded-2xl p-3 text-center shadow ${l.ganada ? "bg-yellow-100" : "bg-slate-100 opacity-70"}`}>
+                <span className="text-3xl">{l.ganada ? l.icono : "🔒"}</span>
+                <span className="text-xs font-black leading-tight text-slate-700">{l.nombre}</span>
+                <span className="text-[9px] font-bold leading-tight text-slate-400">{l.desc}</span>
+              </div>
+            ))}
+          </div>
+          {diplomas.length > 0 && (
+            <div className="rounded-3xl bg-white p-4 shadow-md">
+              <p className="font-black text-slate-700">🎓 Diplomas para imprimir y colgar</p>
+              {diplomas.map((l) => (
+                <button key={l.id} onClick={() => descargarDiploma(l)}
+                  className="mt-2 w-full rounded-full bg-amber-500 py-3 font-black text-white shadow active:scale-95">
+                  🎓 Descargar diploma «{l.nombre}»
+                </button>
+              ))}
+            </div>
+          )}
+          <p className="rounded-2xl bg-white p-3 text-center text-xs text-slate-400">Muy pronto: puntos canjeables por premios de verdad (juguetes didácticos y más), con la versión con cuentas.</p>
         </div>
       </div>
     );
@@ -2700,6 +3094,8 @@ ${an.alertas.length ? `<h2>Para conversar en el próximo control pediátrico</h2
                 className={`rounded-full px-4 py-2 text-sm font-black active:scale-95 ${demoNoti === "convivir" ? "bg-rose-500 text-white" : "bg-rose-100 text-rose-700"}`}>💛 Reforzar cercanía</button>
               <button onClick={() => setDemoNoti(demoNoti === "refuerzo" ? null : "refuerzo")}
                 className={`rounded-full px-4 py-2 text-sm font-black active:scale-95 ${demoNoti === "refuerzo" ? "bg-sky-500 text-white" : "bg-sky-100 text-sky-700"}`}>🔎 Bajamos la dificultad</button>
+              <button onClick={() => { setDemoNoti(demoNoti === "brisa" ? null : "brisa"); setDemoBrisa(null); }}
+                className={`rounded-full px-4 py-2 text-sm font-black active:scale-95 ${demoNoti === "brisa" ? "bg-amber-500 text-white" : "bg-amber-100 text-amber-700"}`}>🏫 Solicitud de la seño</button>
             </div>
             {demoNoti === "adelantado" && (
               <div className="mt-3 rounded-2xl border-4 border-indigo-200 bg-indigo-50 p-4">
@@ -2749,6 +3145,28 @@ ${an.alertas.length ? `<h2>Para conversar en el próximo control pediátrico</h2
                   ni una detección de retraso: eso solo lo evalúa el pediatra con herramientas validadas. Les avisaremos cuando
                   retome el ritmo. Si en casa observan algo que les preocupe, llévenlo a la próxima consulta junto con el informe
                   descargable de la app.
+                </p>
+              </div>
+            )}
+            {demoNoti === "brisa" && (
+              <div className="mt-3 rounded-2xl border-4 border-amber-200 bg-amber-50 p-4">
+                <p className="font-black text-amber-700">🏫 Solicitud de grupo escolar</p>
+                <p className="mt-2 text-sm text-slate-600">
+                  La <b>seño Brisa</b> quiere sumar a <b>{activo.nombre}</b> a su grupo <b>«Sala Amarilla 2026»</b> para
+                  enviarle tareas y actividades para hacer en clase y en casa.
+                </p>
+                <div className="mt-3 flex gap-2">
+                  <button onClick={() => setDemoBrisa("ok")} className="rounded-full bg-emerald-500 px-5 py-2 font-black text-white active:scale-95">Autorizar ✅</button>
+                  <button onClick={() => setDemoBrisa("no")} className="rounded-full bg-slate-200 px-5 py-2 font-black text-slate-600 active:scale-95">Rechazar</button>
+                </div>
+                {demoBrisa && (
+                  <p className="mt-2 text-sm font-black text-slate-600">{demoBrisa === "ok" ? "✔️ ¡Así de simple va a ser autorizar!" : "✔️ Y así de simple rechazar."} Los grupos escolares llegan con la versión con cuentas (requiere servidor).</p>
+                )}
+                <p className="mt-3 rounded-xl bg-white p-3 text-xs text-slate-500">
+                  <b>Cómo va a funcionar, con la privacidad primero:</b> la seño genera un <b>código de aula</b> y son USTEDES
+                  quienes lo cargan acá para sumar a su hijo. La app nunca va a permitir que un docente busque niños por DNI
+                  o teléfono: los datos de los chicos no se exponen a búsquedas, y sin la autorización expresa de ustedes no
+                  pasa absolutamente nada.
                 </p>
               </div>
             )}
@@ -2833,13 +3251,31 @@ ${an.alertas.length ? `<h2>Para conversar en el próximo control pediátrico</h2
               {perfiles.map((p) => (
                 <div key={p.id} className="flex items-center justify-between rounded-2xl bg-slate-50 px-4 py-2">
                   <span className="font-bold text-slate-700">{p.avatar} {p.nombre} · {calcularEdad(p.nacimiento)} años {p.pin ? "· 🔒 con PIN" : ""}</span>
-                  {borrando === p.id ? (
-                    <button onClick={() => borrarPerfil(p.id)} className="rounded-full bg-red-500 px-3 py-1 text-sm font-black text-white">¿Seguro?</button>
-                  ) : (
-                    <button onClick={() => setBorrando(p.id)} className="rounded-full bg-slate-200 px-3 py-1 text-sm font-black text-slate-600">Borrar</button>
-                  )}
+                  <span className="flex items-center gap-1">
+                    <button onClick={() => setPinEdit(pinEdit && pinEdit.id === p.id ? null : { id: p.id, val: "" })}
+                      className="rounded-full bg-sky-100 px-3 py-1 text-sm font-black text-sky-700">🔑 PIN</button>
+                    {borrando === p.id ? (
+                      <button onClick={() => borrarPerfil(p.id)} className="rounded-full bg-red-500 px-3 py-1 text-sm font-black text-white">¿Seguro?</button>
+                    ) : (
+                      <button onClick={() => setBorrando(p.id)} className="rounded-full bg-slate-200 px-3 py-1 text-sm font-black text-slate-600">Borrar</button>
+                    )}
+                  </span>
                 </div>
               ))}
+              {pinEdit && (
+                <div className="flex items-center gap-2 rounded-2xl bg-sky-50 p-3">
+                  <CampoPin valor={pinEdit.val} setValor={(v) => setPinEdit({ ...pinEdit, val: v })} placeholder="Nuevo PIN" />
+                  <button onClick={() => {
+                      const lista = perfiles.map((x) => (x.id === pinEdit.id ? { ...x, pin: pinEdit.val.length === 4 ? pinEdit.val : null } : x));
+                      setPerfiles(lista);
+                      guardar("pequemundo:perfiles", lista);
+                      if (activo && activo.id === pinEdit.id) setActivo({ ...activo, pin: pinEdit.val.length === 4 ? pinEdit.val : null });
+                      setPinEdit(null);
+                    }}
+                    className="rounded-full bg-emerald-500 px-4 py-2 text-sm font-black text-white active:scale-95">Guardar</button>
+                </div>
+              )}
+              <p className="text-xs text-slate-400">💡 Con «🔑 PIN» pueden ponerle o cambiarle la clave a cada peque (o dejarla vacía para quitarla): útil si la olvidó y quiere seguir su racha 🔥.</p>
             </div>
             <button onClick={() => { setErrorPerfil(null); setPantalla("nuevoPerfil"); }}
               className="mt-3 rounded-full bg-sky-500 px-6 py-2 font-black text-white shadow active:scale-95">➕ Agregar peque</button>
@@ -2878,6 +3314,10 @@ ${an.alertas.length ? `<h2>Para conversar en el próximo control pediátrico</h2
                 ▶ Jugar nivel {siguiente}
               </button>
             )}
+            <button onClick={() => abrirInfinito(s)}
+              className="mt-2 w-full rounded-full bg-violet-500 py-3 font-black text-white shadow-md active:scale-95">
+              ∞ Práctica libre (dificultad máxima, siempre distinta)
+            </button>
           </div>
           <div className="grid grid-cols-5 gap-2">
             {[...Array(s.niveles)].map((_, i) => {
@@ -2927,6 +3367,10 @@ ${an.alertas.length ? `<h2>Para conversar en el próximo control pediátrico</h2
               className="flex items-center gap-2 rounded-full bg-white px-4 py-2 font-black text-slate-600 shadow active:scale-95">
               <BarChart3 /> Padres
             </button>
+            <button onClick={() => setPantalla("logros")} aria-label="Mis logros"
+              className="rounded-full bg-white px-4 py-2 font-black text-slate-600 shadow active:scale-95">🏅</button>
+            <button onClick={alternarLectura} aria-label={modoSolito ? "Pasar a modo Acompañado" : "Pasar a modo Solito"}
+              className={`rounded-full px-4 py-2 font-black shadow active:scale-95 ${modoSolito ? "bg-sky-500 text-white" : "bg-white text-slate-600"}`}>{modoSolito ? "🎧" : "📖"}</button>
             <button onClick={alternarSonido} aria-label={sonidoOn ? "Silenciar" : "Activar sonido"}
               className="rounded-full bg-white px-4 py-2 font-black text-slate-600 shadow active:scale-95">{sonidoOn ? "🔊" : "🔇"}</button>
             <button onClick={() => setPantalla("elegirPerfil")} aria-label="Cambiar de peque"
@@ -2976,7 +3420,14 @@ ${an.alertas.length ? `<h2>Para conversar en el próximo control pediátrico</h2
           </p>
         </button>
 
-        {guiado ? (
+        {esClase && (
+          <div className="rounded-3xl bg-rose-100 p-4">
+            <p className="font-black text-rose-700">🏫 Modo clase</p>
+            <p className="text-sm font-bold text-rose-600">Elijan una serie, proyecten y respondan entre todos a mano alzada ✋. ¡Que pase el que sigue!</p>
+          </div>
+        )}
+
+        {guiado && !esClase ? (
           <section className="rounded-3xl bg-white p-4 shadow-md sm:p-5">
             <h2 className="mb-1 text-xl font-black text-slate-700 sm:text-2xl">✨ Elegidos hoy para vos</h2>
             <p className="mb-3 text-xs font-bold text-slate-400">La app eligió estos niveles según tu edad y tu progreso. ¡Cada día cambian!</p>
@@ -3377,6 +3828,8 @@ function AppAdultos({ alSelector }) {
   const [nombreInput, setNombreInput] = useState("");
   const [claveEj, setClaveEj] = useState(0);
   const t = tema(cfg);
+
+  useEffect(() => { try { window.scrollTo(0, 0); } catch (e) { /* nada */ } }, [pantalla]);
 
   useEffect(() => {
     (async () => {
