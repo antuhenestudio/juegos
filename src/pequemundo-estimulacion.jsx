@@ -296,6 +296,9 @@ const VOCABULARIO = [
   { id: "arbol", p: "árbol", s: ["ár", "bol"] }, { id: "luna", p: "luna", s: ["lu", "na"] },
   { id: "estrella", p: "estrella", s: ["es", "tre", "lla"] }, { id: "globo", p: "globo", s: ["glo", "bo"] },
 ];
+const PACK_NATURALEZA = ["sol", "arbol", "flor", "luna", "estrella", "manzana"];
+const PACK_COSAS = ["casa", "auto", "pelota", "globo", "gato", "pez"];
+const PACK_TODO = ["sol", "gato", "pez", "flor", "pelota", "auto", "estrella", "manzana"];
 const B_ANIMALES = [
   { e: "🐶", p: "perro", s: ["pe", "rro"] }, { e: "🐮", p: "vaca", s: ["va", "ca"] },
   { e: "🐴", p: "caballo", s: ["ca", "ba", "llo"] }, { e: "🐰", p: "conejo", s: ["co", "ne", "jo"] },
