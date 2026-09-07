@@ -1,0 +1,676 @@
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import { Star, Home, BarChart3, ArrowLeft, RotateCcw, Sparkles } from "lucide-react";
+
+// ============================================================
+// PequeMundo — MVP de estimulación infantil por áreas y edades
+// Áreas: Cognitiva · Lenguaje · Psicomotricidad
+// Edades: 3-5 (preescolar) · 6-8 (primaria inicial)
+// Persistencia: window.storage (con fallback en memoria)
+// ============================================================
+
+const AREAS = {
+  cognitiva: { nombre: "Pensar", icono: "🧠", color: "bg-violet-500", suave: "bg-violet-100", texto: "text-violet-700", desc: "Memoria, lógica y patrones" },
+  lenguaje: { nombre: "Hablar", icono: "💬", color: "bg-amber-500", suave: "bg-amber-100", texto: "text-amber-700", desc: "Palabras, letras y sonidos" },
+  psicomotor: { nombre: "Mover", icono: "✋", color: "bg-emerald-500", suave: "bg-emerald-100", texto: "text-emerald-700", desc: "Coordinación ojo-mano" },
+};
+
+const JUEGOS = [
+  { id: "memoria", nombre: "Memoria de pares", icono: "🃏", area: "cognitiva", edades: ["3-5", "6-8"] },
+  { id: "patrones", nombre: "¿Qué sigue?", icono: "🔮", area: "cognitiva", edades: ["3-5", "6-8"] },
+  { id: "matematicas", nombre: "Súper cuentas", icono: "➕", area: "cognitiva", edades: ["6-8"] },
+  { id: "palabras", nombre: "Nombra la figura", icono: "🗣️", area: "lenguaje", edades: ["3-5", "6-8"] },
+  { id: "letras", nombre: "Primera letra", icono: "🔤", area: "lenguaje", edades: ["6-8"] },
+  { id: "atrapa", nombre: "Atrapa al bichito", icono: "🐞", area: "psicomotor", edades: ["3-5", "6-8"] },
+];
+
+// ---------- almacenamiento con fallback ----------
+const memFallback = {};
+async function guardar(clave, valor) {
+  try {
+    await window.storage.set(clave, JSON.stringify(valor));
+  } catch (e) {
+    memFallback[clave] = JSON.stringify(valor);
+  }
+}
+async function leer(clave) {
+  try {
+    const r = await window.storage.get(clave);
+    return r ? JSON.parse(r.value) : null;
+  } catch (e) {
+    return memFallback[clave] ? JSON.parse(memFallback[clave]) : null;
+  }
+}
+
+// ---------- utilidades ----------
+const mezclar = (arr) => [...arr].sort(() => Math.random() - 0.5);
+const azar = (n) => Math.floor(Math.random() * n);
+
+const VOCABULARIO = [
+  { e: "🐶", p: "perro" }, { e: "🐱", p: "gato" }, { e: "🌞", p: "sol" },
+  { e: "🍎", p: "manzana" }, { e: "🏠", p: "casa" }, { e: "🌳", p: "árbol" },
+  { e: "🚗", p: "auto" }, { e: "🐟", p: "pez" }, { e: "🌙", p: "luna" },
+  { e: "⭐", p: "estrella" }, { e: "🐘", p: "elefante" }, { e: "🦋", p: "mariposa" },
+  { e: "🍌", p: "banana" }, { e: "⚽", p: "pelota" }, { e: "🌸", p: "flor" },
+  { e: "🐸", p: "rana" }, { e: "🚲", p: "bicicleta" }, { e: "🎈", p: "globo" },
+];
+
+const EMOJIS_MEMORIA = ["🐶", "🐱", "🐸", "🦁", "🐼", "🦊", "🐵", "🐰", "🐷", "🐮"];
+
+// ============================================================
+// Pantalla de resultado compartida
+// ============================================================
+function Resultado({ puntos, maximo, onRepetir, onSalir }) {
+  const ratio = maximo > 0 ? puntos / maximo : 0;
+  const estrellas = ratio >= 0.8 ? 3 : ratio >= 0.5 ? 2 : 1;
+  const mensaje = estrellas === 3 ? "¡Increíble!" : estrellas === 2 ? "¡Muy bien!" : "¡Buen intento!";
+  return (
+    <div className="flex flex-col items-center gap-6 py-10">
+      <div className="text-7xl">{estrellas === 3 ? "🏆" : estrellas === 2 ? "🎉" : "💪"}</div>
+      <h2 className="text-4xl font-black text-slate-800">{mensaje}</h2>
+      <div className="flex gap-2">
+        {[1, 2, 3].map((n) => (
+          <Star key={n} size={48} className={n <= estrellas ? "fill-yellow-400 text-yellow-400" : "text-slate-300"} />
+        ))}
+      </div>
+      <p className="text-2xl font-bold text-slate-600">{puntos} de {maximo} puntos</p>
+      <div className="flex gap-4">
+        <button onClick={onRepetir} className="flex items-center gap-2 rounded-full bg-sky-500 px-8 py-4 text-xl font-black text-white shadow-lg active:scale-95">
+          <RotateCcw size={24} /> Otra vez
+        </button>
+        <button onClick={onSalir} className="flex items-center gap-2 rounded-full bg-slate-200 px-8 py-4 text-xl font-black text-slate-700 active:scale-95">
+          <Home size={24} /> Menú
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// Juego 1 — Memoria de pares (Cognitiva)
+// ============================================================
+function JuegoMemoria({ edad, alTerminar }) {
+  const pares = edad === "3-5" ? 3 : 6;
+  const crear = useCallback(() => {
+    const elegidos = mezclar(EMOJIS_MEMORIA).slice(0, pares);
+    return mezclar([...elegidos, ...elegidos].map((e, i) => ({ id: i, emoji: e, vista: false, lista: false })));
+  }, [pares]);
+
+  const [cartas, setCartas] = useState(crear);
+  const [seleccion, setSeleccion] = useState([]);
+  const [intentos, setIntentos] = useState(0);
+  const [fin, setFin] = useState(false);
+  const bloqueo = useRef(false);
+
+  const tocar = (idx) => {
+    if (bloqueo.current || cartas[idx].vista || cartas[idx].lista) return;
+    const nuevas = cartas.map((c, i) => (i === idx ? { ...c, vista: true } : c));
+    const sel = [...seleccion, idx];
+    setCartas(nuevas);
+    setSeleccion(sel);
+    if (sel.length === 2) {
+      bloqueo.current = true;
+      setIntentos((v) => v + 1);
+      const [a, b] = sel;
+      setTimeout(() => {
+        setCartas((prev) => {
+          const acierto = prev[a].emoji === prev[b].emoji;
+          const res = prev.map((c, i) =>
+            i === a || i === b ? { ...c, vista: acierto, lista: acierto ? true : c.lista } : c
+          );
+          if (res.every((c) => c.lista)) setFin(true);
+          return res;
+        });
+        setSeleccion([]);
+        bloqueo.current = false;
+      }, 800);
+    }
+  };
+
+  useEffect(() => {
+    if (fin) {
+      const maximo = pares * 10;
+      const puntos = Math.max(pares * 10 - Math.max(0, intentos - pares) * 2, pares * 2);
+      alTerminar(puntos, maximo);
+    }
+  }, [fin]); // eslint-disable-line
+
+  return (
+    <div className="flex flex-col items-center gap-6">
+      <p className="text-xl font-bold text-slate-600">Encontrá las parejas iguales 🔍</p>
+      <div className={`grid gap-3 ${pares <= 3 ? "grid-cols-3" : "grid-cols-4"}`}>
+        {cartas.map((c, i) => (
+          <button
+            key={c.id}
+            onClick={() => tocar(i)}
+            className={`flex h-20 w-20 items-center justify-center rounded-2xl text-4xl shadow-md transition-transform active:scale-95 ${
+              c.vista || c.lista ? "bg-white" : "bg-violet-400"
+            }`}
+          >
+            {c.vista || c.lista ? c.emoji : "❓"}
+          </button>
+        ))}
+      </div>
+      <p className="text-lg font-bold text-violet-600">Intentos: {intentos}</p>
+    </div>
+  );
+}
+
+// ============================================================
+// Juego 2 — ¿Qué sigue? Patrones (Cognitiva)
+// ============================================================
+function JuegoPatrones({ edad, alTerminar }) {
+  const TOTAL = 8;
+  const fichas = edad === "3-5" ? ["🔴", "🔵", "🟡"] : ["🔴", "🔵", "🟡", "🟢", "🟣"];
+
+  const generarRonda = useCallback(() => {
+    if (edad === "3-5") {
+      const [a, b] = mezclar(fichas);
+      const sec = [a, b, a, b, a];
+      return { secuencia: sec, respuesta: b, opciones: mezclar([...new Set([b, ...mezclar(fichas)])]).slice(0, 3) };
+    }
+    const tipo = azar(3);
+    const [a, b, c] = mezclar(fichas);
+    let sec, resp;
+    if (tipo === 0) { sec = [a, b, a, b, a]; resp = b; }
+    else if (tipo === 1) { sec = [a, a, b, b, a]; resp = a; }
+    else { sec = [a, b, c, a, b]; resp = c; }
+    const ops = new Set([resp]);
+    while (ops.size < 3) ops.add(fichas[azar(fichas.length)]);
+    return { secuencia: sec, respuesta: resp, opciones: mezclar([...ops]) };
+  }, [edad]); // eslint-disable-line
+
+  const [ronda, setRonda] = useState(generarRonda);
+  const [num, setNum] = useState(1);
+  const [puntos, setPuntos] = useState(0);
+  const [marca, setMarca] = useState(null); // 'bien' | 'mal'
+
+  const responder = (op) => {
+    if (marca) return;
+    const ok = op === ronda.respuesta;
+    setMarca(ok ? "bien" : "mal");
+    const nuevos = ok ? puntos + 1 : puntos;
+    if (ok) setPuntos(nuevos);
+    setTimeout(() => {
+      if (num >= TOTAL) alTerminar(nuevos, TOTAL);
+      else { setNum(num + 1); setRonda(generarRonda()); setMarca(null); }
+    }, 900);
+  };
+
+  return (
+    <div className="flex flex-col items-center gap-6">
+      <p className="text-xl font-bold text-slate-600">¿Qué ficha sigue en la fila? 🤔</p>
+      <div className="flex items-center gap-2 rounded-3xl bg-white p-5 shadow-md">
+        {ronda.secuencia.map((f, i) => <span key={i} className="text-4xl">{f}</span>)}
+        <span className="flex h-12 w-12 items-center justify-center rounded-xl border-4 border-dashed border-violet-300 text-2xl font-black text-violet-400">?</span>
+      </div>
+      <div className="flex gap-4">
+        {ronda.opciones.map((op, i) => (
+          <button key={i} onClick={() => responder(op)}
+            className={`flex h-20 w-20 items-center justify-center rounded-2xl text-5xl shadow-md transition-transform active:scale-90 ${
+              marca && op === ronda.respuesta ? "bg-green-200" : marca === "mal" ? "bg-red-100" : "bg-white"
+            }`}>
+            {op}
+          </button>
+        ))}
+      </div>
+      {marca && <p className="text-2xl font-black">{marca === "bien" ? "✅ ¡Sí!" : `❌ Era ${ronda.respuesta}`}</p>}
+      <p className="text-lg font-bold text-violet-600">Ronda {num} de {TOTAL} · Puntos: {puntos}</p>
+    </div>
+  );
+}
+
+// ============================================================
+// Juego 3 — Súper cuentas (Cognitiva, 6-8) — inspirado en tu juego en C
+// ============================================================
+function JuegoMatematicas({ alTerminar }) {
+  const TOTAL = 10;
+  const generar = () => {
+    let n1 = azar(20) + 1, n2 = azar(20) + 1;
+    const suma = azar(2) === 0;
+    if (!suma && n1 < n2) [n1, n2] = [n2, n1];
+    const resp = suma ? n1 + n2 : n1 - n2;
+    const ops = new Set([resp]);
+    while (ops.size < 3) {
+      const d = resp + (azar(9) - 4);
+      if (d >= 0 && d !== resp) ops.add(d);
+    }
+    return { n1, n2, suma, resp, opciones: mezclar([...ops]) };
+  };
+
+  const [p, setP] = useState(generar);
+  const [num, setNum] = useState(1);
+  const [puntos, setPuntos] = useState(0);
+  const [marca, setMarca] = useState(null);
+
+  const responder = (op) => {
+    if (marca !== null) return;
+    const ok = op === p.resp;
+    setMarca(op);
+    const nuevos = ok ? puntos + 1 : puntos;
+    if (ok) setPuntos(nuevos);
+    setTimeout(() => {
+      if (num >= TOTAL) alTerminar(nuevos, TOTAL);
+      else { setNum(num + 1); setP(generar()); setMarca(null); }
+    }, 900);
+  };
+
+  return (
+    <div className="flex flex-col items-center gap-6">
+      <p className="text-xl font-bold text-slate-600">Resolvé la cuenta 🧮</p>
+      <div className="rounded-3xl bg-white px-10 py-8 shadow-md">
+        <p className="text-6xl font-black text-slate-800">{p.n1} {p.suma ? "+" : "−"} {p.n2}</p>
+      </div>
+      <div className="flex gap-4">
+        {p.opciones.map((op) => (
+          <button key={op} onClick={() => responder(op)}
+            className={`h-20 w-20 rounded-2xl text-3xl font-black shadow-md transition-transform active:scale-90 ${
+              marca !== null && op === p.resp ? "bg-green-300 text-green-900"
+              : marca === op ? "bg-red-200 text-red-800" : "bg-white text-slate-700"
+            }`}>
+            {op}
+          </button>
+        ))}
+      </div>
+      <p className="text-lg font-bold text-violet-600">Cuenta {num} de {TOTAL} · Puntos: {puntos}</p>
+    </div>
+  );
+}
+
+// ============================================================
+// Juego 4 — Nombra la figura (Lenguaje)
+// ============================================================
+function JuegoPalabras({ edad, alTerminar }) {
+  const TOTAL = 8;
+  const banco = edad === "3-5" ? VOCABULARIO.slice(0, 10) : VOCABULARIO;
+  const generar = useCallback(() => {
+    const item = banco[azar(banco.length)];
+    const ops = new Set([item.p]);
+    while (ops.size < 3) ops.add(banco[azar(banco.length)].p);
+    return { ...item, opciones: mezclar([...ops]) };
+  }, [edad]); // eslint-disable-line
+
+  const [r, setR] = useState(generar);
+  const [num, setNum] = useState(1);
+  const [puntos, setPuntos] = useState(0);
+  const [marca, setMarca] = useState(null);
+
+  const responder = (op) => {
+    if (marca !== null) return;
+    const ok = op === r.p;
+    setMarca(op);
+    const nuevos = ok ? puntos + 1 : puntos;
+    if (ok) setPuntos(nuevos);
+    setTimeout(() => {
+      if (num >= TOTAL) alTerminar(nuevos, TOTAL);
+      else { setNum(num + 1); setR(generar()); setMarca(null); }
+    }, 900);
+  };
+
+  return (
+    <div className="flex flex-col items-center gap-6">
+      <p className="text-xl font-bold text-slate-600">¿Cómo se llama esto? 👀</p>
+      <div className="flex h-40 w-40 items-center justify-center rounded-3xl bg-white text-8xl shadow-md">{r.e}</div>
+      <div className="flex flex-col gap-3">
+        {r.opciones.map((op) => (
+          <button key={op} onClick={() => responder(op)}
+            className={`rounded-full px-12 py-4 text-2xl font-black shadow-md transition-transform active:scale-95 ${
+              marca !== null && op === r.p ? "bg-green-300 text-green-900"
+              : marca === op ? "bg-red-200 text-red-800" : "bg-amber-400 text-amber-950"
+            }`}>
+            {op}
+          </button>
+        ))}
+      </div>
+      <p className="text-lg font-bold text-amber-600">Figura {num} de {TOTAL} · Puntos: {puntos}</p>
+    </div>
+  );
+}
+
+// ============================================================
+// Juego 5 — Primera letra (Lenguaje, 6-8)
+// ============================================================
+function JuegoLetras({ alTerminar }) {
+  const TOTAL = 8;
+  const generar = () => {
+    const item = VOCABULARIO[azar(VOCABULARIO.length)];
+    const inicial = item.p[0].toUpperCase();
+    const abec = "ABCDEFGLMNPRSTV".split("");
+    const ops = new Set([inicial]);
+    while (ops.size < 4) ops.add(abec[azar(abec.length)]);
+    return { ...item, inicial, opciones: mezclar([...ops]) };
+  };
+
+  const [r, setR] = useState(generar);
+  const [num, setNum] = useState(1);
+  const [puntos, setPuntos] = useState(0);
+  const [marca, setMarca] = useState(null);
+
+  const responder = (op) => {
+    if (marca !== null) return;
+    const ok = op === r.inicial;
+    setMarca(op);
+    const nuevos = ok ? puntos + 1 : puntos;
+    if (ok) setPuntos(nuevos);
+    setTimeout(() => {
+      if (num >= TOTAL) alTerminar(nuevos, TOTAL);
+      else { setNum(num + 1); setR(generar()); setMarca(null); }
+    }, 900);
+  };
+
+  return (
+    <div className="flex flex-col items-center gap-6">
+      <p className="text-xl font-bold text-slate-600">¿Con qué letra empieza? ✏️</p>
+      <div className="flex flex-col items-center gap-2 rounded-3xl bg-white px-10 py-6 shadow-md">
+        <span className="text-7xl">{r.e}</span>
+        <span className="text-3xl font-black text-slate-800">_{r.p.slice(1)}</span>
+      </div>
+      <div className="flex gap-3">
+        {r.opciones.map((op) => (
+          <button key={op} onClick={() => responder(op)}
+            className={`h-16 w-16 rounded-2xl text-3xl font-black shadow-md transition-transform active:scale-90 ${
+              marca !== null && op === r.inicial ? "bg-green-300 text-green-900"
+              : marca === op ? "bg-red-200 text-red-800" : "bg-amber-400 text-amber-950"
+            }`}>
+            {op}
+          </button>
+        ))}
+      </div>
+      <p className="text-lg font-bold text-amber-600">Palabra {num} de {TOTAL} · Puntos: {puntos}</p>
+    </div>
+  );
+}
+
+// ============================================================
+// Juego 6 — Atrapa al bichito (Psicomotricidad)
+// ============================================================
+function JuegoAtrapa({ edad, alTerminar }) {
+  const DURACION = 30;
+  const velocidad = edad === "3-5" ? 2000 : 1200;
+  const tam = edad === "3-5" ? "text-7xl" : "text-5xl";
+  const [pos, setPos] = useState({ x: 40, y: 40 });
+  const [atrapados, setAtrapados] = useState(0);
+  const [tiempo, setTiempo] = useState(DURACION);
+  const [activo, setActivo] = useState(false);
+  const meta = edad === "3-5" ? 10 : 15;
+
+  const mover = () => setPos({ x: 5 + azar(75), y: 5 + azar(70) });
+
+  useEffect(() => {
+    if (!activo) return;
+    const reloj = setInterval(() => setTiempo((t) => t - 1), 1000);
+    const salto = setInterval(mover, velocidad);
+    return () => { clearInterval(reloj); clearInterval(salto); };
+  }, [activo, velocidad]);
+
+  useEffect(() => {
+    if (activo && tiempo <= 0) alTerminar(Math.min(atrapados, meta), meta);
+  }, [tiempo]); // eslint-disable-line
+
+  if (!activo) {
+    return (
+      <div className="flex flex-col items-center gap-6 py-10">
+        <div className="text-8xl">🐞</div>
+        <p className="max-w-xs text-center text-xl font-bold text-slate-600">
+          ¡El bichito se escapa! Tocalo cada vez que aparezca. Tenés {DURACION} segundos.
+        </p>
+        <button onClick={() => setActivo(true)}
+          className="rounded-full bg-emerald-500 px-12 py-5 text-2xl font-black text-white shadow-lg active:scale-95">
+          ¡A jugar!
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col items-center gap-4">
+      <div className="flex w-full max-w-md justify-between text-xl font-black">
+        <span className="text-emerald-600">🐞 {atrapados}</span>
+        <span className={tiempo <= 5 ? "text-red-500" : "text-slate-600"}>⏰ {tiempo}s</span>
+      </div>
+      <div className="relative h-96 w-full max-w-md overflow-hidden rounded-3xl bg-lime-100 shadow-inner">
+        <button
+          onClick={() => { setAtrapados((v) => v + 1); mover(); }}
+          className={`absolute ${tam} transition-none active:scale-75`}
+          style={{ left: `${pos.x}%`, top: `${pos.y}%` }}
+          aria-label="Atrapar bichito"
+        >
+          🐞
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// Panel para padres
+// ============================================================
+function PanelPadres({ sesiones, perfil }) {
+  const porArea = Object.keys(AREAS).map((clave) => {
+    const del = sesiones.filter((s) => s.area === clave);
+    const jugadas = del.length;
+    const promedio = jugadas > 0 ? Math.round((del.reduce((a, s) => a + s.puntos / s.maximo, 0) / jugadas) * 100) : 0;
+    return { clave, jugadas, promedio };
+  });
+  const ultimas = [...sesiones].reverse().slice(0, 8);
+
+  return (
+    <div className="flex w-full max-w-md flex-col gap-6">
+      <div className="rounded-3xl bg-white p-6 shadow-md">
+        <h3 className="mb-4 text-xl font-black text-slate-800">Progreso por área</h3>
+        {porArea.map(({ clave, jugadas, promedio }) => (
+          <div key={clave} className="mb-4">
+            <div className="mb-1 flex justify-between text-sm font-bold text-slate-600">
+              <span>{AREAS[clave].icono} {AREAS[clave].nombre} — {AREAS[clave].desc}</span>
+              <span>{jugadas > 0 ? `${promedio}%` : "sin datos"}</span>
+            </div>
+            <div className="h-4 w-full overflow-hidden rounded-full bg-slate-100">
+              <div className={`h-full rounded-full ${AREAS[clave].color}`} style={{ width: `${promedio}%` }} />
+            </div>
+            <p className="mt-1 text-xs text-slate-400">{jugadas} {jugadas === 1 ? "partida" : "partidas"}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="rounded-3xl bg-white p-6 shadow-md">
+        <h3 className="mb-3 text-xl font-black text-slate-800">Últimas partidas</h3>
+        {ultimas.length === 0 ? (
+          <p className="text-slate-500">Todavía no hay partidas. ¡Que {perfil?.nombre || "tu peque"} empiece a jugar para ver su progreso acá!</p>
+        ) : (
+          ultimas.map((s, i) => {
+            const juego = JUEGOS.find((j) => j.id === s.juego);
+            return (
+              <div key={i} className="flex items-center justify-between border-b border-slate-100 py-2 last:border-0">
+                <span className="font-bold text-slate-700">{juego?.icono} {juego?.nombre}</span>
+                <span className={`font-black ${s.puntos / s.maximo >= 0.7 ? "text-green-600" : "text-amber-600"}`}>
+                  {s.puntos}/{s.maximo}
+                </span>
+              </div>
+            );
+          })
+        )}
+      </div>
+
+      <div className="rounded-3xl bg-sky-50 p-5 text-sm text-slate-600">
+        <p className="font-bold text-slate-700">💡 Sugerencia</p>
+        <p>
+          {(() => {
+            const sinJugar = porArea.filter((a) => a.jugadas === 0);
+            if (sinJugar.length > 0) return `Todavía no exploraron el área "${AREAS[sinJugar[0].clave].nombre}". Probar juegos variados estimula el desarrollo integral.`;
+            const menor = porArea.reduce((a, b) => (a.promedio <= b.promedio ? a : b));
+            return `El área con más espacio para crecer es "${AREAS[menor.clave].nombre}". Repetir juegos cortos varias veces por semana ayuda más que sesiones largas.`;
+          })()}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// App principal
+// ============================================================
+export default function PequeMundo() {
+  const [pantalla, setPantalla] = useState("cargando"); // cargando | perfil | menu | juego | panel
+  const [perfil, setPerfil] = useState(null);
+  const [sesiones, setSesiones] = useState([]);
+  const [juegoActivo, setJuegoActivo] = useState(null);
+  const [resultado, setResultado] = useState(null);
+  const [nombreInput, setNombreInput] = useState("");
+  const [edadInput, setEdadInput] = useState(null);
+  const [claveJuego, setClaveJuego] = useState(0);
+
+  useEffect(() => {
+    (async () => {
+      const p = await leer("pequemundo:perfil");
+      const s = await leer("pequemundo:sesiones");
+      if (s) setSesiones(s);
+      if (p) { setPerfil(p); setPantalla("menu"); }
+      else setPantalla("perfil");
+    })();
+  }, []);
+
+  const crearPerfil = () => {
+    if (!nombreInput.trim() || !edadInput) return;
+    const p = { nombre: nombreInput.trim(), edad: edadInput };
+    setPerfil(p);
+    guardar("pequemundo:perfil", p);
+    setPantalla("menu");
+  };
+
+  const terminarJuego = (puntos, maximo) => {
+    const s = { juego: juegoActivo.id, area: juegoActivo.area, puntos, maximo, fecha: Date.now() };
+    const nuevas = [...sesiones, s];
+    setSesiones(nuevas);
+    guardar("pequemundo:sesiones", nuevas);
+    setResultado({ puntos, maximo });
+  };
+
+  const abrirJuego = (j) => { setJuegoActivo(j); setResultado(null); setClaveJuego((k) => k + 1); setPantalla("juego"); };
+  const repetir = () => { setResultado(null); setClaveJuego((k) => k + 1); };
+
+  // ---------- pantallas ----------
+  if (pantalla === "cargando") {
+    return <div className="flex min-h-screen items-center justify-center bg-sky-100 text-2xl font-black text-sky-600">Cargando… 🎈</div>;
+  }
+
+  if (pantalla === "perfil") {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-8 bg-sky-100 p-6">
+        <div className="text-center">
+          <div className="text-7xl">🌈</div>
+          <h1 className="mt-2 text-5xl font-black text-sky-700">PequeMundo</h1>
+          <p className="mt-2 text-lg font-bold text-slate-500">Jugar, pensar, hablar y mover</p>
+        </div>
+        <div className="flex w-full max-w-sm flex-col gap-4 rounded-3xl bg-white p-6 shadow-lg">
+          <label className="text-lg font-black text-slate-700">¿Cómo se llama tu peque?</label>
+          <input
+            value={nombreInput}
+            onChange={(e) => setNombreInput(e.target.value)}
+            placeholder="Escribí su nombre"
+            className="rounded-2xl border-4 border-sky-200 px-4 py-3 text-xl font-bold text-slate-700 outline-none focus:border-sky-400"
+          />
+          <label className="text-lg font-black text-slate-700">¿Qué edad tiene?</label>
+          <div className="flex gap-3">
+            {["3-5", "6-8"].map((e) => (
+              <button key={e} onClick={() => setEdadInput(e)}
+                className={`flex-1 rounded-2xl py-4 text-xl font-black transition-transform active:scale-95 ${
+                  edadInput === e ? "bg-sky-500 text-white shadow-md" : "bg-sky-100 text-sky-700"
+                }`}>
+                {e} años
+              </button>
+            ))}
+          </div>
+          <button onClick={crearPerfil}
+            disabled={!nombreInput.trim() || !edadInput}
+            className="mt-2 rounded-full bg-emerald-500 py-4 text-2xl font-black text-white shadow-lg transition-transform active:scale-95 disabled:opacity-40">
+            ¡Empezar a jugar!
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (pantalla === "juego" && juegoActivo) {
+    return (
+      <div className="min-h-screen bg-sky-100 p-4">
+        <div className="mx-auto flex max-w-lg flex-col gap-6">
+          <div className="flex items-center justify-between">
+            <button onClick={() => setPantalla("menu")} className="flex items-center gap-1 rounded-full bg-white px-4 py-2 font-black text-slate-600 shadow active:scale-95">
+              <ArrowLeft size={20} /> Volver
+            </button>
+            <span className="text-xl font-black text-slate-700">{juegoActivo.icono} {juegoActivo.nombre}</span>
+          </div>
+          <div className="rounded-3xl bg-sky-50 p-4">
+            {resultado ? (
+              <Resultado puntos={resultado.puntos} maximo={resultado.maximo} onRepetir={repetir} onSalir={() => setPantalla("menu")} />
+            ) : (
+              <div key={claveJuego}>
+                {juegoActivo.id === "memoria" && <JuegoMemoria edad={perfil.edad} alTerminar={terminarJuego} />}
+                {juegoActivo.id === "patrones" && <JuegoPatrones edad={perfil.edad} alTerminar={terminarJuego} />}
+                {juegoActivo.id === "matematicas" && <JuegoMatematicas alTerminar={terminarJuego} />}
+                {juegoActivo.id === "palabras" && <JuegoPalabras edad={perfil.edad} alTerminar={terminarJuego} />}
+                {juegoActivo.id === "letras" && <JuegoLetras alTerminar={terminarJuego} />}
+                {juegoActivo.id === "atrapa" && <JuegoAtrapa edad={perfil.edad} alTerminar={terminarJuego} />}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (pantalla === "panel") {
+    return (
+      <div className="min-h-screen bg-sky-100 p-4">
+        <div className="mx-auto flex max-w-md flex-col items-center gap-6">
+          <div className="flex w-full items-center justify-between">
+            <button onClick={() => setPantalla("menu")} className="flex items-center gap-1 rounded-full bg-white px-4 py-2 font-black text-slate-600 shadow active:scale-95">
+              <ArrowLeft size={20} /> Volver
+            </button>
+            <span className="text-xl font-black text-slate-700">📊 Panel para padres</span>
+          </div>
+          <PanelPadres sesiones={sesiones} perfil={perfil} />
+        </div>
+      </div>
+    );
+  }
+
+  // ---------- menú principal ----------
+  const disponibles = JUEGOS.filter((j) => j.edades.includes(perfil.edad));
+  return (
+    <div className="min-h-screen bg-sky-100 p-4 pb-10">
+      <div className="mx-auto flex max-w-lg flex-col gap-6">
+        <header className="flex items-center justify-between pt-2">
+          <div>
+            <h1 className="text-3xl font-black text-sky-700">🌈 ¡Hola, {perfil.nombre}!</h1>
+            <p className="font-bold text-slate-500">¿A qué querés jugar hoy?</p>
+          </div>
+          <button onClick={() => setPantalla("panel")}
+            className="flex items-center gap-2 rounded-full bg-white px-4 py-2 font-black text-slate-600 shadow active:scale-95">
+            <BarChart3 size={20} /> Padres
+          </button>
+        </header>
+
+        {Object.keys(AREAS).map((clave) => {
+          const juegosArea = disponibles.filter((j) => j.area === clave);
+          if (juegosArea.length === 0) return null;
+          const a = AREAS[clave];
+          return (
+            <section key={clave} className={`rounded-3xl ${a.suave} p-5`}>
+              <h2 className={`mb-3 text-2xl font-black ${a.texto}`}>{a.icono} {a.nombre}</h2>
+              <div className="flex flex-col gap-3">
+                {juegosArea.map((j) => (
+                  <button key={j.id} onClick={() => abrirJuego(j)}
+                    className="flex items-center gap-4 rounded-2xl bg-white p-4 text-left shadow-md transition-transform active:scale-95">
+                    <span className="text-4xl">{j.icono}</span>
+                    <span className="text-xl font-black text-slate-700">{j.nombre}</span>
+                    <Sparkles className="ml-auto text-yellow-400" size={22} />
+                  </button>
+                ))}
+              </div>
+            </section>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
