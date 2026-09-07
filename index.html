@@ -1,5 +1,38 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
-import { Star, Home, BarChart3, ArrowLeft, RotateCcw, Sparkles } from "lucide-react";
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mente en Juego — Estimulación cognitiva para cada etapa</title>
+  <meta name="description" content="PequeMundo (niños 3-11: pensar, hablar, mover y ahorrar) y MenteActiva (adultos: memoria, atención, cálculo y lenguaje con accesibilidad)." />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧠</text></svg>" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.26.4/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { margin: 0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+    button { cursor: pointer; border: none; font-family: inherit; }
+  </style>
+</head>
+<body>
+  <div id="raiz"></div>
+  <script type="text/babel" data-presets="react">
+const { useState, useEffect, useRef, useCallback } = React;
+
+// ---- íconos de interfaz (reemplazo liviano de lucide-react) ----
+const Star = ({ className = "" }) => (
+  <svg viewBox="0 0 24 24" className={className} fill="currentColor">
+    <path d="M12 2l2.9 6.9 7.1.6-5.4 4.7 1.6 7-6.2-3.7-6.2 3.7 1.6-7L2 9.5l7.1-.6z" />
+  </svg>
+);
+const Icn = ({ children, className = "" }) => <span className={className} aria-hidden="true">{children}</span>;
+const Home = ({ className = "" }) => <Icn className={className}>🏠</Icn>;
+const ArrowLeft = ({ className = "" }) => <Icn className={className}>←</Icn>;
+const RotateCcw = ({ className = "" }) => <Icn className={className}>🔄</Icn>;
+const BarChart3 = ({ className = "" }) => <Icn className={className}>📊</Icn>;
+const Sparkles = ({ className = "" }) => <Icn className={className}>✨</Icn>;
+
 
 // ============================================================
 // PequeMundo v3 — Plataforma de estimulación cognitiva
@@ -16,11 +49,11 @@ import { Star, Home, BarChart3, ArrowLeft, RotateCcw, Sparkles } from "lucide-re
 // ---------- almacenamiento con fallback ----------
 const memFallback = {};
 async function guardar(clave, valor) {
-  try { await window.storage.set(clave, JSON.stringify(valor)); }
+  try { localStorage.setItem(clave, JSON.stringify(valor)); }
   catch (e) { memFallback[clave] = JSON.stringify(valor); }
 }
 async function leer(clave) {
-  try { const r = await window.storage.get(clave); return r ? JSON.parse(r.value) : null; }
+  try { const r = localStorage.getItem(clave); return r ? JSON.parse(r) : null; }
   catch (e) { return memFallback[clave] ? JSON.parse(memFallback[clave]) : null; }
 }
 
@@ -1580,7 +1613,7 @@ function AppAdultos({ alSelector }) {
 // ============================================================
 // Selector de módulo
 // ============================================================
-export default function App() {
+function App() {
   const [modo, setModo] = useState("selector");
 
   if (modo === "nino") return <AppNinos alSelector={() => setModo("selector")} />;
@@ -1612,3 +1645,10 @@ export default function App() {
     </div>
   );
 }
+
+
+ReactDOM.createRoot(document.getElementById("raiz")).render(<App />);
+
+  </script>
+</body>
+</html>
