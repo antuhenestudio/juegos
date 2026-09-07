@@ -670,6 +670,110 @@ const B_SOCIEDAD = [
   { e: "🎒", q: "Encontrás algo que no es tuyo en la escuela.", ops: ["Lo entrego a la seño para buscar al dueño", "Me lo quedo", "Lo escondo"], ok: 0, por: "Lo perdido se devuelve: imaginate la alegría del que lo recupera." },
 ];
 
+// ---------- el cuerpo: partes, funciones y órganos ----------
+const B_QUIZ_CUERPO = [
+  { e: "👁️", q: "¿Cómo se llama esta parte del cuerpo?", ops: ["El ojo", "La oreja", "La nariz"], ok: 0, por: "Con los ojos vemos los colores y las caras que queremos.", chico: true },
+  { e: "👃", q: "¿Cómo se llama esta parte del cuerpo?", ops: ["La nariz", "La boca", "El pie"], ok: 0, por: "Con la nariz olemos y respiramos.", chico: true },
+  { e: "👄", q: "¿Cómo se llama esta parte del cuerpo?", ops: ["La boca", "La oreja", "La mano"], ok: 0, por: "Con la boca comemos, hablamos y damos besos.", chico: true },
+  { e: "👂", q: "¿Cómo se llama esta parte del cuerpo?", ops: ["La oreja", "El ojo", "La panza"], ok: 0, por: "Con las orejas escuchamos la música y las voces.", chico: true },
+  { e: "✋", q: "¿Cómo se llama esta parte del cuerpo?", ops: ["La mano", "El pie", "La cabeza"], ok: 0, por: "Con las manos dibujamos, comemos y saludamos.", chico: true },
+  { e: "🦶", q: "¿Cómo se llama esta parte del cuerpo?", ops: ["El pie", "La mano", "La nariz"], ok: 0, por: "Con los pies caminamos, corremos y saltamos.", chico: true },
+  { e: "🦷", q: "¿Cómo se llama esto?", ops: ["Los dientes", "Los ojos", "Los dedos"], ok: 0, por: "Los dientes mastican la comida: por eso se cepillan todos los días.", chico: true },
+  { e: "🫃", q: "¿Cómo se llama esta parte?", ops: ["La panza", "La espalda", "La rodilla"], ok: 0, por: "En la panza está el estómago, que guarda la comida.", chico: true },
+  { e: "💪", q: "¿Cómo se llama esta parte?", ops: ["El brazo", "La pierna", "La oreja"], ok: 0, por: "Los brazos abrazan, levantan y hamacan.", chico: true },
+  { e: "🦵", q: "¿Cómo se llama esta parte?", ops: ["La pierna", "El brazo", "La boca"], ok: 0, por: "Las piernas nos llevan a todos lados.", chico: true },
+  { e: "🧏", q: "¿Con qué escuchás un cuento?", ops: ["Con las orejas", "Con los pies", "Con la panza"], ok: 0, por: "Las orejas captan los sonidos y los mandan al cerebro.", chico: true },
+  { e: "👀", q: "¿Con qué mirás un arcoíris?", ops: ["Con los ojos", "Con las manos", "Con la nariz"], ok: 0, por: "Los ojos ven la luz y los colores.", chico: true },
+  { e: "🍦", q: "¿Con qué sentís el gusto del helado?", ops: ["Con la lengua", "Con la oreja", "Con el codo"], ok: 0, por: "La lengua siente lo dulce, lo salado, lo ácido y lo amargo.", chico: true },
+  { e: "🧤", q: "¿Con qué sentís si algo está frío o calentito?", ops: ["Con la piel", "Con los dientes", "Con el pelo"], ok: 0, por: "La piel cubre todo el cuerpo y siente el frío, el calor y las caricias." },
+];
+const B_QUIZ_ORGANOS = [
+  { e: "🧠", q: "¿Qué órgano piensa, recuerda e imagina?", ops: ["El cerebro", "El estómago", "La rodilla"], ok: 0, por: "El cerebro dirige todo el cuerpo: ¡es el que estás usando ahora!" },
+  { e: "🫀", q: "¿Qué hace el corazón?", ops: ["Bombea la sangre a todo el cuerpo", "Digiere la comida", "Escucha sonidos"], ok: 0, por: "Late sin parar, día y noche, unas 100.000 veces por día." },
+  { e: "🫁", q: "¿Qué hacen los pulmones?", ops: ["Llevan el aire que respiramos", "Mueven las piernas", "Ven de noche"], ok: 0, por: "Se inflan y desinflan con cada respiración." },
+  { e: "🍽️", q: "¿Dónde va la comida después de tragarla?", ops: ["Al estómago", "A los pulmones", "A las orejas"], ok: 0, por: "El estómago la mezcla y la deshace para sacarle los nutrientes." },
+  { e: "🦴", q: "¿Cuántos huesos tiene aproximadamente un adulto?", ops: ["Más de 200", "10", "Un millón"], ok: 0, por: "El esqueleto sostiene el cuerpo y protege los órganos." },
+  { e: "💪", q: "¿Qué hacen los músculos?", ops: ["Mueven el cuerpo", "Piensan", "Digieren"], ok: 0, por: "Trabajan de a pares tirando de los huesos: por eso podés correr y escribir." },
+  { e: "🩸", q: "¿Qué lleva la sangre por el cuerpo?", ops: ["Oxígeno y nutrientes", "Música", "Aire frío"], ok: 0, por: "La sangre es el delivery del cuerpo: reparte lo que cada parte necesita." },
+  { e: "🧽", q: "¿Qué órganos limpian la sangre?", ops: ["Los riñones", "Los dientes", "Las uñas"], ok: 0, por: "Los riñones filtran la sangre y lo que sobra sale como pis." },
+  { e: "🛡️", q: "¿Cuál es el órgano más grande del cuerpo?", ops: ["La piel", "El corazón", "La nariz"], ok: 0, por: "La piel cubre todo el cuerpo, lo protege y siente." },
+  { e: "😴", q: "¿Por qué es importante dormir?", ops: ["El cuerpo se repara y el cerebro guarda lo aprendido", "Para no aburrirse", "No es importante"], ok: 0, por: "Dormir bien es tan importante como comer bien y jugar." },
+];
+
+// ---------- biología: plantas y oxígeno ----------
+const B_QUIZ_PLANTAS = [
+  { e: "🌱", q: "¿Qué necesita una semilla para crecer?", ops: ["Agua, tierra y luz del sol", "Solo caramelos", "Nada"], ok: 0, por: "Con agua, nutrientes de la tierra y luz, la semilla despierta y brota.", chico: true },
+  { e: "🌿", q: "¿Qué regalo nos hacen las plantas al mundo?", ops: ["Liberan el oxígeno que respiramos", "Hacen ruido", "Dan wifi"], ok: 0, por: "Las plantas producen oxígeno: sin ellas no podríamos respirar.", chico: true },
+  { e: "☀️", q: "¿Cómo fabrican su alimento las plantas?", ops: ["Con la luz del sol (fotosíntesis)", "Van al supermercado", "Comen tierra con cuchara"], ok: 0, por: "Se llama fotosíntesis: usan luz, agua y aire para fabricar su alimento y liberar oxígeno." },
+  { e: "🫚", q: "¿Para qué sirven las raíces?", ops: ["Agarran la planta y toman agua de la tierra", "Para decorar", "Para volar"], ok: 0, por: "Las raíces sostienen la planta y absorben agua y nutrientes.", chico: true },
+  { e: "🍃", q: "¿En qué parte de la planta ocurre la fotosíntesis?", ops: ["En las hojas", "En las raíces", "En las piedras"], ok: 0, por: "Las hojas son las fábricas verdes: captan la luz del sol." },
+  { e: "🌸", q: "¿Para qué sirven las flores?", ops: ["Para hacer semillas y frutos", "Solo para perfume", "Para nada"], ok: 0, por: "De la flor nacen los frutos con sus semillas: así las plantas tienen hijos." },
+  { e: "🐝", q: "¿Qué hacen las abejas al visitar las flores?", ops: ["Llevan polen de flor en flor y las ayudan a reproducirse", "Las rompen", "Les sacan fotos"], ok: 0, por: "Se llama polinización: por eso las abejas son súper importantes.", chico: true },
+  { e: "🌳", q: "¿Por qué los bosques son importantes?", ops: ["Dan oxígeno, hogar a animales y frescura", "No sirven", "Solo para leña"], ok: 0, por: "Los bosques son los pulmones verdes del planeta: cuidarlos es cuidarnos." },
+  { e: "💧", q: "¿Qué pasa si no regás una planta?", ops: ["Se marchita porque necesita agua para vivir", "Crece más", "Se vuelve de plástico"], ok: 0, por: "El agua viaja por el tallo llevando alimento a toda la planta.", chico: true },
+  { e: "🍎", q: "¿De dónde viene una manzana?", ops: ["De la flor del manzano que se convirtió en fruto", "De la fábrica", "Del fondo del mar"], ok: 0, por: "Flor → fruto → semillas → nuevo árbol: ¡el ciclo de la vida!", chico: true },
+];
+
+// ---------- personajes y hechos históricos (hechos establecidos) ----------
+const B_QUIZ_PROCERES = [
+  { e: "🐎", q: "¿Quién cruzó los Andes para ayudar a liberar a Chile y Perú?", ops: ["José de San Martín", "Un turista", "Nadie"], ok: 0, por: "San Martín cruzó la cordillera con su ejército en 1817: una hazaña enorme." },
+  { e: "🚩", q: "¿Quién creó la bandera argentina?", ops: ["Manuel Belgrano", "Un pintor famoso", "Se creó sola"], ok: 0, por: "Belgrano la izó por primera vez en 1812, a orillas del río Paraná." },
+  { e: "📚", q: "¿Por qué se recuerda a Sarmiento cada 11 de septiembre?", ops: ["Impulsó la educación y las escuelas", "Inventó la pelota", "Fue cantante"], ok: 0, por: "Domingo F. Sarmiento impulsó cientos de escuelas: es el Día del Maestro." },
+  { e: "🇦🇷", q: "¿Qué pasó el 25 de mayo de 1810?", ops: ["Se formó el primer gobierno patrio", "Se inventó el mate", "Un mundial"], ok: 0, por: "La Revolución de Mayo: el primer paso hacia la independencia." },
+  { e: "📜", q: "¿Qué se declaró el 9 de julio de 1816 en Tucumán?", ops: ["La independencia de Argentina", "El feriado de verano", "Nada"], ok: 0, por: "Los congresales declararon la independencia de las Provincias Unidas." },
+  { e: "🔬", q: "¿Quién ganó DOS premios Nobel de ciencia?", ops: ["Marie Curie", "Un futbolista", "Nadie nunca"], ok: 0, por: "Marie Curie: física y química. Sus descubrimientos ayudan hasta hoy en medicina." },
+  { e: "🍎", q: "¿Quién explicó la gravedad observando cómo caen las cosas?", ops: ["Isaac Newton", "Un mago", "El viento"], ok: 0, por: "Newton descubrió que la misma fuerza que tira la manzana sostiene a la Luna." },
+  { e: "🐢", q: "¿Quién estudió cómo cambian los seres vivos a lo largo del tiempo?", ops: ["Charles Darwin", "Un pirata", "Nadie"], ok: 0, por: "Darwin viajó por el mundo (¡pasó por Argentina!) y explicó la evolución." },
+  { e: "💉", q: "¿Qué argentino ganó el Nobel por estudiar la diabetes y las hormonas?", ops: ["Bernardo Houssay", "Un arquero", "Un chef"], ok: 0, por: "Houssay (1947), primer Nobel de ciencias de Latinoamérica. Milstein y Leloir también ganaron." },
+  { e: "🚀", q: "¿Quién fue la primera persona en pisar la Luna (1969)?", ops: ["Neil Armstrong", "Un dinosaurio", "Todavía nadie"], ok: 0, por: "\"Un pequeño paso para el hombre, un gran salto para la humanidad.\"" },
+];
+
+// ---------- átomos, materia y espacio (nivel avanzado: se gana con interés) ----------
+const B_QUIZ_ATOMOS = [
+  { e: "⚛️", q: "¿De qué están hechas TODAS las cosas?", ops: ["De átomos, piezas diminutas e invisibles", "De algodón", "De pintura"], ok: 0, por: "Vos, el agua, el aire y las estrellas: todo está hecho de átomos." },
+  { e: "🧱", q: "Cuando muchos átomos se juntan forman…", ops: ["Moléculas", "Canciones", "Sombras"], ok: 0, por: "Los átomos se combinan como bloquecitos: dos de hidrógeno + uno de oxígeno = agua." },
+  { e: "💧", q: "¿Qué es el H₂O?", ops: ["El agua: 2 átomos de hidrógeno y 1 de oxígeno", "Un robot", "Una vitamina"], ok: 0, por: "¡Ya sabés química! Esa es la fórmula del agua." },
+  { e: "🧊", q: "El agua puede ser hielo, líquida o vapor. Eso se llama…", ops: ["Estados de la materia", "Magia", "Disfraces"], ok: 0, por: "Sólido, líquido y gaseoso: la misma agua, con sus moléculas más juntas o más sueltas." },
+  { e: "🔥", q: "¿Qué pasa al calentar el agua a 100 grados?", ops: ["Hierve y se convierte en vapor", "Se congela", "Se vuelve jugo"], ok: 0, por: "El calor hace que las moléculas se muevan tan rápido que escapan como gas." },
+  { e: "☀️", q: "¿Qué es el Sol?", ops: ["Una estrella: una bola gigante de gas muy caliente", "Una lamparita", "Un planeta"], ok: 0, por: "Es NUESTRA estrella: su luz tarda unos 8 minutos en llegar a la Tierra." },
+  { e: "🌍", q: "¿Qué fuerza nos mantiene pegados a la Tierra?", ops: ["La gravedad", "El pegamento", "El viento"], ok: 0, por: "La gravedad atrae todo hacia el centro del planeta: por eso las cosas caen." },
+  { e: "🌕", q: "¿Por qué la Luna gira alrededor de la Tierra?", ops: ["La gravedad de la Tierra la mantiene en órbita", "Está atada con soga", "Se aburre"], ok: 0, por: "La misma gravedad de la manzana de Newton sostiene a la Luna en su vuelta." },
+  { e: "🪐", q: "¿Cuál es el planeta más grande del sistema solar?", ops: ["Júpiter", "La Luna", "Plutón"], ok: 0, por: "Júpiter es tan grande que adentro entrarían más de 1.000 Tierras." },
+  { e: "✨", q: "¿Qué son las estrellas que vemos de noche?", ops: ["Soles lejísimos, muchos más grandes que el nuestro", "Agujeritos", "Luces de aviones"], ok: 0, por: "Cada puntito es un sol lejano: su luz viaja años hasta tus ojos." },
+  { e: "🌌", q: "¿Cómo se llama nuestra galaxia?", ops: ["La Vía Láctea", "La Rueda", "Galaxia 7"], ok: 0, por: "Una espiral de miles de millones de estrellas: nuestro barrio cósmico." },
+  { e: "🔭", q: "¿Con qué instrumento se estudian las estrellas?", ops: ["Con el telescopio", "Con una lupa de juguete", "Con binoculares de cotillón"], ok: 0, por: "Los telescopios juntan la luz lejana: algunos hasta viajan por el espacio." },
+];
+
+// ---------- cuidado del cuerpo (alineado a ESI nivel inicial · Ley 26.150) ----------
+const B_CUERPO_CUIDADO = [
+  { e: "🩲", q: "Las partes del cuerpo que cubre la ropa interior…", ops: ["Son privadas: son solo tuyas", "Son de cualquiera", "No importan"], ok: 0, por: "Se llaman partes privadas o íntimas. Nadie puede tocarlas ni pedir verlas.", chico: true },
+  { e: "🙅", q: "Si alguien quiere tocar tus partes privadas o pedirte fotos…", ops: ["Digo NO fuerte y le cuento a mi adulto de confianza", "Me quedo callado", "Le hago caso si es conocido"], ok: 0, por: "Decir NO y contarlo es lo correcto SIEMPRE, sea quien sea. No estás en problemas por contar.", chico: true },
+  { e: "🛡️", q: "Si algo así pasó o pasa, ¿de quién es la culpa?", ops: ["Nunca es culpa del niño o la niña", "Del niño", "De nadie, mejor olvidarlo"], ok: 0, por: "NUNCA es tu culpa. Contarlo a un adulto de confianza es de valientes, y hay que contarlo hasta que te ayuden.", chico: true },
+  { e: "🩺", q: "¿Cuándo puede un médico revisar tu cuerpo?", ops: ["Para cuidar tu salud, con tu mamá, papá o cuidador presente", "Cuando quiera, a solas", "Nunca"], ok: 0, por: "Los controles médicos cuidan tu salud, y tu adulto de confianza te acompaña.", chico: true },
+  { e: "🤗", q: "¿Tenés que dar besos o abrazos si no querés?", ops: ["No: puedo saludar con la mano o una sonrisa", "Sí, siempre", "Solo a la familia sí o sí"], ok: 0, por: "Tu cuerpo es tuyo: elegís cómo saludar, con respeto.", chico: true },
+  { e: "🫱", q: "¿Y el cuerpo de los demás?", ops: ["También se respeta: pido permiso antes de abrazar", "Puedo tocarlo sin preguntar", "No importa"], ok: 0, por: "Así como tu cuerpo se respeta, vos respetás el de los demás: preguntar es cuidar.", chico: true },
+  { e: "🧼", q: "Cuidar tu cuerpo también es…", ops: ["Bañarse, lavarse las manos y los dientes", "No bañarse nunca", "Comer solo golosinas"], ok: 0, por: "La higiene es una forma de quererte y cuidar tu salud.", chico: true },
+  { e: "🗣️", q: "Nombrar las partes del cuerpo con sus nombres…", ops: ["Está muy bien: así podés contar si algo te pasa", "Es de mala educación", "Está prohibido"], ok: 0, por: "Conocer y nombrar tu cuerpo te ayuda a cuidarlo y a pedir ayuda claro." },
+  { e: "📵", q: "¿Está bien mandar fotos de tu cuerpo si alguien te las pide?", ops: ["No: aviso a mi adulto de confianza", "Sí, si insiste", "Sí, si promete no mostrarlas"], ok: 0, por: "Nadie puede pedirte fotos de tu cuerpo, ni en persona ni por internet. Avisar protege." },
+  { e: "💗", q: "Tu cuerpo, ¿cómo es?", ops: ["Único y valioso, tal como es", "Está mal si es distinto", "Vale según lo que digan otros"], ok: 0, por: "Todos los cuerpos son distintos y todos merecen respeto y cuidado.", chico: true },
+];
+
+// ---------- pubertad (9-11 · cambios normales del crecimiento) ----------
+const B_QUIZ_PUBERTAD = [
+  { e: "🌱", q: "¿Qué es la pubertad?", ops: ["Una etapa de cambios del cuerpo al crecer", "Una enfermedad", "Un juego"], ok: 0, por: "Es el paso natural del cuerpo de niño al de adolescente. Le pasa a todo el mundo." },
+  { e: "⏰", q: "¿A qué edad empieza la pubertad?", ops: ["A cada persona a su tiempo, entre los 8 y los 14 aprox.", "A todos exactamente igual", "A los 30"], ok: 0, por: "Cada cuerpo tiene su propio reloj: empezar antes o después es igual de normal." },
+  { e: "📏", q: "En la pubertad, el cuerpo…", ops: ["Pega un estirón y cambia de forma", "Se achica", "Queda igual para siempre"], ok: 0, por: "Crecés más rápido, y los cambios pueden notarse de a poco o de golpe." },
+  { e: "🗣️", q: "¿Qué le puede pasar a la voz?", ops: ["Cambia y se vuelve más grave, sobre todo en los varones", "Desaparece", "Se vuelve de robot"], ok: 0, por: "Mientras cambia puede hacer 'gallitos': es normal y pasa." },
+  { e: "🧴", q: "Aparecen granitos en la cara. ¿Qué significa?", ops: ["Es normal por los cambios de la piel: higiene y paciencia", "Que hiciste algo mal", "Que estás enfermo"], ok: 0, por: "La piel produce más grasa en esta etapa. No es culpa de nadie; si molestan mucho, se consulta al médico." },
+  { e: "💧", q: "¿Por qué se transpira más y aparece olor?", ops: ["Las glándulas se activan: bañarse y desodorante ayudan", "Por mala suerte", "Porque sí y no hay nada que hacer"], ok: 0, por: "Es parte del cambio. La higiene diaria lo resuelve." },
+  { e: "🩸", q: "La menstruación es…", ops: ["Un proceso natural y sano del cuerpo que puede empezar en esta etapa", "Una enfermedad", "Algo de qué avergonzarse"], ok: 0, por: "Es señal de que el cuerpo está creciendo sano. Se habla con confianza con tus adultos o tu médica." },
+  { e: "🎢", q: "¿Y si un día estás re contento y al rato triste sin saber por qué?", ops: ["Es normal: las emociones también cambian en esta etapa", "Está mal sentir eso", "Hay que esconderlo"], ok: 0, por: "Las hormonas mueven también las emociones. Hablarlo ayuda un montón." },
+  { e: "🪞", q: "Tu compañero cambió un montón y vos todavía no. ¿Qué pensás?", ops: ["Cada cuerpo tiene su tiempo: el mío también va a llegar", "Algo anda mal conmigo", "Hay que apurarlo"], ok: 0, por: "Compararse no sirve: la pubertad de cada uno llega a su propio ritmo, y todos los ritmos son normales." },
+  { e: "😜", q: "¿Está bien burlarse de los cambios del cuerpo de otro?", ops: ["No, nunca: todos estamos cambiando y merecemos respeto", "Sí, es gracioso", "Solo un poco"], ok: 0, por: "Los cambios pueden dar vergüenza: la burla lastima doble. Respetar es la regla." },
+  { e: "❓", q: "Tenés dudas sobre tu cuerpo y sus cambios. ¿A quién le preguntás?", ops: ["A mis adultos de confianza o al médico", "A un desconocido de internet", "A nadie, mejor adivinar"], ok: 0, por: "Preguntar es de inteligentes. Tus adultos y tu pediatra están para eso." },
+  { e: "📚", q: "En la escuela argentina, aprender sobre estos cambios…", ops: ["Es un derecho: lo dice la ley de Educación Sexual Integral", "Está prohibido", "Es optativo para la escuela"], ok: 0, por: "La Ley 26.150 (ESI) garantiza que todos los chicos y chicas aprendan a conocer y cuidar su cuerpo." },
+];
+
 // ---------- datos de Lengua (gramática escolar) ----------
 const B_GRAM = {
   Sustantivo: ["perro", "casa", "escuela", "manzana", "río", "maestra", "libro", "montaña", "pelota", "abuela", "tren", "flor"],
@@ -1241,8 +1345,8 @@ const GENERADORES = {
         explicacion: it.por, dice: `${it.t}. ¿Está bien o está mal?`,
       };
     }
-    const bancos = { magicas: MAGICAS, ayudar: AYUDAR, situaciones: SITUACIONES, bullying: B_BULLYING, buentrato: B_BUENTRATO, animales: B_ANIMALES_CUIDADO, sociedad: B_SOCIEDAD };
-    const titulos = { magicas: "Las palabras mágicas ✨", ayudar: "Ayudo en mi casa 🏠", situaciones: "¿Qué hago si...? 🤗", bullying: "Frená el bullying 🛑", buentrato: "Buen trato 🤝", animales: "Cuido a los animales 🐾", sociedad: "Buenos vecinos 🌳" };
+    const bancos = { magicas: MAGICAS, ayudar: AYUDAR, situaciones: SITUACIONES, bullying: B_BULLYING, buentrato: B_BUENTRATO, animales: B_ANIMALES_CUIDADO, sociedad: B_SOCIEDAD, cuerpo: B_CUERPO_CUIDADO };
+    const titulos = { magicas: "Las palabras mágicas ✨", ayudar: "Ayudo en mi casa 🏠", situaciones: "¿Qué hago si...? 🤗", bullying: "Frená el bullying 🛑", buentrato: "Buen trato 🤝", animales: "Cuido a los animales 🐾", sociedad: "Buenos vecinos 🌳", cuerpo: "Mi cuerpo se respeta 💗" };
     const banco = filtraEdad(bancos[p.tipo] || SITUACIONES);
     const it = banco[azar(banco.length)];
     return {
@@ -2378,6 +2482,19 @@ S("des-his", "Historia argentina", "🎩", "descubrir", "quiz", ["6-8", "9-11"],
 S("des-ban", "Banderas del mundo", "🏳️", "descubrir", "capitales", ["6-8", "9-11"], 20, { modo: "bandera" }, null, "text-cyan-700");
 S("des-cap", "Capitales del mundo", "🗺️", "descubrir", "capitales", ["9-11"], 25, {}, null, "text-cyan-700");
 
+// --- Descubrir · el cuerpo humano por edad ---
+S("cue-1", "Las partes de mi cuerpo", "🧍", "descubrir", "quiz", ["3-5", "6-8"], 20, { banco: B_QUIZ_CUERPO, titulo: "Mi cuerpo 🧍" }, null, "text-cyan-700");
+S("cue-2", "Por dentro del cuerpo", "🫀", "descubrir", "quiz", ["6-8", "9-11"], 20, { banco: B_QUIZ_ORGANOS, titulo: "Por dentro del cuerpo 🫀" }, null, "text-cyan-700");
+S("cue-3", "Estoy creciendo: la pubertad", "🌱", "descubrir", "quiz", ["9-11"], 20, { banco: B_QUIZ_PUBERTAD, titulo: "Estoy creciendo 🌱" }, null, "text-cyan-700");
+
+// --- Descubrir · biología, historia y ciencia avanzada ---
+S("pla-1", "Plantas y oxígeno", "🌿", "descubrir", "quiz", ["3-5", "6-8", "9-11"], 20, { banco: B_QUIZ_PLANTAS, titulo: "Plantas y oxígeno 🌿" }, null, "text-cyan-700");
+S("his-2", "Grandes personas de la historia", "📜", "descubrir", "quiz", ["6-8", "9-11"], 20, { banco: B_QUIZ_PROCERES, titulo: "Grandes de la historia 📜" }, null, "text-cyan-700");
+S("atm-1", "Átomos, materia y espacio", "⚛️", "descubrir", "quiz", ["9-11"], 24, { banco: B_QUIZ_ATOMOS, titulo: "Átomos y espacio ⚛️" }, null, "text-cyan-700");
+
+// --- Convivir · cuidado y respeto del cuerpo (ESI inicial) ---
+S("cvv-cu", "Mi cuerpo se cuida y se respeta", "💗", "convivir", "convivir", ["3-5", "6-8"], 20, { tipo: "cuerpo" });
+
 // --- Hablar · lectocomprensión ---
 S("lec-1", "Leo y comprendo", "📖", "lenguaje", "lectura", ["6-8"], 20, {});
 S("lec-2", "Leo y comprendo: detective", "🕵️", "lenguaje", "lectura", ["9-11"], 20, { dif: true });
@@ -2407,6 +2524,11 @@ Object.keys(IDIOMAS).forEach((l) => {
       IDIOMAS[l].bandera, "idiomas", "idioma", et === "intermedio" ? ["9-11"] : ["6-8", "9-11"], 20, { idioma: l, cat, pInv: 0, pAud: 15 }, { pInv: 45, pAud: 35 });
   });
 });
+
+// contenido de ESI con control parental (la anatomía básica no se marca)
+["cvv-cu", "cue-3"].forEach((id) => { const s = SERIES.find((x) => x.id === id); if (s) s.esi = true; });
+// serie avanzada: se desbloquea demostrando interés sostenido en Descubrir
+const sAtm = SERIES.find((x) => x.id === "atm-1"); if (sAtm) sAtm.avanzada = true;
 
 const TOTAL_NIVELES = SERIES.reduce((a, s) => a + s.niveles, 0);
 // <<< SERIES
@@ -2882,6 +3004,15 @@ function AppNinos({ alSelector, permisos = { mic: true, videos: true }, alRevisa
   const [duelo, setDuelo] = useState(null);
   const [modalModo, setModalModo] = useState(null);
   const [planPago, setPlanPago] = useState({ tipo: "free" });
+  const [esiOn, setEsiOn] = useState(true);
+  const [canjes, setCanjes] = useState([]);
+  const [canjeDetalle, setCanjeDetalle] = useState("");
+  const [canjePts, setCanjePts] = useState("");
+  const [padre1, setPadre1] = useState("");
+  const [padre2, setPadre2] = useState("");
+  const [mascotaFiesta, setMascotaFiesta] = useState(0);
+  const [panelTab, setPanelTab] = useState("progreso");
+  const [tour, setTour] = useState(null); // {tipo, paso}
   const [codigoPromo, setCodigoPromo] = useState("");
   const [bib, setBib] = useState(null); // biblioteca docente
   const [demoTarea, setDemoTarea] = useState(null); // paso de la demo animada
@@ -2931,6 +3062,8 @@ function AppNinos({ alSelector, permisos = { mic: true, videos: true }, alRevisa
       const sonidoV = so === null ? true : !!so;
       setSonidoOn(sonidoV);
       setAudioOn(sonidoV);
+      const esi = await leer("mentejuego:esi");
+      setEsiOn(esi === null ? true : !!esi);
       const pp2 = await leer("mentejuego:plan");
       if (pp2 && pp2.tipo === "premium") setPlanPago(pp2);
       const mu = await leer("pequemundo:musica");
@@ -2945,6 +3078,13 @@ function AppNinos({ alSelector, permisos = { mic: true, videos: true }, alRevisa
   }, []);
 
   useEffect(() => { try { window.scrollTo(0, 0); } catch (e) { /* nada */ } }, [pantalla]);
+  useEffect(() => {
+    if (tour && tour.tipo === "nino" && activo && modoSolito) {
+      const p2 = TOURS.nino[tour.paso];
+      hablar(`${p2.t}. ${p2.x}`, AUDIO_ON, 0.95);
+    }
+  }, [tour && tour.tipo === "nino" ? tour.paso : -1]); // eslint-disable-line
+
   useEffect(() => {
     if (demoTarea === null) return;
     const t = setInterval(() => setDemoTarea((s) => (s + 1) % 7), 2300);
@@ -2986,6 +3126,10 @@ function AppNinos({ alSelector, permisos = { mic: true, videos: true }, alRevisa
     setVideoActivo(null);
     const tt = (await leer(`pequemundo:tareas:${p.id}`)) || [];
     setTareas(tt);
+    setCanjes((await leer(`pequemundo:canjes:${p.id}`)) || []);
+    if (!(await leer("mentejuego:tour:nino"))) setTour({ tipo: "nino", paso: 0 });
+    setPadre1((p.padres && p.padres.p1) || "");
+    setPadre2((p.padres && p.padres.p2) || "");
     setActivo(p);
     setSesiones(s);
     setPendiente(null);
@@ -3031,6 +3175,7 @@ function AppNinos({ alSelector, permisos = { mic: true, videos: true }, alRevisa
   };
 
   const terminarJuego = (puntos, maximo) => {
+    if (puntos / maximo >= 0.5) setMascotaFiesta(Date.now());
     const s = { juego: juegoActivo.id, area: juegoActivo.serie.area, puntos, maximo, fecha: Date.now() };
     const nuevas = [...sesiones, s];
     setSesiones(nuevas);
@@ -3264,6 +3409,8 @@ ${an.alertas.length ? `<h2>Para conversar en el próximo control pediátrico</h2
   const abrirPanel = async () => {
     setPinPA(""); setPinPA2(""); setErrorPin(null);
     setMetaInput(premio.meta || 5);
+    setPanelTab("progreso");
+    if (!(await leer("mentejuego:tour:padres"))) setTour({ tipo: "padres", paso: 0 });
     const am = (await leer(`pequemundo:amigos:${activo.id}`)) || [];
     setAmigos(am);
     setAmigoPaso(null);
@@ -3362,15 +3509,42 @@ ${an.alertas.length ? `<h2>Para conversar en el próximo control pediátrico</h2
   // ---------- cursos y capacitaciones ----------
   if (pantalla === "cursos") {
     const CURSOS = [
-      { id: "aula", icono: "🍎", nombre: "PequeMundo en el aula", para: "Docentes de inicial y primaria", dur: "4 encuentros en vivo + material", precio: 25000,
+      { id: "aula", icono: "🍎", nombre: "PequeMundo en el aula", para: "Docentes de inicial y primaria", dur: "4 videos + material", precio: 25000, vimeo: null,
         desc: "Tareas y biblioteca a fondo, tareas de vacaciones, cómo leer el progreso de los alumnos, diferenciación automática y casos reales de aula." },
-      { id: "familias", icono: "👨‍👩‍👧", nombre: "Pantallas sin culpa", para: "Madres, padres y cuidadores", dur: "2 encuentros en vivo", precio: 12000,
+      { id: "familias", icono: "👨‍👩‍👧", nombre: "Pantallas sin culpa", para: "Madres, padres y cuidadores", dur: "2 videos cortos", precio: 12000, vimeo: null,
         desc: "Límites que funcionan, el premio responsable, acompañar sin estar encima, y cómo usar los informes de la app en el control pediátrico." },
-      { id: "psico", icono: "🧠", nombre: "Observar el desarrollo: qué mirar y cuándo derivar", para: "Psicopedagogía y equipos de orientación", dur: "6 encuentros · dictado por profesionales matriculados", precio: 35000,
+      { id: "psico", icono: "🧠", nombre: "Observar el desarrollo: qué mirar y cuándo derivar", para: "Psicopedagogía y equipos de orientación", dur: "6 videos · dictado por profesionales matriculados", precio: 35000, vimeo: null,
         desc: "Señales de acompañamiento (no diagnóstico), lectura crítica de los informes de la app como insumo, y trabajo articulado con pediatría y escuela." },
-      { id: "directivos", icono: "🏫", nombre: "Implementación institucional", para: "Equipos directivos", dur: "3 encuentros", precio: 30000,
+      { id: "directivos", icono: "🏫", nombre: "Implementación institucional", para: "Equipos directivos", dur: "3 videos", precio: 30000, vimeo: null,
         desc: "Licencias por aula, privacidad y consentimientos con las familias, medición de resultados y comunicación a la comunidad educativa." },
     ];
+    const certificadoCurso = (c) => {
+      const p1 = (activo && activo.padres && activo.padres.p1) || "";
+      const p2 = (activo && activo.padres && activo.padres.p2) || "";
+      const nombres = p1 && p2 ? `${p1} y ${p2}` : p1 || p2 || "________________ y ________________";
+      const f = new Date().toLocaleDateString("es-AR");
+      const html = `<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><title>Certificado — ${c.nombre}</title>
+<style>body{font-family:Georgia,serif;background:#f8fafc;margin:0;padding:40px;display:flex;justify-content:center}
+.c{background:#fff;border:14px double #7c3aed;border-radius:18px;max-width:680px;padding:48px;text-align:center;color:#1e293b}
+h1{color:#7c3aed;font-size:34px;margin:8px 0}.n{font-size:28px;font-weight:bold;color:#0f172a;margin:16px 0;border-bottom:3px solid #facc15;display:inline-block;padding:0 16px 6px}
+.s{margin-top:36px;display:flex;justify-content:space-around;font-size:13px;color:#64748b}.s div{border-top:2px solid #cbd5e1;padding-top:6px;width:200px}
+.pie{margin-top:20px;font-size:11px;color:#94a3b8}</style></head><body><div class="c">
+<div style="font-size:44px">🧠🎓</div><h1>Certificado de Capacitación</h1>
+<p>Mente en Juego certifica que</p><p class="n">${nombres}</p>
+<p>completaron el curso <b>${c.icono} ${c.nombre}</b><br/>(${c.dur}) — el ${f}.</p>
+<p style="font-size:14px;color:#475569">Formarse para acompañar es también una forma de amar.<br/>¡Gracias por aprender en familia!</p>
+<div class="s"><div>Equipo Mente en Juego</div><div>Dirección académica</div></div>
+<p class="pie">Certificado de participación de valor formativo. Los contenidos clínico-pedagógicos son dictados por profesionales matriculados. Verificación online disponible en la versión con cuentas.</p>
+</div></body></html>`;
+      try {
+        const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url; a.download = `certificado-${c.id}.html`;
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      } catch (e) { /* nada */ }
+    };
     const anotarse = async (id) => {
       if (cursosLista.includes(id)) return;
       const lista = [...cursosLista, id];
@@ -3392,16 +3566,31 @@ ${an.alertas.length ? `<h2>Para conversar en el próximo control pediátrico</h2
               <p className="text-lg font-black text-slate-800">{c.icono} {c.nombre}</p>
               <p className="text-xs font-black text-violet-600">{c.para} · {c.dur}</p>
               <p className="mt-1 text-sm font-bold text-slate-500">{c.desc}</p>
-              <div className="mt-2 flex items-center justify-between gap-2">
+              <div className="mt-2 overflow-hidden rounded-2xl bg-slate-900" style={{ aspectRatio: "16/9" }}>
+                {c.vimeo ? (
+                  <iframe title={c.nombre} src={`https://player.vimeo.com/video/${c.vimeo}?dnt=1`} className="h-full w-full" allow="fullscreen" />
+                ) : (
+                  <div className="flex h-full flex-col items-center justify-center gap-1 p-4 text-center">
+                    <span className="text-3xl">🎬</span>
+                    <p className="text-xs font-black text-white">Acá va el curso grabado (reproductor Vimeo embebido)</p>
+                    <p className="text-[10px] font-bold text-slate-400">Los videos se ven directamente en la app, sin salir. Pendiente: grabar y cargar el ID de Vimeo.</p>
+                  </div>
+                )}
+              </div>
+              <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
                 <span className="text-lg font-black text-slate-700">${c.precio.toLocaleString("es-AR")}</span>
-                <button onClick={() => anotarse(c.id)}
-                  className={`rounded-full px-4 py-2 text-sm font-black active:scale-95 ${cursosLista.includes(c.id) ? "bg-emerald-100 text-emerald-700" : "bg-violet-500 text-white"}`}>
-                  {cursosLista.includes(c.id) ? "✅ Anotado en la lista" : "✋ Anotarme a la lista de espera"}
-                </button>
+                <span className="flex gap-1">
+                  <button onClick={() => anotarse(c.id)}
+                    className={`rounded-full px-3 py-2 text-xs font-black active:scale-95 ${cursosLista.includes(c.id) ? "bg-emerald-100 text-emerald-700" : "bg-violet-500 text-white"}`}>
+                    {cursosLista.includes(c.id) ? "✅ En la lista" : "✋ Lista de espera"}
+                  </button>
+                  <button onClick={() => certificadoCurso(c)}
+                    className="rounded-full bg-amber-400 px-3 py-2 text-xs font-black text-amber-900 active:scale-95">🎓 Certificado (modelo)</button>
+                </span>
               </div>
             </div>
           ))}
-          <p className="rounded-2xl bg-white p-3 text-xs text-slate-400">Los cursos se dictan con la versión online: inscripción y pago real, cupos, certificado descargable, y los contenidos clínico-pedagógicos SIEMPRE a cargo de profesionales matriculados. Aranceles estimativos de lanzamiento, sujetos a revisión.</p>
+          <p className="rounded-2xl bg-white p-3 text-xs text-slate-400">Los cursos son grabados y se ven acá mismo (Vimeo embebido). El certificado sale a nombre de los DOS adultos de la familia (se cargan en Padres → 👨‍👩‍👧 Familia). El pago real, el marcado de lecciones vistas y la verificación de certificados llegan con la versión online. Contenidos clínico-pedagógicos SIEMPRE a cargo de profesionales matriculados. Aranceles estimativos.</p>
         </div>
       </div>
     );
@@ -3831,6 +4020,10 @@ ${an.alertas.length ? `<h2>Para conversar en el próximo control pediátrico</h2
   const rango = rangoDeEdad(Math.min(Math.max(edadAnios, 3), 11));
   const modoSolito = activo.solito != null ? !!activo.solito : edadAnios <= 5;
   const esPremium = planPago.tipo === "premium";
+  const cientifico = sesiones.filter((x) => x.area === "descubrir" && x.puntos / x.maximo >= 0.8).length >= 12;
+  const puntosGanados = sesiones.reduce((a, x) => a + x.puntos, 0);
+  const puntosGastados = canjes.reduce((a, x) => a + x.puntos, 0);
+  const puntosDisponibles = puntosGanados - puntosGastados;
   const LIMITE_FREE = 15; // niveles por día en el plan gratuito (tareas de la seño y duelos NO cuentan)
   const esClase = String(activo.id).startsWith("clase");
   const alternarLectura = () => {
@@ -3856,6 +4049,7 @@ ${an.alertas.length ? `<h2>Para conversar en el próximo control pediátrico</h2
     const motor = juegoActivo.serie.motor;
     return (
       <div className="min-h-screen bg-sky-100 p-3 sm:p-4">
+        <MascotaChispa />
         <div className="mx-auto flex max-w-lg flex-col gap-4 sm:gap-6">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <button onClick={() => setPantalla("menu")} className="flex items-center gap-1 rounded-full bg-white px-4 py-2 font-black text-slate-600 shadow active:scale-95">
@@ -4028,6 +4222,32 @@ ${an.alertas.length ? `<h2>Para conversar en el próximo control pediátrico</h2
     const logros = calcularLogros(sesiones, rango);
     const ganadas = logros.filter((l) => l.ganada).length;
     const diplomas = logros.filter((l) => l.ganada && l.diploma);
+    const certificadoNino = () => {
+      const f = new Date().toLocaleDateString("es-AR");
+      const meds = MEDALLAS.filter((m) => logrosGanados.includes(m.id));
+      const html = `<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><title>Certificado — ${activo.nombre}</title>
+<style>body{font-family:Georgia,serif;background:#fefce8;margin:0;padding:40px;display:flex;justify-content:center}
+.c{background:#fff;border:14px double #f59e0b;border-radius:18px;max-width:680px;padding:48px;text-align:center;color:#1e293b}
+h1{color:#d97706;font-size:34px;margin:8px 0}.n{font-size:30px;font-weight:bold;color:#0f172a;margin:16px 0;border-bottom:3px solid #38bdf8;display:inline-block;padding:0 16px 6px}
+.m{font-size:15px;margin:4px 0}.s{margin-top:32px;display:flex;justify-content:space-around;font-size:13px;color:#64748b}.s div{border-top:2px solid #cbd5e1;padding-top:6px;width:200px}
+.pie{margin-top:18px;font-size:11px;color:#94a3b8}</style></head><body><div class="c">
+<div style="font-size:44px">🏆</div><h1>Certificado de Reconocimiento</h1>
+<p>Mente en Juego reconoce a</p><p class="n">${activo.avatar} ${activo.nombre}</p>
+<p>por su esfuerzo y constancia: <b>${sesiones.length}</b> juegos completados y <b>${puntosGanados.toLocaleString("es-AR")}</b> puntos ganados aprendiendo.</p>
+${meds.length ? `<p class="m"><b>Medallas:</b> ${meds.map((m) => m.icono + " " + m.nombre).join(" · ")}</p>` : ""}
+<p style="font-size:14px;color:#475569">Cada nivel superado es un pasito de tu cerebro creciendo. ¡Seguí así!</p>
+<div class="s"><div>Equipo Mente en Juego</div><div>Familia · ${f}</div></div>
+<p class="pie">Reconocimiento al esfuerzo dentro de la app. No constituye certificación académica oficial.</p>
+</div></body></html>`;
+      try {
+        const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url; a.download = `certificado-${activo.nombre.toLowerCase()}.html`;
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      } catch (e) { /* nada */ }
+    };
     const descargarDiploma = (l) => {
       const f = new Date().toLocaleDateString("es-AR");
       const html = `<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><title>Diploma — ${activo.nombre}</title>
@@ -4065,6 +4285,11 @@ h1{color:#b45309;letter-spacing:2px}h2{font-size:40px;margin:12px 0;color:#1e293
               </div>
             ))}
           </div>
+          <button onClick={certificadoNino}
+            className="rounded-full bg-orange-500 py-3 font-black text-white shadow-md active:scale-95">
+            🏆 Descargar mi Certificado de Reconocimiento
+          </button>
+
           {diplomas.length > 0 && (
             <div className="rounded-3xl bg-white p-4 shadow-md">
               <p className="font-black text-slate-700">🎓 Diplomas para imprimir y colgar</p>
@@ -4183,6 +4408,66 @@ h1{color:#b45309;letter-spacing:2px}h2{font-size:40px;margin:12px 0;color:#1e293
     );
   }
 
+  // ---------- recorridos guiados ----------
+  const TOURS = {
+    padres: [
+      { e: "👋", t: "¡Bienvenidos al panel!", x: "Acá está TODO el control de la experiencia, ahora ordenado en 4 pestañas para que nada se pierda. Les mostramos qué hay en cada una (dura 1 minuto)." },
+      { e: "📊", t: "Pestaña Progreso", x: "La lectura honesta del avance: cómo va comparado consigo mismo, los avisos de adelanto o refuerzo, la señal para el pediatra si hiciera falta (nunca un diagnóstico), y el informe descargable." },
+      { e: "🎮", t: "Pestaña Juego y premios", x: "Los videos premio (cuántos niveles cuesta cada uno y el máximo diario), el canje de puntos por momentos en familia, la música de fondo y el modo guiado o explorador." },
+      { e: "🏫", t: "Pestaña Escuela", x: "Peguen acá el código de tarea que manda la seño (común o de vacaciones): a su peque le aparece como tarjeta y la juega A SU nivel. También los amigos a distancia y los cursos para adultos." },
+      { e: "⚙️", t: "Pestaña Familia y ajustes", x: "Los nombres de ambos adultos (salen en los certificados), la suscripción y sus precios, el contenido de cuidado del cuerpo (ESI) con su interruptor, y los PIN de cada peque." },
+      { e: "❓", t: "¡Listo!", x: "Pueden volver a ver este recorrido cuando quieran con el botón ❓ de arriba. Y recuerden: las tareas de la seño y lo esencial funcionan SIEMPRE, con o sin suscripción. 💛" },
+    ],
+    nino: [
+      { e: "🦊", t: "¡Hola! Soy Chispa", x: "¡Te muestro tu mundo en un minuto! Tocá la flecha para seguir." },
+      { e: "✨", t: "Tus juegos de hoy", x: "Arriba están los ELEGIDOS PARA VOS. Tocá uno ¡y a jugar! Cada estrella que ganás me pone muy feliz." },
+      { e: "🎧", t: "Los botones de arriba", x: "Solito hace que te lea todo con mi voz. Con 🎵 apagás la música y con 🔊 las voces, como más te guste." },
+      { e: "🎁", t: "Tus puntos y tareas", x: "Jugando ganás puntos que canjeás con tu familia por lo que VOS elijas. Y si tu seño manda tarea, aparece en una tarjeta amarilla." },
+      { e: "👥", t: "¡Y hay más!", x: "Podés jugar duelos con tu hermano o tus amigos, ganar medallas y diplomas... ¡Yo te acompaño siempre desde acá abajo! ¡A jugar!" },
+    ],
+  };
+  const cerrarTour = () => { if (tour) guardar(`mentejuego:tour:${tour.tipo}`, true); setTour(null); };
+  const TourGuiado = () => {
+    if (!tour) return null;
+    const pasos = TOURS[tour.tipo];
+    const p2 = pasos[tour.paso];
+    const ultimo = tour.paso === pasos.length - 1;
+    return (
+      <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/50 p-4 sm:items-center">
+        <div className="w-full max-w-sm rounded-3xl bg-white p-5 shadow-2xl">
+          <div className="text-center text-5xl">{p2.e}</div>
+          <p className="mt-2 text-center text-xl font-black text-slate-800">{p2.t}</p>
+          <p className="mt-1 text-center text-sm font-bold text-slate-600">{p2.x}</p>
+          <div className="mt-3 flex items-center justify-center gap-1.5">
+            {pasos.map((_, i) => <span key={i} className={`h-2 rounded-full ${i === tour.paso ? "w-5 bg-violet-500" : "w-2 bg-slate-200"}`} />)}
+          </div>
+          <div className="mt-4 flex gap-2">
+            {tour.paso > 0 && (
+              <button onClick={() => setTour({ ...tour, paso: tour.paso - 1 })}
+                className="rounded-full bg-slate-200 px-4 py-3 font-black text-slate-600 active:scale-95">←</button>
+            )}
+            <button onClick={() => (ultimo ? cerrarTour() : setTour({ ...tour, paso: tour.paso + 1 }))}
+              className="flex-1 rounded-full bg-violet-500 py-3 font-black text-white active:scale-95">{ultimo ? "¡Entendido! 👍" : "Siguiente →"}</button>
+            {!ultimo && <button onClick={cerrarTour} className="rounded-full bg-slate-100 px-4 py-3 text-xs font-black text-slate-400 active:scale-95">Saltar</button>}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // ---------- mascota flotante (ejemplo v1: a futuro con animaciones profesionales) ----------
+  const MascotaChispa = () => {
+    const festejando = Date.now() - mascotaFiesta < 3000;
+    if (!["menu", "serie", "juego", "logros"].includes(pantalla)) return null;
+    return (
+      <button onClick={() => { setMascotaFiesta(Date.now()); hablar(`¡Hola ${activo.nombre}! Soy Chispa. ¡Me encanta verte jugar! ¡Vamos por más!`, AUDIO_ON); }}
+        aria-label="Chispa, tu mascota"
+        className={`fixed bottom-4 right-4 z-40 flex h-16 w-16 items-center justify-center rounded-full bg-orange-400 text-3xl shadow-xl transition-transform active:scale-90 ${festejando ? "animate-bounce" : "animate-pulse"}`}>
+        {festejando ? "🦊✨" : "🦊"}
+      </button>
+    );
+  };
+
   // ---------- guía para padres ----------
   if (pantalla === "guia") {
     return (
@@ -4202,6 +4487,8 @@ h1{color:#b45309;letter-spacing:2px}h2{font-size:40px;margin:12px 0;color:#1e293
 
   // ---------- panel de padres (protegido por PIN) ----------
   if (pantalla === "panel") {
+    const carta = (t) => `w-full rounded-3xl bg-white p-5 shadow-md sm:p-6 ${panelTab === t ? "" : "hidden"}`;
+    const PESTANAS = [["progreso", "📊 Progreso"], ["juego", "🎮 Juego y premios"], ["escuela", "🏫 Escuela"], ["ajustes", "⚙️ Familia y ajustes"]];
     return (
       <div className="min-h-screen bg-sky-100 p-3 sm:p-4">
         <div className="mx-auto flex max-w-md flex-col items-center gap-5 sm:gap-6">
@@ -4210,6 +4497,16 @@ h1{color:#b45309;letter-spacing:2px}h2{font-size:40px;margin:12px 0;color:#1e293
               <ArrowLeft /> Volver
             </button>
             <span className="text-lg font-black text-slate-700 sm:text-xl">📊 Panel para padres</span>
+            <button onClick={() => setTour({ tipo: "padres", paso: 0 })}
+              className="rounded-full bg-white px-3 py-2 text-sm font-black text-violet-600 shadow active:scale-95">❓ Recorrido</button>
+          </div>
+
+          <TourGuiado />
+          <div className="sticky top-2 z-30 flex w-full flex-wrap justify-center gap-1.5 rounded-full bg-white/90 p-1.5 shadow-md">
+            {PESTANAS.map(([t, nom]) => (
+              <button key={t} onClick={() => setPanelTab(t)}
+                className={`rounded-full px-3 py-1.5 text-xs font-black transition-colors active:scale-95 ${panelTab === t ? "bg-sky-600 text-white" : "text-slate-500"}`}>{nom}</button>
+            ))}
           </div>
 
           {(() => {
@@ -4219,7 +4516,7 @@ h1{color:#b45309;letter-spacing:2px}h2{font-size:40px;margin:12px 0;color:#1e293
             const areasAdelPanel = Object.keys(AREAS).filter((a) => adelantosPanel[a]);
             const an = analizarProgreso(sesiones, disponiblesPanel, rango, edadAnios);
             return (
-              <div className="w-full rounded-3xl bg-white p-5 shadow-md sm:p-6">
+              <div className={carta("progreso")}>
                 <h3 className="text-lg font-black text-slate-800 sm:text-xl">🤖 Lectura del progreso</h3>
                 <p className="mt-1 text-xs text-slate-400">Generada automáticamente comparando a {activo.nombre} con su propio historial.</p>
                 <div className="mt-3 flex flex-wrap gap-2 text-xs font-black">
@@ -4278,7 +4575,7 @@ h1{color:#b45309;letter-spacing:2px}h2{font-size:40px;margin:12px 0;color:#1e293
             );
           })()}
 
-          <div className="w-full rounded-3xl bg-white p-5 shadow-md sm:p-6">
+          <div className={carta("progreso")}>
             <h3 className="text-lg font-black text-slate-800 sm:text-xl">🔔 Modelos de notificaciones (vista de prueba)</h3>
             <p className="mt-1 text-xs text-slate-400">Así se ven los tres tipos de aviso que el sistema genera automáticamente cuando corresponde. Tocá para previsualizar cada uno.</p>
             <div className="mt-3 flex flex-wrap gap-2">
@@ -4368,7 +4665,7 @@ h1{color:#b45309;letter-spacing:2px}h2{font-size:40px;margin:12px 0;color:#1e293
 
           <PanelPadres sesiones={sesiones} perfil={activo} edadAnios={edadAnios} />
 
-          <div className="w-full rounded-3xl bg-white p-5 shadow-md sm:p-6">
+          <div className={carta("juego")}>
             <h3 className="text-lg font-black text-slate-800 sm:text-xl">🎁 Premio diario</h3>
             <p className="mt-1 text-sm text-slate-500">Cuando {activo.nombre} completa el objetivo del día, se le habilitan únicamente los videos de YouTube que ustedes elijan acá (uno por línea).</p>
             <div className="mt-3 flex flex-wrap gap-4">
@@ -4426,13 +4723,64 @@ h1{color:#b45309;letter-spacing:2px}h2{font-size:40px;margin:12px 0;color:#1e293
             </p>
           </div>
 
+          <div className={carta("ajustes")}>
+            <h3 className="text-lg font-black text-slate-800 sm:text-xl">👨‍👩‍👧 La familia de {activo.nombre}</h3>
+            <p className="mt-1 text-sm text-slate-500">Nombres de mamá/papá o cuidadores (aparecen en los certificados; si es uno solo, dejen el segundo vacío):</p>
+            <div className="mt-2 flex flex-col gap-2">
+              <input value={padre1} onChange={(e) => setPadre1(e.target.value)} placeholder="Adulto 1 (ej: María López)"
+                className="rounded-2xl border-4 border-sky-200 px-4 py-2 font-bold text-slate-700 outline-none focus:border-sky-400" />
+              <input value={padre2} onChange={(e) => setPadre2(e.target.value)} placeholder="Adulto 2 (ej: Juan Pérez) — opcional"
+                className="rounded-2xl border-4 border-sky-200 px-4 py-2 font-bold text-slate-700 outline-none focus:border-sky-400" />
+              <button onClick={() => {
+                  const lista = perfiles.map((x) => (x.id === activo.id ? { ...x, padres: { p1: padre1.trim(), p2: padre2.trim() } } : x));
+                  setPerfiles(lista);
+                  setActivo({ ...activo, padres: { p1: padre1.trim(), p2: padre2.trim() } });
+                  guardar("pequemundo:perfiles", lista);
+                  sonido("acierto");
+                }} className="rounded-full bg-sky-500 py-2 font-black text-white active:scale-95">Guardar familia ✅</button>
+            </div>
+          </div>
+
+          <div className={carta("juego")}>
+            <h3 className="text-lg font-black text-slate-800 sm:text-xl">🎁 Canje de puntos</h3>
+            <p className="mt-2 rounded-2xl bg-yellow-50 p-3 text-sm font-black text-yellow-800">
+              {activo.nombre} tiene <span className="text-xl">{puntosDisponibles.toLocaleString("es-AR")}</span> puntos para canjear
+              <span className="block text-xs font-bold text-yellow-700">(ganó {puntosGanados.toLocaleString("es-AR")} · canjeó {puntosGastados.toLocaleString("es-AR")})</span>
+            </p>
+            <p className="mt-2 text-xs text-slate-500">La idea: que {activo.nombre} elija algo que de verdad quiera (una salida al cine, cocinar juntos, un cuento extra) y ustedes lo registren acá. El premio más poderoso es el tiempo compartido, no las cosas.</p>
+            <div className="mt-2 flex flex-col gap-2">
+              <input value={canjeDetalle} onChange={(e) => setCanjeDetalle(e.target.value)} placeholder="¿Qué eligió? (ej: Salida al cine con papá)"
+                className="rounded-2xl border-4 border-yellow-200 px-4 py-2 font-bold text-slate-700 outline-none focus:border-yellow-400" />
+              <div className="flex gap-2">
+                <input value={canjePts} onChange={(e) => setCanjePts(e.target.value.replace(/\D/g, ""))} placeholder="Puntos" inputMode="numeric"
+                  className="w-28 rounded-2xl border-4 border-yellow-200 px-4 py-2 font-black text-slate-700 outline-none focus:border-yellow-400" />
+                <button onClick={() => {
+                    const pts = parseInt(canjePts || "0", 10);
+                    if (!canjeDetalle.trim() || pts <= 0 || pts > puntosDisponibles) { sonido("error"); return; }
+                    const lista = [...canjes, { fecha: Date.now(), detalle: canjeDetalle.trim(), puntos: pts }];
+                    setCanjes(lista);
+                    guardar(`pequemundo:canjes:${activo.id}`, lista);
+                    setCanjeDetalle(""); setCanjePts("");
+                    sonido("fanfarria");
+                  }} className="flex-1 rounded-full bg-yellow-500 py-2 font-black text-white active:scale-95">Registrar canje 🎉</button>
+              </div>
+            </div>
+            {canjes.length > 0 && (
+              <div className="mt-2 flex flex-col gap-1">
+                {canjes.slice(-5).reverse().map((c, i) => (
+                  <p key={i} className="rounded-xl bg-slate-50 px-3 py-2 text-xs font-bold text-slate-600">🎁 {c.detalle} · {c.puntos} pts · {new Date(c.fecha).toLocaleDateString("es-AR")}</p>
+                ))}
+              </div>
+            )}
+          </div>
+
           <button onClick={async () => { setCursosLista((await leer("mentejuego:cursos")) || []); setCursosDesde("panel"); setPantalla("cursos"); }}
-            className="w-full rounded-3xl bg-violet-500 p-4 text-left shadow-md active:scale-[0.99]">
+            className={`w-full rounded-3xl bg-violet-500 p-4 text-left shadow-md active:scale-[0.99] ${panelTab === "escuela" ? "" : "hidden"}`}>
             <span className="text-lg font-black text-white">🎓 Cursos para adultos</span>
             <p className="text-xs font-bold text-white/80">Para familias, seños, psicopedagogía y directivos · con certificado · tocá para ver el catálogo</p>
           </button>
 
-          <div className="w-full rounded-3xl bg-white p-5 shadow-md sm:p-6">
+          <div className={carta("ajustes")}>
             <h3 className="text-lg font-black text-slate-800 sm:text-xl">💎 Suscripción</h3>
             <p className={`mt-2 rounded-2xl p-3 text-sm font-black ${esPremium ? "bg-violet-100 text-violet-700" : "bg-slate-100 text-slate-600"}`}>
               Plan actual: {esPremium ? "💎 Premium" : "🌱 Gratuito"}{esPremium && planPago.demo ? " (demo)" : ""}
@@ -4477,7 +4825,7 @@ h1{color:#b45309;letter-spacing:2px}h2{font-size:40px;margin:12px 0;color:#1e293
             <p className="mt-2 text-xs text-slate-400">El pago real (MercadoPago, tarjeta) llega con la versión online. El código de prueba te deja ver hoy la experiencia Premium completa. Precios de lanzamiento sujetos a revisión periódica.</p>
           </div>
 
-          <div className="w-full rounded-3xl bg-white p-5 shadow-md sm:p-6">
+          <div className={carta("escuela")}>
             <h3 className="text-lg font-black text-slate-800 sm:text-xl">📚 Tarea de la seño</h3>
             {tareas.length > 0 && (
               <div className="mt-2 flex flex-col gap-1">
@@ -4519,7 +4867,7 @@ h1{color:#b45309;letter-spacing:2px}h2{font-size:40px;margin:12px 0;color:#1e293
             <p className="mt-2 text-xs text-slate-400">La seño arma la tarea en 🏫 Modo clase → 📚 Biblioteca docente y comparte el código. A cada peque le aparece como tarjeta amarilla en su menú y juega SUS próximos niveles de esos juegos.</p>
           </div>
 
-          <div className="w-full rounded-3xl bg-white p-5 shadow-md sm:p-6">
+          <div className={carta("escuela")}>
             <h3 className="text-lg font-black text-slate-800 sm:text-xl">👥 Amigos a distancia</h3>
             <p className="mt-1 text-sm text-slate-500">Número de amigo de <b>{activo.nombre}</b> (compártanlo SOLO con padres que conozcan):</p>
             <p className="mt-1 text-center text-2xl font-black tracking-widest text-fuchsia-600">{(() => { const n = parseInt(String(activo.id).replace(/\D/g, "").slice(-10) || "7", 10); const b = (n % 2176782336).toString(36).toUpperCase().padStart(6, "0"); return b.slice(0, 3) + "-" + b.slice(3); })()}</p>
@@ -4565,7 +4913,27 @@ h1{color:#b45309;letter-spacing:2px}h2{font-size:40px;margin:12px 0;color:#1e293
             <p className="mt-2 text-xs text-slate-400">Los duelos a distancia se activan con la versión con cuentas (requiere servidor). Mientras tanto, ¡el Duelo de amigos ya funciona en el mismo dispositivo desde el menú de los peques!</p>
           </div>
 
-          <div className="w-full rounded-3xl bg-white p-5 shadow-md sm:p-6">
+          <div className={carta("ajustes")}>
+            <h3 className="text-lg font-black text-slate-800 sm:text-xl">💗 Cuidado del cuerpo (contenido alineado a ESI)</h3>
+            <button onClick={() => { const v = !esiOn; setEsiOn(v); guardar("mentejuego:esi", v); }}
+              className={`mt-3 flex w-full items-center justify-between rounded-2xl p-4 text-left font-black active:scale-[0.99] ${esiOn ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-600"}`}>
+              <span>{esiOn ? "💗 Activado (recomendado)" : "⏸️ Desactivado"}</span>
+              <span className="text-xs">Tocá para cambiar</span>
+            </button>
+            <p className="mt-2 text-xs text-slate-500">
+              Controla dos series: <b>«Mi cuerpo se cuida y se respeta»</b> (3-8: partes privadas, decir no, contar a un adulto de
+              confianza, "nunca es tu culpa" — los mensajes de prevención del abuso que enseña la ESI en nivel inicial) y
+              <b> «Estoy creciendo: la pubertad»</b> (9-11: los cambios del cuerpo como proceso normal, sin vergüenza ni burlas).
+              El contenido sigue los lineamientos de la <b>Ley 26.150 de Educación Sexual Integral</b> para cada edad: nada gráfico,
+              todo protector. Las series de anatomía básica (partes del cuerpo, órganos) no dependen de este interruptor.
+            </p>
+            <p className="mt-2 rounded-2xl bg-amber-50 p-3 text-xs font-bold text-amber-700">
+              💡 Recomendamos dejarlo activado: la evidencia en prevención del abuso infantil muestra que los chicos que conocen
+              estos mensajes piden ayuda antes. La decisión final, como siempre en esta app, es de ustedes.
+            </p>
+          </div>
+
+          <div className={carta("juego")}>
             <h3 className="text-lg font-black text-slate-800 sm:text-xl">🎵 Música de fondo</h3>
             <button onClick={alternarMusica}
               className={`mt-3 flex w-full items-center justify-between rounded-2xl p-4 text-left font-black active:scale-[0.99] ${musicaOn ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-600"}`}>
@@ -4580,7 +4948,7 @@ h1{color:#b45309;letter-spacing:2px}h2{font-size:40px;margin:12px 0;color:#1e293
             </p>
           </div>
 
-          <div className="w-full rounded-3xl bg-white p-5 shadow-md sm:p-6">
+          <div className={carta("juego")}>
             <h3 className="text-lg font-black text-slate-800 sm:text-xl">🧭 Cómo elige los juegos</h3>
             <button onClick={() => { const cfg = { ...premio, guiado: !(premio.guiado !== false) }; setPremio(cfg); guardar("pequemundo:premio", cfg); }}
               className={`mt-3 flex w-full items-center justify-between rounded-2xl p-4 text-left font-black active:scale-[0.99] ${premio.guiado !== false ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-600"}`}>
@@ -4593,7 +4961,7 @@ h1{color:#b45309;letter-spacing:2px}h2{font-size:40px;margin:12px 0;color:#1e293
             </p>
           </div>
 
-          <div className="w-full rounded-3xl bg-white p-5 shadow-md sm:p-6">
+          <div className={carta("ajustes")}>
             <h3 className="text-lg font-black text-slate-800 sm:text-xl">👨‍👩‍👧‍👦 Peques del dispositivo</h3>
             <div className="mt-3 flex flex-col gap-2">
               {perfiles.map((p) => (
@@ -4705,7 +5073,9 @@ h1{color:#b45309;letter-spacing:2px}h2{font-size:40px;margin:12px 0;color:#1e293
   const bandaSig = BANDA_SIG[rango];
   const disponibles = SERIES.filter((s) =>
     (s.edades.includes(rango) || (bandaSig && adelantos[s.area] && s.edades.includes(bandaSig))) &&
-    (esPremium || s.area !== "idiomas" || s.id.startsWith("idi-en")));
+    (esPremium || s.area !== "idiomas" || s.id.startsWith("idi-en")) &&
+    (esiOn || !s.esi) &&
+    (!s.avanzada || cientifico));
   const esAdelantada = (s) => !s.edades.includes(rango);
   const areasAdel = Object.keys(AREAS).filter((a) => adelantos[a]);
   const nivelesEtapa = disponibles.reduce((a, s) => a + s.niveles, 0);
@@ -4737,6 +5107,8 @@ h1{color:#b45309;letter-spacing:2px}h2{font-size:40px;margin:12px 0;color:#1e293
           </div>
         </header>
 
+        <MascotaChispa />
+        <TourGuiado />
         {modalModo && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setModalModo(null)}>
             <div className="w-full max-w-sm rounded-3xl bg-white p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
@@ -4779,6 +5151,19 @@ h1{color:#b45309;letter-spacing:2px}h2{font-size:40px;margin:12px 0;color:#1e293
           <div className="rounded-3xl bg-yellow-100 p-4 text-center">
             <p className="text-2xl font-black text-amber-700">🎂 ¡FELIZ CUMPLEAÑOS, {activo.nombre.toUpperCase()}! 🎉</p>
             <p className="font-bold text-amber-600">Hoy cumplís {edadAnios}. ¡Tus juegos crecen con vos!</p>
+          </div>
+        )}
+
+        <div className="rounded-3xl bg-yellow-300 p-4 shadow-md">
+          <p className="text-lg font-black text-yellow-900">🎁 Tenés {puntosDisponibles.toLocaleString("es-AR")} puntos</p>
+          <p className="text-xs font-bold text-yellow-800">Se canjean con tus papás por lo que VOS elijas: una salida, un cuento, una peli juntos... ¡Ellos lo anotan en su panel!</p>
+          {canjes.length > 0 && <p className="mt-1 text-xs font-black text-yellow-900">Último canje: {canjes[canjes.length - 1].detalle} 🎉</p>}
+        </div>
+
+        {!cientifico && rango === "9-11" && (
+          <div className="rounded-3xl bg-slate-200 p-4 shadow-sm">
+            <p className="text-sm font-black text-slate-600">⚛️ Átomos, materia y espacio · 🔒</p>
+            <p className="text-xs font-bold text-slate-500">Se desbloquea demostrando interés: superá 12 niveles de 🦁 Descubrir con 80% o más. ¡El conocimiento se gana explorando!</p>
           </div>
         )}
 
@@ -5533,6 +5918,8 @@ const TEXTOS_CONSENT = {
 function ConsentimientoScreen({ inicial, alAceptar }) {
   const [pais, setPais] = useState(inicial ? inicial.pais : null);
   const [acepta, setAcepta] = useState(false);
+  const [provincia, setProvincia] = useState("");
+  const [ciudad, setCiudad] = useState("");
   const [mic, setMic] = useState(inicial ? !!inicial.mic : true);
   const [videos, setVideos] = useState(inicial ? !!inicial.videos : true);
   const p = PAISES.find((x) => x.id === pais);
@@ -5578,13 +5965,24 @@ function ConsentimientoScreen({ inicial, alAceptar }) {
           <input type="checkbox" checked={videos} onChange={(e) => setVideos(e.target.checked)} className="mt-1 h-5 w-5 accent-red-500" />
           <span className="text-sm text-slate-600">🎬 {t.videos}</span>
         </label>
+        <div className="rounded-2xl border-4 border-sky-100 bg-sky-50 p-3">
+          <p className="text-sm font-black text-slate-700">📍 ¿Desde dónde nos acompañan? (obligatorio)</p>
+          <div className="mt-2 flex flex-col gap-2">
+            <input value={provincia} onChange={(e) => setProvincia(e.target.value)} placeholder="Provincia / Estado (ej: Neuquén)"
+              className="rounded-2xl border-4 border-sky-200 bg-white px-4 py-2 font-bold text-slate-700 outline-none focus:border-sky-400" />
+            <input value={ciudad} onChange={(e) => setCiudad(e.target.value)} placeholder="Ciudad (ej: Neuquén capital)"
+              className="rounded-2xl border-4 border-sky-200 bg-white px-4 py-2 font-bold text-slate-700 outline-none focus:border-sky-400" />
+          </div>
+          <p className="mt-2 text-[10px] leading-snug text-slate-400">Usamos la ubicación SOLO en forma agregada y anónima: mapas de uso por región para mejorar la app y orientar donaciones de tablets a comunidades con menos recursos. Nunca se muestra a otras familias ni a docentes, y nunca se piden domicilios exactos.</p>
+        </div>
+
         <label className="flex cursor-pointer items-start gap-3 rounded-2xl border-4 border-emerald-100 bg-emerald-50 p-3">
           <input type="checkbox" checked={acepta} onChange={(e) => setAcepta(e.target.checked)} className="mt-1 h-5 w-5 accent-emerald-600" />
           <span className="text-sm font-bold text-slate-700">✅ {t.acepto}</span>
         </label>
 
-        <button disabled={!acepta}
-          onClick={() => alAceptar({ pais, mic, videos, fecha: new Date().toISOString(), version: 1 })}
+        <button disabled={!acepta || !provincia.trim() || !ciudad.trim()}
+          onClick={() => alAceptar({ pais, provincia: provincia.trim(), ciudad: ciudad.trim(), mic, videos, fecha: new Date().toISOString(), version: 1 })}
           className="rounded-full bg-emerald-500 py-3 text-xl font-black text-white shadow-lg transition-transform active:scale-95 disabled:opacity-40">
           {t.boton}
         </button>
