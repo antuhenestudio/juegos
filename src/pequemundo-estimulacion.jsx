@@ -3021,8 +3021,10 @@ function AppNinos({ alSelector, permisos = { mic: true, videos: true }, alRevisa
   const [bib, setBib] = useState(null); // biblioteca docente
   const [demoTarea, setDemoTarea] = useState(null); // paso de la demo animada
   const [proyectos, setProyectos] = useState([]);
-  const [cursosLista, setCursosLista] = useState([]);
   const [cursosDesde, setCursosDesde] = useState("clase");
+  const [cursoDetalle, setCursoDetalle] = useState(null);
+  const [cursosComprados, setCursosComprados] = useState([]);
+  const [codigoCurso, setCodigoCurso] = useState("");
   const [demoJuego, setDemoJuego] = useState(null); // {serie, clave}
   const [tareas, setTareas] = useState([]);
   const [tareaCod, setTareaCod] = useState("");
@@ -3512,25 +3514,46 @@ ${an.alertas.length ? `<h2>Para conversar en el próximo control pediátrico</h2
             setPantalla("biblioteca");
           }}
           className="rounded-full bg-white px-6 py-2 text-sm font-black text-cyan-700 shadow active:scale-95">📚 Biblioteca docente: armar tareas</button>
-        <button onClick={async () => { setCursosLista((await leer("mentejuego:cursos")) || []); setCursosDesde("clase"); setPantalla("cursos"); }}
+        <button onClick={async () => { setCursosComprados((await leer("mentejuego:cursosComprados")) || []); setCursoDetalle(null); setCursosDesde("clase"); setPantalla("cursos"); }}
           className="rounded-full bg-white px-6 py-2 text-sm font-black text-violet-700 shadow active:scale-95">🎓 Cursos y capacitaciones</button>
         <button onClick={() => setPantalla("elegirPerfil")} className="text-sm font-bold text-slate-400">← Volver</button>
       </div>
     );
   }
 
-  // ---------- cursos y capacitaciones ----------
+  // ---------- cursos y capacitaciones (catálogo + página de detalle + compra) ----------
   if (pantalla === "cursos") {
     const CURSOS = [
-      { id: "aula", icono: "🍎", nombre: "PequeMundo en el aula", para: "Docentes de inicial y primaria", dur: "4 videos + material", precio: 25000, vimeo: null,
-        desc: "Tareas y biblioteca a fondo, tareas de vacaciones, cómo leer el progreso de los alumnos, diferenciación automática y casos reales de aula." },
-      { id: "familias", icono: "👨‍👩‍👧", nombre: "Pantallas sin culpa", para: "Madres, padres y cuidadores", dur: "2 videos cortos", precio: 12000, vimeo: null,
-        desc: "Límites que funcionan, el premio responsable, acompañar sin estar encima, y cómo usar los informes de la app en el control pediátrico." },
-      { id: "psico", icono: "🧠", nombre: "Observar el desarrollo: qué mirar y cuándo derivar", para: "Psicopedagogía y equipos de orientación", dur: "6 videos · dictado por profesionales matriculados", precio: 35000, vimeo: null,
-        desc: "Señales de acompañamiento (no diagnóstico), lectura crítica de los informes de la app como insumo, y trabajo articulado con pediatría y escuela." },
-      { id: "directivos", icono: "🏫", nombre: "Implementación institucional", para: "Equipos directivos", dur: "3 videos", precio: 30000, vimeo: null,
-        desc: "Licencias por aula, privacidad y consentimientos con las familias, medición de resultados y comunicación a la comunidad educativa." },
+      { id: "aula", icono: "🍎", nombre: "PequeMundo en el aula", para: "Docentes de inicial y primaria", dur: "4 videos (3 h totales) + material descargable", precio: 25000, vimeo: null,
+        desc: "Convertí la app en tu asistente pedagógico: tareas diferenciadas sin trabajo extra.",
+        temario: ["Módulo 1 · La biblioteca docente: buscar, filtrar y armar tareas en 5 minutos", "Módulo 2 · Tareas de vacaciones y proyectos reutilizables año a año", "Módulo 3 · Leer el progreso: diferenciación automática, adelanto y refuerzo", "Módulo 4 · Casos reales de aula + prevención del bullying con la app"],
+        egresado: ["Armás tareas adaptadas a cada alumno en minutos, comunes o de vacaciones", "Interpretás el avance del aula sin planillas", "Integrás la app a tu planificación sin reemplazar tu didáctica"],
+        dicta: "Equipo pedagógico de Mente en Juego + docente de grado invitada (a confirmar al lanzar; siempre con experiencia de aula real)." },
+      { id: "familias", icono: "👨‍👩‍👧", nombre: "Pantallas sin culpa", para: "Madres, padres y cuidadores", dur: "2 videos cortos (70 min) + guía práctica", precio: 12000, vimeo: null,
+        desc: "Criar con pantallas sin pelearse con ellas: límites que funcionan y premio responsable.",
+        temario: ["Módulo 1 · Cuánta pantalla según la edad: qué dice la evidencia y cómo aplicarla sin drama", "Módulo 2 · El video como premio, el canje de puntos y cómo acompañar sin estar encima"],
+        egresado: ["Ponés límites de pantalla sostenibles y sin gritos", "Usás los informes de la app en el control pediátrico", "Convertís los puntos del juego en momentos en familia"],
+        dicta: "Equipo de Mente en Juego; revisión de contenidos por profesional de la salud infantil matriculado (a confirmar al lanzar)." },
+      { id: "psico", icono: "🧠", nombre: "Observar el desarrollo: qué mirar y cuándo derivar", para: "Psicopedagogía y equipos de orientación escolar", dur: "6 videos (5 h) + bibliografía + certificado", precio: 35000, vimeo: null,
+        desc: "Los datos de juego como insumo clínico responsable: señales, límites y articulación.",
+        temario: ["Módulo 1 · Qué mide (y qué NO mide) una app educativa", "Módulo 2 · Señales de acompañamiento vs. diagnóstico: el límite ético y legal", "Módulo 3 · Lectura crítica de los informes de progreso", "Módulo 4 · Conciencia fonológica y matemática temprana: cuándo profundizar", "Módulo 5 · Articulación con pediatría, escuela y familia", "Módulo 6 · Casos integradores"],
+        egresado: ["Usás informes de la app como insumo (nunca como diagnóstico)", "Detectás señales que ameritan evaluación con herramientas validadas", "Diseñás devoluciones a familias claras y sin etiquetas"],
+        dicta: "Dictado EXCLUSIVAMENTE por profesionales matriculados en psicopedagogía (convocatoria abierta; nombre y matrícula se publican antes de la venta)." },
+      { id: "directivos", icono: "🏫", nombre: "Implementación institucional", para: "Equipos directivos y coordinación", dur: "3 videos (2,5 h) + kit de comunicación a familias", precio: 30000, vimeo: null,
+        desc: "Del piloto a toda la escuela: licencias, privacidad y familias a bordo.",
+        temario: ["Módulo 1 · Roles, aulas y licencias: cómo se organiza la escuela en la plataforma", "Módulo 2 · Privacidad y consentimientos: qué firmar, qué comunicar, qué jamás pedir", "Módulo 3 · Medir resultados y comunicar a la comunidad educativa"],
+        egresado: ["Implementás la app en toda la institución con roles claros", "Respondés las preguntas de privacidad de cualquier familia", "Medís adopción y resultados por aula"],
+        dicta: "Equipo de Mente en Juego + directivo/a invitado/a con implementación real (a confirmar al lanzar)." },
     ];
+    const comprarDemo = (c) => {
+      if (codigoCurso.trim() === "CURSO30") {
+        const lista = [...new Set([...cursosComprados, c.id])];
+        setCursosComprados(lista);
+        guardar("mentejuego:cursosComprados", lista);
+        setCodigoCurso("");
+        sonido("fanfarria");
+      } else sonido("error");
+    };
     const certificadoCurso = (c) => {
       const p1 = (activo && activo.padres && activo.padres.p1) || "";
       const p2 = (activo && activo.padres && activo.padres.p2) || "";
@@ -3545,9 +3568,9 @@ h1{color:#7c3aed;font-size:34px;margin:8px 0}.n{font-size:28px;font-weight:bold;
 <div style="font-size:44px">🧠🎓</div><h1>Certificado de Capacitación</h1>
 <p>Mente en Juego certifica que</p><p class="n">${nombres}</p>
 <p>completaron el curso <b>${c.icono} ${c.nombre}</b><br/>(${c.dur}) — el ${f}.</p>
-<p style="font-size:14px;color:#475569">Formarse para acompañar es también una forma de amar.<br/>¡Gracias por aprender en familia!</p>
+<p style="font-size:14px;color:#475569">Formarse para acompañar es también una forma de amar.</p>
 <div class="s"><div>Equipo Mente en Juego</div><div>Dirección académica</div></div>
-<p class="pie">Certificado de participación de valor formativo. Los contenidos clínico-pedagógicos son dictados por profesionales matriculados. Verificación online disponible en la versión con cuentas.</p>
+<p class="pie">Certificado de participación de valor formativo. Contenidos clínico-pedagógicos dictados por profesionales matriculados. Verificación online en la versión con cuentas.</p>
 </div></body></html>`;
       try {
         const blob = new Blob([html], { type: "text/html;charset=utf-8" });
@@ -3558,52 +3581,97 @@ h1{color:#7c3aed;font-size:34px;margin:8px 0}.n{font-size:28px;font-weight:bold;
         URL.revokeObjectURL(url);
       } catch (e) { /* nada */ }
     };
-    const anotarse = async (id) => {
-      if (cursosLista.includes(id)) return;
-      const lista = [...cursosLista, id];
-      setCursosLista(lista);
-      await guardar("mentejuego:cursos", lista);
-      sonido("acierto");
-    };
+    const det = cursoDetalle && CURSOS.find((c) => c.id === cursoDetalle);
+    const comprado = det && cursosComprados.includes(det.id);
+
     return (
       <div className="min-h-screen bg-violet-50 p-3 pb-10 sm:p-4">
-        <div className="mx-auto flex max-w-lg flex-col gap-3">
+        <div className="mx-auto flex w-full max-w-lg flex-col gap-3 md:max-w-3xl xl:max-w-5xl">
           <div className="flex items-center justify-between">
-            <button onClick={() => setPantalla(cursosDesde === "panel" ? "panel" : "clase")}
-              className="flex items-center gap-1 rounded-full bg-white px-4 py-2 font-black text-slate-600 shadow active:scale-95"><ArrowLeft /> Volver</button>
-            <span className="text-lg font-black text-violet-700">🎓 Cursos</span>
+            <button onClick={() => (det ? setCursoDetalle(null) : setPantalla(cursosDesde === "panel" ? "panel" : "clase"))}
+              className="flex items-center gap-1 rounded-full bg-white px-4 py-2 font-black text-slate-600 shadow active:scale-95"><ArrowLeft /> {det ? "Catálogo" : "Volver"}</button>
+            <span className="text-lg font-black text-violet-700">🎓 {det ? det.nombre : "Cursos"}</span>
           </div>
-          <p className="text-center text-sm font-bold text-slate-500">Capacitaciones con certificado para sacarle TODO el jugo a Mente en Juego — y para acompañar mejor, con o sin app.</p>
-          {CURSOS.map((c) => (
-            <div key={c.id} className="rounded-3xl bg-white p-4 shadow-md">
-              <p className="text-lg font-black text-slate-800">{c.icono} {c.nombre}</p>
-              <p className="text-xs font-black text-violet-600">{c.para} · {c.dur}</p>
-              <p className="mt-1 text-sm font-bold text-slate-500">{c.desc}</p>
-              <div className="mt-2 overflow-hidden rounded-2xl bg-slate-900" style={{ aspectRatio: "16/9" }}>
-                {c.vimeo ? (
-                  <iframe title={c.nombre} src={`https://player.vimeo.com/video/${c.vimeo}?dnt=1`} className="h-full w-full" allow="fullscreen" />
+
+          {!det && (
+            <>
+              <p className="text-center text-sm font-bold text-slate-500">Capacitaciones grabadas, con certificado, para ver acá mismo a tu ritmo. Tocá un curso para conocerlo a fondo.</p>
+              <div className="flex flex-col gap-3 md:grid md:grid-cols-2">
+                {CURSOS.map((c) => (
+                  <button key={c.id} onClick={() => setCursoDetalle(c.id)} className="rounded-3xl bg-white p-4 text-left shadow-md transition-transform active:scale-[0.98]">
+                    <p className="text-3xl">{c.icono}</p>
+                    <p className="mt-1 text-lg font-black leading-tight text-slate-800">{c.nombre}</p>
+                    <p className="text-xs font-black text-violet-600">{c.para}</p>
+                    <p className="mt-1 text-sm font-bold text-slate-500">{c.desc}</p>
+                    <p className="mt-2 flex items-center justify-between">
+                      <span className="text-lg font-black text-slate-700">${c.precio.toLocaleString("es-AR")}</span>
+                      <span className="rounded-full bg-violet-100 px-3 py-1 text-xs font-black text-violet-700">{cursosComprados.includes(c.id) ? "✅ Comprado · entrar" : "Ver curso →"}</span>
+                    </p>
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+
+          {det && (
+            <div className="flex flex-col gap-3 md:grid md:grid-cols-2 md:items-start">
+              <div className="rounded-3xl bg-white p-5 shadow-md">
+                <p className="text-4xl">{det.icono}</p>
+                <p className="mt-1 text-xl font-black text-slate-800">{det.nombre}</p>
+                <p className="text-sm font-black text-violet-600">{det.para}</p>
+                <p className="mt-2 text-sm font-bold text-slate-500">{det.desc}</p>
+                <p className="mt-2 rounded-xl bg-violet-50 px-3 py-2 text-xs font-black text-violet-700">🕐 {det.dur} · 📼 100% grabado, a tu ritmo · 🎓 con certificado</p>
+                <div className="mt-3 rounded-2xl bg-slate-50 p-3">
+                  <p className="text-sm font-black text-slate-700">📖 Temario</p>
+                  {det.temario.map((m, i) => <p key={i} className="mt-1 text-xs font-bold text-slate-600">• {m}</p>)}
+                </div>
+                <div className="mt-2 rounded-2xl bg-emerald-50 p-3">
+                  <p className="text-sm font-black text-emerald-700">🎯 Al terminar vas a poder</p>
+                  {det.egresado.map((m, i) => <p key={i} className="mt-1 text-xs font-bold text-slate-600">✓ {m}</p>)}
+                </div>
+                <div className="mt-2 rounded-2xl bg-amber-50 p-3">
+                  <p className="text-sm font-black text-amber-700">👤 ¿Quién lo dicta?</p>
+                  <p className="mt-1 text-xs font-bold text-slate-600">{det.dicta}</p>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-3">
+                {comprado ? (
+                  <>
+                    <div className="overflow-hidden rounded-3xl bg-slate-900 shadow-md" style={{ aspectRatio: "16/9" }}>
+                      {det.vimeo ? (
+                        <iframe title={det.nombre} src={`https://player.vimeo.com/video/${det.vimeo}?dnt=1`} className="h-full w-full" allow="fullscreen" />
+                      ) : (
+                        <div className="flex h-full flex-col items-center justify-center gap-1 p-4 text-center">
+                          <span className="text-3xl">🎬</span>
+                          <p className="text-xs font-black text-white">✅ Curso habilitado: acá se reproducen tus videos (Vimeo embebido)</p>
+                          <p className="text-[10px] font-bold text-slate-400">Pendiente: grabar los videos y cargar sus ID de Vimeo.</p>
+                        </div>
+                      )}
+                    </div>
+                    <button onClick={() => certificadoCurso(det)} className="rounded-full bg-amber-400 py-3 font-black text-amber-900 shadow-md active:scale-95">🎓 Descargar mi certificado</button>
+                    <p className="text-center text-[10px] font-bold text-slate-400">El certificado sale a nombre de los adultos cargados en Padres → ⚙️ → 👨‍👩‍👧 Familia.</p>
+                  </>
                 ) : (
-                  <div className="flex h-full flex-col items-center justify-center gap-1 p-4 text-center">
-                    <span className="text-3xl">🎬</span>
-                    <p className="text-xs font-black text-white">Acá va el curso grabado (reproductor Vimeo embebido)</p>
-                    <p className="text-[10px] font-bold text-slate-400">Los videos se ven directamente en la app, sin salir. Pendiente: grabar y cargar el ID de Vimeo.</p>
+                  <div className="rounded-3xl bg-white p-5 text-center shadow-md">
+                    <p className="text-3xl">🔒</p>
+                    <p className="mt-1 font-black text-slate-700">El contenido se habilita al comprar</p>
+                    <p className="text-2xl font-black text-violet-700">${det.precio.toLocaleString("es-AR")}</p>
+                    <button onClick={() => sonido("tap")} className="mt-2 w-full rounded-full bg-violet-500 py-3 font-black text-white shadow-md active:scale-95">💳 Comprar (MercadoPago · llega con la versión online)</button>
+                    <div className="mt-3 rounded-2xl bg-violet-50 p-3">
+                      <p className="text-xs font-black text-violet-700">¿Querés ver la experiencia completa hoy? Probá el código de demostración:</p>
+                      <div className="mt-2 flex gap-2">
+                        <input value={codigoCurso} onChange={(e) => setCodigoCurso(e.target.value.toUpperCase())} placeholder="CURSO30"
+                          className="min-w-0 flex-1 rounded-2xl border-4 border-violet-200 px-3 py-2 font-black text-slate-700 outline-none focus:border-violet-400" />
+                        <button onClick={() => comprarDemo(det)} className="shrink-0 rounded-full bg-violet-500 px-4 py-2 font-black text-white active:scale-95">Habilitar</button>
+                      </div>
+                    </div>
+                    <p className="mt-2 text-[10px] text-slate-400">Contenidos clínico-pedagógicos siempre a cargo de profesionales matriculados. Aranceles estimativos de lanzamiento.</p>
                   </div>
                 )}
               </div>
-              <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
-                <span className="text-lg font-black text-slate-700">${c.precio.toLocaleString("es-AR")}</span>
-                <span className="flex gap-1">
-                  <button onClick={() => anotarse(c.id)}
-                    className={`rounded-full px-3 py-2 text-xs font-black active:scale-95 ${cursosLista.includes(c.id) ? "bg-emerald-100 text-emerald-700" : "bg-violet-500 text-white"}`}>
-                    {cursosLista.includes(c.id) ? "✅ En la lista" : "✋ Lista de espera"}
-                  </button>
-                  <button onClick={() => certificadoCurso(c)}
-                    className="rounded-full bg-amber-400 px-3 py-2 text-xs font-black text-amber-900 active:scale-95">🎓 Certificado (modelo)</button>
-                </span>
-              </div>
             </div>
-          ))}
-          <p className="rounded-2xl bg-white p-3 text-xs text-slate-400">Los cursos son grabados y se ven acá mismo (Vimeo embebido). El certificado sale a nombre de los DOS adultos de la familia (se cargan en Padres → 👨‍👩‍👧 Familia). El pago real, el marcado de lecciones vistas y la verificación de certificados llegan con la versión online. Contenidos clínico-pedagógicos SIEMPRE a cargo de profesionales matriculados. Aranceles estimativos.</p>
+          )}
         </div>
       </div>
     );
@@ -3668,7 +3736,7 @@ h1{color:#7c3aed;font-size:34px;margin:8px 0}.n{font-size:28px;font-weight:bold;
     };
     return (
       <div className="min-h-screen bg-cyan-50 p-3 pb-24 sm:p-4">
-        <div className="mx-auto flex max-w-lg flex-col gap-3">
+        <div className="mx-auto flex w-full max-w-lg flex-col md:max-w-3xl xl:max-w-5xl gap-3">
           <div className="flex items-center justify-between">
             <button onClick={() => setPantalla("clase")} className="flex items-center gap-1 rounded-full bg-white px-4 py-2 font-black text-slate-600 shadow active:scale-95"><ArrowLeft /> Volver</button>
             <span className="text-lg font-black text-cyan-700">📚 Biblioteca docente</span>
@@ -4124,7 +4192,7 @@ h1{color:#7c3aed;font-size:34px;margin:8px 0}.n{font-size:28px;font-weight:bold;
     return (
       <div className="min-h-screen bg-sky-100 p-3 sm:p-4">
         <MascotaChispa />
-        <div className="mx-auto flex max-w-lg flex-col gap-4 sm:gap-6">
+        <div className="mx-auto flex w-full max-w-lg flex-col md:max-w-3xl xl:max-w-5xl gap-4 sm:gap-6">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <button onClick={() => setPantalla("menu")} className="flex items-center gap-1 rounded-full bg-white px-4 py-2 font-black text-slate-600 shadow active:scale-95">
               <ArrowLeft /> Volver
@@ -4179,7 +4247,7 @@ h1{color:#7c3aed;font-size:34px;margin:8px 0}.n{font-size:28px;font-weight:bold;
     const habilitados = (premio.videos || []).filter((u) => idYoutube(u));
     return (
       <div className="min-h-screen bg-sky-100 p-3 sm:p-4">
-        <div className="mx-auto flex max-w-lg flex-col gap-4">
+        <div className="mx-auto flex w-full max-w-lg flex-col md:max-w-3xl xl:max-w-5xl gap-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <button onClick={() => { setVideoActivo(null); setPantalla("menu"); }} className="flex items-center gap-1 rounded-full bg-white px-4 py-2 font-black text-slate-600 shadow active:scale-95">
               <ArrowLeft /> Volver
@@ -4343,14 +4411,14 @@ h1{color:#b45309;letter-spacing:2px}h2{font-size:40px;margin:12px 0;color:#1e293
     };
     return (
       <div className="min-h-screen bg-sky-100 p-3 pb-10 sm:p-4">
-        <div className="mx-auto flex max-w-lg flex-col gap-4">
+        <div className="mx-auto flex w-full max-w-lg flex-col md:max-w-3xl xl:max-w-5xl gap-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <button onClick={() => setPantalla("menu")} className="flex items-center gap-1 rounded-full bg-white px-4 py-2 font-black text-slate-600 shadow active:scale-95">
               <ArrowLeft /> Volver
             </button>
             <span className="text-lg font-black text-slate-700">🏅 Mis logros · {ganadas}/{logros.length}</span>
           </div>
-          <div className="grid grid-cols-3 gap-2 sm:gap-3">
+          <div className="grid grid-cols-3 gap-2 sm:gap-3 md:grid-cols-4 xl:grid-cols-6">
             {logros.map((l) => (
               <div key={l.id} className={`flex flex-col items-center gap-1 rounded-2xl p-3 text-center shadow ${l.ganada ? "bg-yellow-100" : "bg-slate-100 opacity-70"}`}>
                 <span className="text-3xl">{l.ganada ? l.icono : "🔒"}</span>
@@ -4387,7 +4455,7 @@ h1{color:#b45309;letter-spacing:2px}h2{font-size:40px;margin:12px 0;color:#1e293
     const salirDuelo = () => { setDuelo(null); setDueloPin(""); setPantalla("menu"); };
     return (
       <div className="min-h-screen bg-fuchsia-50 p-3 pb-10 sm:p-4">
-        <div className="mx-auto flex max-w-lg flex-col gap-4">
+        <div className="mx-auto flex w-full max-w-lg flex-col md:max-w-3xl xl:max-w-5xl gap-4">
           <div className="flex items-center justify-between">
             <button onClick={salirDuelo} className="flex items-center gap-1 rounded-full bg-white px-4 py-2 font-black text-slate-600 shadow active:scale-95"><ArrowLeft /> Salir</button>
             <span className="text-lg font-black text-fuchsia-700">👥 Duelo de amigos</span>
@@ -4505,8 +4573,8 @@ h1{color:#b45309;letter-spacing:2px}h2{font-size:40px;margin:12px 0;color:#1e293
     const PESTANAS = [["progreso", "📊 Progreso"], ["juego", "🎮 Juego y premios"], ["escuela", "🏫 Escuela"], ["ajustes", "⚙️ Familia y ajustes"]];
     return (
       <div className="min-h-screen bg-sky-100 p-3 sm:p-4">
-        <div className="mx-auto flex max-w-md flex-col items-center gap-5 sm:gap-6">
-          <div className="flex w-full flex-wrap items-center justify-between gap-2">
+        <div className="mx-auto grid w-full max-w-md grid-cols-1 items-start gap-5 sm:gap-6 md:max-w-4xl md:grid-cols-2 xl:max-w-6xl">
+          <div className="flex w-full flex-wrap items-center justify-between gap-2 md:col-span-2">
             <button onClick={() => setPantalla("menu")} className="flex items-center gap-1 rounded-full bg-white px-4 py-2 font-black text-slate-600 shadow active:scale-95">
               <ArrowLeft /> Volver
             </button>
@@ -4516,7 +4584,7 @@ h1{color:#b45309;letter-spacing:2px}h2{font-size:40px;margin:12px 0;color:#1e293
           </div>
 
           <TourGuiado />
-          <div className="sticky top-2 z-30 flex w-full flex-wrap justify-center gap-1.5 rounded-full bg-white/90 p-1.5 shadow-md">
+          <div className="sticky top-2 z-30 flex w-full flex-wrap justify-center gap-1.5 rounded-full bg-white/90 p-1.5 shadow-md md:col-span-2">
             {PESTANAS.map(([t, nom]) => (
               <button key={t} onClick={() => setPanelTab(t)}
                 className={`rounded-full px-3 py-1.5 text-xs font-black transition-colors active:scale-95 ${panelTab === t ? "bg-sky-600 text-white" : "text-slate-500"}`}>{nom}</button>
@@ -4788,7 +4856,7 @@ h1{color:#b45309;letter-spacing:2px}h2{font-size:40px;margin:12px 0;color:#1e293
             )}
           </div>
 
-          <button onClick={async () => { setCursosLista((await leer("mentejuego:cursos")) || []); setCursosDesde("panel"); setPantalla("cursos"); }}
+          <button onClick={async () => { setCursosComprados((await leer("mentejuego:cursosComprados")) || []); setCursoDetalle(null); setCursosDesde("panel"); setPantalla("cursos"); }}
             className={`w-full rounded-3xl bg-violet-500 p-4 text-left shadow-md active:scale-[0.99] ${panelTab === "escuela" ? "" : "hidden"}`}>
             <span className="text-lg font-black text-white">🎓 Cursos para adultos</span>
             <p className="text-xs font-bold text-white/80">Para familias, seños, psicopedagogía y directivos · con certificado · tocá para ver el catálogo</p>
@@ -5061,7 +5129,7 @@ h1{color:#b45309;letter-spacing:2px}h2{font-size:40px;margin:12px 0;color:#1e293
     const completados = Object.keys(mejor).filter((id) => id.startsWith(s.id + "-n")).length;
     return (
       <div className="min-h-screen bg-sky-100 p-3 pb-10 sm:p-4">
-        <div className="mx-auto flex max-w-lg flex-col gap-4">
+        <div className="mx-auto flex w-full max-w-lg flex-col md:max-w-3xl xl:max-w-5xl gap-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <button onClick={() => setPantalla("menu")} className="flex items-center gap-1 rounded-full bg-white px-4 py-2 font-black text-slate-600 shadow active:scale-95">
               <ArrowLeft /> Volver
@@ -5088,7 +5156,7 @@ h1{color:#b45309;letter-spacing:2px}h2{font-size:40px;margin:12px 0;color:#1e293
               </button>
             )}
           </div>
-          <div className="grid grid-cols-5 gap-2">
+          <div className="grid grid-cols-5 gap-2 md:grid-cols-8 xl:grid-cols-10">
             {[...Array(s.niveles)].map((_, i) => {
               const k = i + 1;
               const r = mejor[idNivel(s, k)];
@@ -5129,8 +5197,8 @@ h1{color:#b45309;letter-spacing:2px}h2{font-size:40px;margin:12px 0;color:#1e293
   const completadosDe = (s) => Object.keys(mejorMenu).filter((id) => id.startsWith(s.id + "-n")).length;
   return (
     <div className="min-h-screen bg-sky-100 p-3 pb-10 sm:p-4">
-      <div className="mx-auto flex max-w-lg flex-col gap-5 sm:gap-6">
-        <header className="flex flex-wrap items-center justify-between gap-3 pt-2">
+      <div className="mx-auto grid w-full max-w-lg grid-cols-1 items-start gap-5 sm:gap-6 md:max-w-4xl md:grid-cols-2 xl:max-w-6xl">
+        <header className="flex flex-wrap items-center justify-between gap-3 pt-2 md:col-span-2">
           <div>
             <h1 className="text-2xl font-black text-sky-700 sm:text-3xl">{activo.avatar} ¡Hola, {activo.nombre}!</h1>
             <p className="font-bold text-slate-500">{edadAnios} años · {nivelesEtapa.toLocaleString("es-AR")} niveles para tu edad</p>
@@ -5782,7 +5850,7 @@ function AppAdultos({ alSelector }) {
     const nivel = niveles[dominioActivo] || 1;
     return (
       <div className={`min-h-screen p-4 ${t.fondo}`}>
-        <div className="mx-auto flex max-w-lg flex-col gap-6">
+        <div className="mx-auto flex w-full max-w-lg flex-col md:max-w-3xl xl:max-w-5xl gap-6">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <button onClick={() => setPantalla("menu")} className={`flex items-center gap-1 rounded-full px-5 py-3 text-lg font-black active:scale-95 ${t.botonSec}`}>
               <ArrowLeft /> Volver
@@ -5873,7 +5941,7 @@ function AppAdultos({ alSelector }) {
 
   return (
     <div className={`min-h-screen p-4 pb-10 ${t.fondo}`}>
-      <div className="mx-auto flex max-w-lg flex-col gap-5">
+      <div className="mx-auto flex w-full max-w-lg flex-col md:max-w-3xl xl:max-w-5xl gap-5">
         <header className="flex flex-wrap items-center justify-between gap-3 pt-2">
           <div>
             <h1 className={`text-3xl font-black ${t.texto}`}>🧠 Hola, {perfil.nombre}</h1>
