@@ -16,10 +16,17 @@ import { Star, Home, BarChart3, ArrowLeft, RotateCcw, Sparkles } from "lucide-re
 // ---------- almacenamiento con fallback ----------
 const memFallback = {};
 
+// modo calma: menos estímulos para quien lo necesita (TEA y más)
+let CALMA = false;
+function setCalma(v) {
+  CALMA = !!v;
+  try { if (typeof document !== "undefined") document.body.classList.toggle("modo-calma", CALMA); } catch (e) { /* nada */ }
+}
+
 // confeti de verdad: partículas que caen, livianas y sin librerías
 function lanzarConfeti(n = 14) {
   try {
-    if (typeof document === "undefined") return;
+    if (CALMA || typeof document === "undefined") return;
     const colores = ["#f43f5e", "#f59e0b", "#10b981", "#3b82f6", "#a855f7", "#facc15", "#ec4899"];
     for (let i = 0; i < n; i++) {
       const p = document.createElement("div");
@@ -140,6 +147,7 @@ function sonido(nombre) {
 }
 const FRASES_FESTEJO = ["¡Muy bien!", "¡Excelente!", "¡Genial!", "¡Eso es!", "¡Perfecto!", "¡Bravo!", "¡Qué bien lo hiciste!", "¡Sos increíble!", "¡Sigue así, campeón!", "¡Lo lograste!"];
 function festejar() {
+  if (CALMA) { sonido("acierto"); return; } // festejo sereno: sin gritos ni lluvia
   lanzarConfeti(10);
   sonido("acierto");
   hablar(FRASES_FESTEJO[Math.floor(Math.random() * FRASES_FESTEJO.length)], AUDIO_ON);
@@ -152,7 +160,7 @@ const setMusicaOn = (v) => { MUSICA_ON = !!v; };
 const musicaSonando = () => !!musTimer;
 function detenerMusica() { if (musTimer) { clearInterval(musTimer); musTimer = null; } }
 function iniciarMusica(rango) {
-  if (musTimer || !MUSICA_ON) return;
+  if (musTimer || !MUSICA_ON || CALMA) return;
   const c = ctxAudio();
   if (!c) return;
   const escalas = { "3-5": [262, 294, 330, 392, 440], "6-8": [262, 330, 392, 494, 523, 587], "9-11": [220, 262, 330, 392, 440, 523, 587] };
@@ -2701,7 +2709,8 @@ function areasAdelantadas(sesiones, rango) {
 // Punto de partida según la edad: en series que abarcan varias etapas, el niño
 // de la etapa mayor NO arranca del nivel 1 (calibrado para los más chicos),
 // sino más adelante. Los niveles previos quedan abiertos para repasar o reforzar.
-function nivelInicial(serie, rango) {
+function nivelInicial(serie, rango, suave) {
+  if (suave) return 1; // ritmo suave: siempre desde el principio, sin salto por edad
   if (!rango || !serie.edades.includes(rango)) return 1;
   const menores = serie.edades.filter((e) => (ORDEN_BANDA[e] || 0) < (ORDEN_BANDA[rango] || 0));
   if (menores.length === 0) return 1;
@@ -2720,8 +2729,8 @@ function nivelDesbloqueado(s, k, mejor, rango) {
 // Próximo nivel recomendado, con REFUERZO automático: si los dos últimos intentos
 // en la serie salieron muy flojos, baja 3 niveles para encontrar el punto seguro
 // y desde ahí volver a subir.
-function proximoNivel(s, mejor, rango, sesiones) {
-  const inicio = nivelInicial(s, rango);
+function proximoNivel(s, mejor, rango, sesiones, suave) {
+  const inicio = nivelInicial(s, rango, suave);
   let base = null;
   for (let k = inicio; k <= s.niveles; k++) {
     if (nivelDesbloqueado(s, k, mejor, rango) && mejor[idNivel(s, k)] == null) { base = k; break; }
@@ -2777,6 +2786,43 @@ function calcularLogros(sesiones, rango) {
   };
   return MEDALLAS.map((m) => ({ ...m, ganada: !!m.check(ctx) }));
 }
+// ---------- informes periódicos: snapshot, comparación y regla anti-ruido ----------
+function snapshotPeriodo(sesiones, desde, hasta) {
+  const ses = sesiones.filter((x) => x.fecha >= desde && x.fecha < hasta);
+  if (ses.length === 0) return null;
+  const porArea = {};
+  ses.forEach((x) => {
+    if (!porArea[x.area]) porArea[x.area] = { jugados: 0, suma: 0 };
+    porArea[x.area].jugados += 1;
+    porArea[x.area].suma += x.puntos / x.maximo;
+  });
+  Object.keys(porArea).forEach((a) => { porArea[a].prom = Math.round((porArea[a].suma / porArea[a].jugados) * 100); delete porArea[a].suma; });
+  const dias = new Set(ses.map((x) => new Date(x.fecha).toDateString())).size;
+  return {
+    fecha: Date.now(), desde, hasta,
+    sesiones: ses.length,
+    prom: Math.round((ses.reduce((s2, x) => s2 + x.puntos / x.maximo, 0) / ses.length) * 100),
+    superados: ses.filter((x) => x.puntos / x.maximo >= 0.5).length,
+    dias, porArea, visto: false,
+  };
+}
+function compararInformes(prev, cur) {
+  if (!prev) return null;
+  const areas = {};
+  Object.keys(cur.porArea).forEach((a) => {
+    if (prev.porArea[a]) areas[a] = cur.porArea[a].prom - prev.porArea[a].prom;
+  });
+  return { prom: cur.prom - prev.prom, sesiones: cur.sesiones - prev.sesiones, dias: cur.dias - prev.dias, areas };
+}
+const MIN_SESIONES_INFORME = 10; // regla anti-ruido: sin datos suficientes no hay estadística honesta
+function tocaInforme(informes, sesiones, cadaMeses) {
+  const ultimo = informes[informes.length - 1];
+  const desde = ultimo ? ultimo.hasta : (sesiones.length ? Math.min(...sesiones.map((x) => x.fecha)) : Date.now());
+  const vencido = Date.now() - desde >= cadaMeses * 30 * 86400000;
+  const suficientes = sesiones.filter((x) => x.fecha >= desde).length >= MIN_SESIONES_INFORME;
+  return vencido && suficientes ? desde : null;
+}
+
 const hoyISO = () => { const f = new Date(); return `${f.getFullYear()}-${String(f.getMonth() + 1).padStart(2, "0")}-${String(f.getDate()).padStart(2, "0")}`; };
 const diasDeVacaciones = (vac) => {
   const res = [];
@@ -3146,6 +3192,8 @@ function AppNinos({ alSelector, permisos = { mic: true, videos: true }, alRevisa
   const [codigoFamilia, setCodigoFamilia] = useState("");
   const [codFamiliaInput, setCodFamiliaInput] = useState("");
   const [codFamiliaNuevo, setCodFamiliaNuevo] = useState("");
+  const [informes, setInformes] = useState([]);
+  const [informeCada, setInformeCada] = useState(1);
   const [codigoPromo, setCodigoPromo] = useState("");
   const [bib, setBib] = useState(null); // biblioteca docente
   const [demoTarea, setDemoTarea] = useState(null); // paso de la demo animada
@@ -3223,6 +3271,13 @@ function AppNinos({ alSelector, permisos = { mic: true, videos: true }, alRevisa
 
   useEffect(() => { try { window.scrollTo(0, 0); } catch (e) { /* nada */ } }, [pantalla]);
   useEffect(() => {
+    setCalma(!!(activo && activo.apoyo && activo.apoyo.calma));
+    try {
+      if (typeof document !== "undefined") document.documentElement.style.fontSize = activo && activo.apoyo && activo.apoyo.grande ? "115%" : "";
+    } catch (e) { /* nada */ }
+  }, [activo]);
+
+  useEffect(() => {
     if (tour && tour.tipo === "nino" && activo && modoSolito) {
       const p2 = TOURS.nino[tour.paso];
       hablar(`${p2.t}. ${p2.x}`, AUDIO_ON, 0.95);
@@ -3271,6 +3326,18 @@ function AppNinos({ alSelector, permisos = { mic: true, videos: true }, alRevisa
     const tt = (await leer(`pequemundo:tareas:${p.id}`)) || [];
     setTareas(tt);
     setCanjes((await leer(`pequemundo:canjes:${p.id}`)) || []);
+    const infPrev = (await leer(`pequemundo:informes:${p.id}`)) || [];
+    const cadaM = (await leer("pequemundo:informeCada")) || 1;
+    setInformeCada(cadaM);
+    const desdeInf = tocaInforme(infPrev, s, cadaM);
+    if (desdeInf !== null) {
+      const snap = snapshotPeriodo(s, desdeInf, Date.now());
+      if (snap) {
+        const lista = [...infPrev, snap].slice(-24);
+        setInformes(lista);
+        guardar(`pequemundo:informes:${p.id}`, lista);
+      } else setInformes(infPrev);
+    } else setInformes(infPrev);
     if (!(await leer("mentejuego:tour:nino"))) setTour({ tipo: "nino", paso: 0 });
     setPadre1((p.padres && p.padres.p1) || "");
     setPadre2((p.padres && p.padres.p2) || "");
@@ -3383,7 +3450,7 @@ function AppNinos({ alSelector, permisos = { mic: true, videos: true }, alRevisa
     [j1, j2].forEach((j) => {
       const cand = SERIES.filter((s) => s.area === area && s.edades.includes(j.band)).sort((a, b) => progresoSerie(a, j.mejor) - progresoSerie(b, j.mejor));
       j.serie = cand[0];
-      j.nivel = proximoNivel(j.serie, j.mejor, j.band, j.ses);
+      j.nivel = proximoNivel(j.serie, j.mejor, j.band, j.ses, !!(j.p.apoyo && j.p.apoyo.suave));
       j.score = null;
     });
     setSemilla((Date.now() % 2147483647) || 7);
@@ -3434,7 +3501,7 @@ function AppNinos({ alSelector, permisos = { mic: true, videos: true }, alRevisa
     while (lista.length < cuantos && i < 80) {
       const area = areas[i % areas.length];
       const cand = seriesDisp.filter((s) => s.area === area && !usadas.has(s.id)).sort((a, b) => progresoSerie(a, mejor) - progresoSerie(b, mejor));
-      if (cand.length > 0) { const s = cand[0]; usadas.add(s.id); lista.push(idNivel(s, proximoNivel(s, mejor, rango, sesiones))); }
+      if (cand.length > 0) { const s = cand[0]; usadas.add(s.id); lista.push(idNivel(s, proximoNivel(s, mejor, rango, sesiones, apoyo.suave))); }
       i++;
     }
     if (lista.length === 0) return;
@@ -3453,7 +3520,7 @@ function AppNinos({ alSelector, permisos = { mic: true, videos: true }, alRevisa
       || SERIES.find((x) => t.series.includes(x.id) && x.edades.includes(rango));
     if (!s) return;
     const mejor = mejorPorNivel();
-    const inicio2 = proximoNivel(s, mejor, rango, sesiones);
+    const inicio2 = proximoNivel(s, mejor, rango, sesiones, apoyo.suave);
     const lista = [];
     for (let i = 0; i < t.cant; i++) lista.push(idNivel(s, Math.min(inicio2 + i, s.niveles)));
     setPlan({ lista, idx: 0, tareaId: t.id, vacFecha: fecha, titulo: `${t.titulo} · Día ${idxDia + 1}` });
@@ -3466,7 +3533,7 @@ function AppNinos({ alSelector, permisos = { mic: true, videos: true }, alRevisa
     t.series.forEach((idS) => {
       const s = SERIES.find((x) => x.id === idS);
       if (!s || !s.edades.includes(rango)) return;
-      const inicio2 = proximoNivel(s, mejor, rango, sesiones);
+      const inicio2 = proximoNivel(s, mejor, rango, sesiones, apoyo.suave);
       for (let i = 0; i < t.cant; i++) lista.push(idNivel(s, Math.min(inicio2 + i, s.niveles)));
     });
     if (lista.length === 0) return;
@@ -3510,6 +3577,25 @@ function AppNinos({ alSelector, permisos = { mic: true, videos: true }, alRevisa
 
   const salirPlan = () => { setPlan(null); setResultado(null); setPantalla("menu"); };
 
+  const descargarInformePeriodo = (inf, comp) => {
+    const f = (t) => new Date(t).toLocaleDateString("es-AR");
+    const flecha = (v) => (v > 0 ? `<span style="color:#059669">▲ +${v}</span>` : v < 0 ? `<span style="color:#d97706">▼ ${v}</span>` : "→ igual");
+    const html = `<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><title>Informe ${f(inf.desde)}–${f(inf.hasta)} — ${activo.nombre}</title>
+<style>body{font-family:sans-serif;max-width:640px;margin:24px auto;padding:0 16px;color:#1e293b;line-height:1.5}h1{color:#0284c7}.caja{background:#f0f9ff;border-radius:14px;padding:14px 18px;margin:12px 0}.a{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #e2e8f0;font-size:15px}.pie{font-size:11px;color:#94a3b8;margin-top:18px}</style></head><body>
+<h1>🧠 Informe de ${activo.nombre} · ${f(inf.desde)} al ${f(inf.hasta)}</h1>
+<div class="caja"><b>${inf.sesiones}</b> juegos en <b>${inf.dias}</b> días distintos · <b>${inf.prom}%</b> de acierto promedio · <b>${inf.superados}</b> niveles superados${comp ? `<br/>Comparado con el informe anterior: acierto ${flecha(comp.prom)} puntos · ${comp.sesiones >= 0 ? "jugó " + comp.sesiones + " juegos más" : "jugó " + (-comp.sesiones) + " juegos menos"}` : "<br/>🌱 Primer informe: la línea de base de su propio camino."}</div>
+${Object.keys(inf.porArea).map((a) => `<div class="a"><span>${AREAS[a] ? AREAS[a].icono + " " + AREAS[a].nombre : a}</span><span><b>${inf.porArea[a].prom}%</b> en ${inf.porArea[a].jugados} juegos${comp && comp.areas[a] != null ? " · " + (comp.areas[a] > 0 ? "▲ +" + comp.areas[a] : comp.areas[a] < 0 ? "▼ " + comp.areas[a] : "→") : ""}</span></div>`).join("")}
+<div class="caja">📖 <b>Cómo leerlo:</b> ${activo.nombre} se compara SIEMPRE consigo mismo. Las bajadas suaves suelen significar que la app le subió la dificultad (¡eso es crecer!). Miren la tendencia entre varios informes, nunca un número aislado.</div>
+<p class="pie">Herramienta educativa: no diagnostica ni mide inteligencia. Si quieren, llévenlo al control pediátrico como registro de juego. Generado el ${f(inf.fecha)}.</p></body></html>`;
+    try {
+      const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url; a.download = `informe-${activo.nombre.toLowerCase()}-${f(inf.hasta).replace(/\//g, "-")}.html`;
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (e) { /* nada */ }
+  };
   const descargarInforme = (disponibles) => {
     const an = analizarProgreso(sesiones, disponibles, rango, edadAnios);
     const f = new Date().toLocaleDateString("es-AR");
@@ -3644,6 +3730,8 @@ ${an.alertas.length ? `<h2>Para conversar en el próximo control pediátrico</h2
             setPantalla("biblioteca");
           }}
           className="rounded-full bg-white px-6 py-2 text-sm font-black text-cyan-700 shadow active:scale-95">📚 Biblioteca docente: armar tareas</button>
+        <button onClick={() => { setCalma(!CALMA); sonido("tap"); }}
+          className="rounded-full bg-white px-6 py-2 text-sm font-black text-emerald-700 shadow active:scale-95">🧘 Modo calma del aula (sin confeti ni música)</button>
         <button onClick={async () => { setCursosComprados((await leer("mentejuego:cursosComprados")) || []); setCursoDetalle(null); setCursosDesde("clase"); setPantalla("cursos"); }}
           className="rounded-full bg-white px-6 py-2 text-sm font-black text-violet-700 shadow active:scale-95">🎓 Cursos y capacitaciones</button>
         <button onClick={() => setPantalla("elegirPerfil")} className="text-sm font-bold text-slate-400">← Volver</button>
@@ -3983,6 +4071,7 @@ h1{color:#7c3aed;font-size:34px;margin:8px 0}.n{font-size:28px;font-weight:bold;
               <button onClick={hojaTarea} className="rounded-full bg-emerald-500 py-3 font-black text-white active:scale-95">🖨️ Descargar hoja para las familias</button>
               <button onClick={guardarProyecto} className="rounded-full bg-cyan-100 py-3 font-black text-cyan-700 active:scale-95">💾 Guardar como proyecto (para otros años)</button>
               <p className="rounded-xl bg-emerald-50 p-2 text-xs font-bold text-emerald-700">🤝 Tu tarea funciona COMPLETA para todos tus alumnos, tengan o no suscripción paga: en la escuela nadie queda afuera.</p>
+              <p className="rounded-xl bg-sky-50 p-2 text-xs font-bold text-sky-700">♿ Inclusión automática: si una familia configuró apoyos (modo calma, voz total, ritmo suave...), tu tarea se juega CON esos apoyos, sin que hagas nada y sin que veas datos sensibles.</p>
               <p className="text-xs text-slate-400">Compartí el código por WhatsApp o en papel. Las familias lo cargan en Padres → «📚 Tarea de la seño», y a cada peque la app le propone SUS próximos niveles de esos juegos. Cuando el peque la completa, en el panel de su familia figura ✅ con fecha.</p>
               <button onClick={() => setBib({ ...bib, fase: "buscar", sel: [], codigo: null })} className="text-sm font-bold text-slate-400">➕ Armar otra tarea</button>
             </div>
@@ -4229,8 +4318,9 @@ h1{color:#7c3aed;font-size:34px;margin:8px 0}.n{font-size:28px;font-weight:bold;
 
   const edadAnios = calcularEdad(activo.nacimiento);
   const rango = rangoDeEdad(Math.min(Math.max(edadAnios, 3), 11));
-  const modoSolito = activo.solito != null ? !!activo.solito : edadAnios <= 5;
+  const modoSolito = apoyo.leer ? true : activo.solito != null ? !!activo.solito : edadAnios <= 5;
   const esPremium = planPago.tipo === "premium";
+  const apoyo = (activo && activo.apoyo) || {};
   const cientifico = sesiones.filter((x) => x.area === "descubrir" && x.puntos / x.maximo >= 0.8).length >= 12;
   const puntosGanados = sesiones.reduce((a, x) => a + x.puntos, 0);
   const puntosGastados = canjes.reduce((a, x) => a + x.puntos, 0);
@@ -4789,6 +4879,70 @@ h1{color:#b45309;letter-spacing:2px}h2{font-size:40px;margin:12px 0;color:#1e293
           })()}
 
           <div className={carta("progreso")}>
+            <h3 className="text-lg font-black text-slate-800 sm:text-xl">🗓️ Informes periódicos de {activo.nombre}</h3>
+            {informes.some((x) => !x.visto) && (
+              <p className="mt-2 animate-pulse rounded-2xl bg-amber-100 p-3 text-sm font-black text-amber-800">📬 ¡Hay un informe nuevo listo para descargar!</p>
+            )}
+            <p className="mt-2 text-xs font-bold text-slate-500">¿Cada cuánto? <span className="text-slate-400">(recomendado: mensual)</span></p>
+            <div className="mt-1 flex flex-wrap gap-1.5">
+              {[[0.5, "Quincenal"], [1, "Mensual"], [2, "Bimestral"], [3, "Trimestral"]].map(([m, nom]) => (
+                <button key={m} onClick={() => { setInformeCada(m); guardar("pequemundo:informeCada", m); sonido("tap"); }}
+                  className={`rounded-full px-3 py-1.5 text-xs font-black active:scale-95 ${informeCada === m ? "bg-sky-600 text-white" : "bg-slate-100 text-slate-600"}`}>{nom}</button>
+              ))}
+            </div>
+            {informes.length >= 2 && (
+              <div className="mt-3 rounded-2xl bg-sky-50 p-3">
+                <p className="text-xs font-black text-sky-700">📈 Evolución del acierto promedio, informe a informe</p>
+                <div className="mt-2 flex h-20 items-end gap-1.5">
+                  {informes.slice(-8).map((inf, i) => (
+                    <div key={i} className="flex flex-1 flex-col items-center gap-0.5">
+                      <span className="text-[9px] font-black text-sky-700">{inf.prom}%</span>
+                      <div className="w-full rounded-t-lg bg-sky-500" style={{ height: `${Math.max(8, inf.prom * 0.6)}px` }} />
+                      <span className="text-[8px] font-bold text-slate-400">{new Date(inf.hasta).toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit" })}</span>
+                    </div>
+                  ))}
+                </div>
+                <p className="mt-1 text-[10px] font-bold text-slate-400">Siempre comparado consigo mismo. Las subidas y bajadas suaves son normales: mirá la tendencia, no el día.</p>
+              </div>
+            )}
+            {informes.length > 0 ? (
+              <div className="mt-3 flex flex-col gap-1.5">
+                <p className="text-xs font-black text-slate-500">Historial ({informes.length})</p>
+                {informes.slice(-6).reverse().map((inf, idx) => {
+                  const iReal = informes.length - 1 - idx;
+                  const comp = compararInformes(informes[iReal - 1], inf);
+                  return (
+                    <div key={inf.fecha} className={`flex items-center justify-between gap-2 rounded-2xl p-3 ${inf.visto ? "bg-slate-50" : "bg-amber-50"}`}>
+                      <div className="min-w-0">
+                        <p className="text-sm font-black text-slate-700">{inf.visto ? "📄" : "📬"} {new Date(inf.desde).toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit" })} → {new Date(inf.hasta).toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit" })}</p>
+                        <p className="text-[11px] font-bold text-slate-400">{inf.sesiones} juegos · {inf.prom}% acierto{comp ? ` · ${comp.prom >= 0 ? "↑" : "↓"}${Math.abs(comp.prom)} vs anterior` : " · primer informe"}</p>
+                      </div>
+                      <button onClick={() => {
+                          const lista = informes.map((x, j) => (j === iReal ? { ...x, visto: true } : x));
+                          setInformes(lista);
+                          guardar(`pequemundo:informes:${activo.id}`, lista);
+                          descargarInformePeriodo(inf, compararInformes(informes[iReal - 1], inf));
+                        }} className="shrink-0 rounded-full bg-sky-500 px-3 py-2 text-xs font-black text-white active:scale-95">⬇️ Descargar</button>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="mt-3 rounded-2xl bg-slate-50 p-3 text-xs font-bold text-slate-500">Todavía no hay informes: el primero se genera solo cuando pasa el período elegido Y hay al menos {10} partidas jugadas — sin datos suficientes, una estadística no dice nada honesto. 🌱</p>
+            )}
+            <button onClick={() => {
+                const ultimo = informes[informes.length - 1];
+                const desde2 = ultimo ? ultimo.hasta : (sesiones.length ? Math.min(...sesiones.map((x) => x.fecha)) : Date.now() - 86400000);
+                const snap = snapshotPeriodo(sesiones, desde2, Date.now());
+                if (!snap) { sonido("error"); return; }
+                const lista = [...informes, snap].slice(-24);
+                setInformes(lista);
+                guardar(`pequemundo:informes:${activo.id}`, lista);
+                sonido("acierto");
+              }} className="mt-2 w-full rounded-full bg-slate-100 py-2 text-xs font-black text-slate-500 active:scale-95">⚙️ Generar uno ahora (para probar el circuito)</button>
+          </div>
+
+          <div className={carta("progreso")}>
             <h3 className="text-lg font-black text-slate-800 sm:text-xl">🔔 Modelos de notificaciones (vista de prueba)</h3>
             <p className="mt-1 text-xs text-slate-400">Así se ven los tres tipos de aviso que el sistema genera automáticamente cuando corresponde. Tocá para previsualizar cada uno.</p>
             <div className="mt-3 flex flex-wrap gap-2">
@@ -5127,6 +5281,46 @@ h1{color:#b45309;letter-spacing:2px}h2{font-size:40px;margin:12px 0;color:#1e293
           </div>
 
           <div className={carta("ajustes")}>
+            <h3 className="text-lg font-black text-slate-800 sm:text-xl">♿ Apoyos y accesibilidad</h3>
+            <p className="mt-1 text-sm text-slate-500">Si {activo.nombre} tiene alguna condición o necesidad particular, elijan el perfil más representativo como <b>punto de partida</b>: la app configura los apoyos, y ustedes los afinan uno por uno — porque cada niño es único.</p>
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {[["", "Sin perfil"], ["tea", "🧩 Autismo (TEA)"], ["down", "💛 Síndrome de Down"], ["tdah", "⚡ TDAH"], ["motriz", "🦾 Motriz"], ["auditiva", "🦻 Auditiva"], ["dislexia", "📖 Dislexia"]].map(([tipo, nom]) => (
+                <button key={tipo} onClick={() => {
+                    const PRESETS = { tea: { calma: true, suave: true }, down: { leer: true, suave: true, grande: true }, tdah: { calma: true }, motriz: { grande: true, suave: true }, auditiva: { grande: true }, dislexia: { leer: true, suave: true } };
+                    const ap = tipo ? { tipo, ...(PRESETS[tipo] || {}) } : {};
+                    const lista = perfiles.map((x) => (x.id === activo.id ? { ...x, apoyo: ap } : x));
+                    setPerfiles(lista);
+                    setActivo({ ...activo, apoyo: ap });
+                    guardar("pequemundo:perfiles", lista);
+                    sonido("acierto");
+                  }}
+                  className={`rounded-full px-3 py-1.5 text-xs font-black active:scale-95 ${(apoyo.tipo || "") === tipo ? "bg-emerald-600 text-white" : "bg-slate-100 text-slate-600"}`}>{nom}</button>
+              ))}
+            </div>
+            <div className="mt-3 flex flex-col gap-1.5">
+              {[["calma", "🧘 Modo calma", "Sin confeti ni animaciones, festejos serenos, música apagada, colores más suaves."],
+                ["leer", "🔊 Todo con voz", "Fuerza el Modo Solito a cualquier edad: la app lee todo y las opciones suenan al tocarlas."],
+                ["grande", "🔍 Todo más grande", "Agranda textos y botones en toda la app (115%)."],
+                ["suave", "🐢 Ritmo suave", "Cada juego arranca desde el nivel 1 sin saltos por edad, y avanza sin aceleraciones: a SU tiempo."]].map(([clave, nom, desc]) => (
+                <button key={clave} onClick={() => {
+                    const ap = { ...apoyo, [clave]: !apoyo[clave] };
+                    const lista = perfiles.map((x) => (x.id === activo.id ? { ...x, apoyo: ap } : x));
+                    setPerfiles(lista);
+                    setActivo({ ...activo, apoyo: ap });
+                    guardar("pequemundo:perfiles", lista);
+                    sonido("tap");
+                  }}
+                  className={`rounded-2xl p-3 text-left active:scale-[0.99] ${apoyo[clave] ? "bg-emerald-50" : "bg-slate-50"}`}>
+                  <span className={`text-sm font-black ${apoyo[clave] ? "text-emerald-700" : "text-slate-600"}`}>{apoyo[clave] ? "✅ " : "⬜ "}{nom}</span>
+                  <p className="text-xs font-bold text-slate-400">{desc}</p>
+                </button>
+              ))}
+            </div>
+            <p className="mt-2 rounded-2xl bg-sky-50 p-3 text-xs font-bold text-sky-700">🔒 Este dato es de la familia: queda SOLO en este dispositivo, jamás se muestra a docentes ni a nadie. Y no es un diagnóstico: es la configuración de apoyos que a SU hijo le sirve. La edad ya la toma del perfil, y las tareas de la seño se juegan automáticamente con estos apoyos.</p>
+            <p className="mt-1 text-[10px] text-slate-400">Estos apoyos fueron diseñados con criterios de accesibilidad general; recomendamos ajustarlos junto al equipo terapéutico de cada niño.</p>
+          </div>
+
+          <div className={carta("ajustes")}>
             <h3 className="text-lg font-black text-slate-800 sm:text-xl">💗 Cuidado del cuerpo (contenido alineado a ESI)</h3>
             <button onClick={() => { const v = !esiOn; setEsiOn(v); guardar("mentejuego:esi", v); }}
               className={`mt-3 flex w-full items-center justify-between rounded-2xl p-4 text-left font-black active:scale-[0.99] ${esiOn ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-600"}`}>
@@ -5256,7 +5450,7 @@ h1{color:#b45309;letter-spacing:2px}h2{font-size:40px;margin:12px 0;color:#1e293
     const estrellasDe = (r) => (r >= 0.8 ? 3 : r >= 0.5 ? 2 : 1);
     const inicio = nivelInicial(s, rango);
     const quedanIncompletos = [...Array(s.niveles)].some((_, i) => mejor[idNivel(s, i + 1)] == null);
-    const siguiente = quedanIncompletos ? proximoNivel(s, mejor, rango, sesiones) : null;
+    const siguiente = quedanIncompletos ? proximoNivel(s, mejor, rango, sesiones, apoyo.suave) : null;
     const completados = Object.keys(mejor).filter((id) => id.startsWith(s.id + "-n")).length;
     return (
       <div className="min-h-screen bg-sky-100 p-3 pb-10 sm:p-4">
@@ -5337,7 +5531,7 @@ h1{color:#b45309;letter-spacing:2px}h2{font-size:40px;margin:12px 0;color:#1e293
           <div className="flex gap-2">
             <button onClick={() => { if (dispositivo && codigoFamilia) { setCodFamiliaInput(""); setModalModo("familia"); } else abrirPanel(); }}
               className="flex items-center gap-2 rounded-full bg-white px-4 py-2 font-black text-slate-600 shadow active:scale-95">
-              <BarChart3 /> {dispositivo ? "🔒 " : ""}Padres
+              <BarChart3 /> {dispositivo ? "🔒 " : ""}Padres{informes.some((x) => !x.visto) ? " 📬" : ""}
             </button>
             <button onClick={() => setPantalla("logros")}
               className="rounded-full bg-white px-3 py-2 text-xs font-black text-slate-600 shadow active:scale-95 sm:text-sm">🏅 Logros</button>
