@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Mente en Juego — Estimulación cognitiva para cada etapa</title>
-  <meta name="description" content="PequeMundo: más de 100 juegos para chicos de 3 a 11 años con consentimiento parental por país, plan diario, perfiles por hijo, pronunciación con voz, informes y premios. MenteActiva: ejercicios accesibles para adultos." />
+  <meta name="description" content="PequeMundo: más de 5.000 niveles para chicos de 3 a 11 años con series de dificultad progresiva, consentimiento parental por país, plan diario, perfiles por hijo, pronunciación con voz, informes y premios. MenteActiva: ejercicios accesibles para adultos." />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧠</text></svg>" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
@@ -57,9 +57,25 @@ async function leer(clave) {
   catch (e) { return memFallback[clave] ? JSON.parse(memFallback[clave]) : null; }
 }
 
-// ---------- utilidades ----------
-const mezclar = (arr) => [...arr].sort(() => Math.random() - 0.5);
-const azar = (n) => Math.floor(Math.random() * n);
+// ---------- utilidades (RNG con semilla: cada nivel es único y reproducible) ----------
+function mulberry32(a) {
+  return function () {
+    a |= 0; a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+function semillaDe(txt) {
+  let h = 2166136261;
+  for (let i = 0; i < txt.length; i++) { h ^= txt.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return h >>> 0;
+}
+let _rng = Math.random;
+const setSemilla = (n) => { _rng = mulberry32(n >>> 0); };
+const soltarSemilla = () => { _rng = Math.random; };
+const mezclar = (arr) => [...arr].sort(() => _rng() - 0.5);
+const azar = (n) => Math.floor(_rng() * n);
 
 let vozElegida = null;
 function elegirVoz() {
@@ -313,38 +329,83 @@ const VOCABULARIO = [
   { id: "arbol", p: "árbol", s: ["ár", "bol"] }, { id: "luna", p: "luna", s: ["lu", "na"] },
   { id: "estrella", p: "estrella", s: ["es", "tre", "lla"] }, { id: "globo", p: "globo", s: ["glo", "bo"] },
 ];
-// Palabras extra para práctica de pronunciación (con emoji en lugar de figura SVG)
-const PALABRAS_MEDIO = [
+const B_ANIMALES = [
+  { e: "🐶", p: "perro", s: ["pe", "rro"] }, { e: "🐮", p: "vaca", s: ["va", "ca"] },
+  { e: "🐴", p: "caballo", s: ["ca", "ba", "llo"] }, { e: "🐰", p: "conejo", s: ["co", "ne", "jo"] },
+  { e: "🦆", p: "pato", s: ["pa", "to"] }, { e: "🦁", p: "león", s: ["le", "ón"] },
+  { e: "🐵", p: "mono", s: ["mo", "no"] }, { e: "🐻", p: "oso", s: ["o", "so"] },
+  { e: "🐢", p: "tortuga", s: ["tor", "tu", "ga"] }, { e: "🐝", p: "abeja", s: ["a", "be", "ja"] },
   { e: "🐸", p: "rana", s: ["ra", "na"] }, { e: "🦒", p: "jirafa", s: ["ji", "ra", "fa"] },
-  { e: "🥁", p: "tambor", s: ["tam", "bor"] }, { e: "🧊", p: "hielo", s: ["hie", "lo"] },
-  { e: "🦋", p: "mariposa", s: ["ma", "ri", "po", "sa"] }, { e: "🐘", p: "elefante", s: ["e", "le", "fan", "te"] },
-  { e: "🍌", p: "banana", s: ["ba", "na", "na"] }, { e: "🧤", p: "guante", s: ["guan", "te"] },
+  { e: "🐯", p: "tigre", s: ["ti", "gre"] }, { e: "🐘", p: "elefante", s: ["e", "le", "fan", "te"] },
+  { e: "🦋", p: "mariposa", s: ["ma", "ri", "po", "sa"] }, { e: "🐊", p: "cocodrilo", s: ["co", "co", "dri", "lo"] },
 ];
+const B_COMIDA = [
+  { e: "🥖", p: "pan", s: ["pan"] }, { e: "🧀", p: "queso", s: ["que", "so"] },
+  { e: "🥚", p: "huevo", s: ["hue", "vo"] }, { e: "🍲", p: "sopa", s: ["so", "pa"] },
+  { e: "🎂", p: "torta", s: ["tor", "ta"] }, { e: "🍦", p: "helado", s: ["he", "la", "do"] },
+  { e: "🍊", p: "naranja", s: ["na", "ran", "ja"] }, { e: "🍇", p: "uva", s: ["u", "va"] },
+  { e: "🍉", p: "sandía", s: ["san", "dí", "a"] }, { e: "🍅", p: "tomate", s: ["to", "ma", "te"] },
+  { e: "🥕", p: "zanahoria", s: ["za", "na", "ho", "ria"] }, { e: "🍌", p: "banana", s: ["ba", "na", "na"] },
+  { e: "🍓", p: "frutilla", s: ["fru", "ti", "lla"] },
+];
+const B_CASA = [
+  { e: "🪑", p: "silla", s: ["si", "lla"] }, { e: "🛏️", p: "cama", s: ["ca", "ma"] },
+  { e: "🚪", p: "puerta", s: ["puer", "ta"] }, { e: "🪟", p: "ventana", s: ["ven", "ta", "na"] },
+  { e: "🥛", p: "vaso", s: ["va", "so"] }, { e: "🍽️", p: "plato", s: ["pla", "to"] },
+  { e: "🥄", p: "cuchara", s: ["cu", "cha", "ra"] }, { e: "🧼", p: "jabón", s: ["ja", "bón"] },
+  { e: "🪞", p: "espejo", s: ["es", "pe", "jo"] }, { e: "🔑", p: "llave", s: ["lla", "ve"] },
+  { e: "⏰", p: "reloj", s: ["re", "loj"] }, { e: "🧤", p: "guante", s: ["guan", "te"] },
+];
+const B_NATURALEZA = [
+  { e: "☁️", p: "nube", s: ["nu", "be"] }, { e: "🌧️", p: "lluvia", s: ["llu", "via"] },
+  { e: "⛰️", p: "montaña", s: ["mon", "ta", "ña"] }, { e: "🏖️", p: "playa", s: ["pla", "ya"] },
+  { e: "🔥", p: "fuego", s: ["fue", "go"] }, { e: "❄️", p: "nieve", s: ["nie", "ve"] },
+  { e: "💨", p: "viento", s: ["vien", "to"] }, { e: "🌱", p: "semilla", s: ["se", "mi", "lla"] },
+  { e: "🌍", p: "planeta", s: ["pla", "ne", "ta"] }, { e: "⚡", p: "relámpago", s: ["re", "lám", "pa", "go"] },
+  { e: "🧊", p: "hielo", s: ["hie", "lo"] }, { e: "🌵", p: "cactus", s: ["cac", "tus"] },
+];
+const B_TRANSPORTE = [
+  { e: "🚂", p: "tren", s: ["tren"] }, { e: "⛵", p: "barco", s: ["bar", "co"] },
+  { e: "✈️", p: "avión", s: ["a", "vión"] }, { e: "🏍️", p: "moto", s: ["mo", "to"] },
+  { e: "🚚", p: "camión", s: ["ca", "mión"] }, { e: "🚀", p: "cohete", s: ["co", "he", "te"] },
+  { e: "🚲", p: "bicicleta", s: ["bi", "ci", "cle", "ta"] }, { e: "🚁", p: "helicóptero", s: ["he", "li", "cóp", "te", "ro"] },
+];
+const B_MAGICAS = [
+  { e: "🐉", p: "dragón", s: ["dra", "gón"] }, { e: "🧙", p: "bruja", s: ["bru", "ja"] },
+  { e: "🥁", p: "tambor", s: ["tam", "bor"] }, { e: "👑", p: "corona", s: ["co", "ro", "na"] },
+  { e: "🏰", p: "castillo", s: ["cas", "ti", "llo"] }, { e: "🦄", p: "unicornio", s: ["u", "ni", "cor", "nio"] },
+];
+const PALABRAS_MEDIO = [...B_ANIMALES.slice(0, 8), ...B_CASA.slice(0, 4)];
 const PALABRAS_DIFICIL = [
-  { e: "🚂", p: "tren", s: ["tren"] }, { e: "🍓", p: "frutilla", s: ["fru", "ti", "lla"] },
-  { e: "🐊", p: "cocodrilo", s: ["co", "co", "dri", "lo"] }, { e: "⚡", p: "relámpago", s: ["re", "lám", "pa", "go"] },
-  { e: "🌧️", p: "lluvia", s: ["llu", "via"] }, { e: "🚁", p: "helicóptero", s: ["he", "li", "cóp", "te", "ro"] },
-  { e: "🐉", p: "dragón", s: ["dra", "gón"] }, { e: "🐯", p: "tigre", s: ["ti", "gre"] },
-  { e: "🧙", p: "bruja", s: ["bru", "ja"] }, { e: "🌍", p: "planeta", s: ["pla", "ne", "ta"] },
+  B_TRANSPORTE[0], B_COMIDA[12], B_ANIMALES[15], B_NATURALEZA[9], B_NATURALEZA[1],
+  B_TRANSPORTE[7], ...B_MAGICAS.slice(0, 3), B_NATURALEZA[8],
 ];
-const BANCO_SILABAS = [...VOCABULARIO, ...PALABRAS_MEDIO, ...PALABRAS_DIFICIL];
+const BANCO_SILABAS = [...VOCABULARIO, ...B_ANIMALES, ...B_COMIDA, ...B_CASA, ...B_NATURALEZA, ...B_TRANSPORTE, ...B_MAGICAS];
+const TODOS_BANCOS = [VOCABULARIO, B_ANIMALES, B_COMIDA, B_CASA, B_NATURALEZA, B_TRANSPORTE, B_MAGICAS];
 
 // ---------- región: cada país nombra las cosas a su manera ----------
 const TXT = { plata: "plata" };
+const REGLAS_REGION = [
+  { base: "banana", sBase: ["ba", "na", "na"], alt: { cl: "plátano", mx: "plátano", es: "plátano", pe: "plátano", co: "banano" }, sAlt: { "plátano": ["plá", "ta", "no"], banano: ["ba", "na", "no"] } },
+  { base: "frutilla", sBase: ["fru", "ti", "lla"], alt: { mx: "fresa", es: "fresa", co: "fresa", pe: "fresa", us: "fresa", br: "morango", xx: "fresa" }, sAlt: { fresa: ["fre", "sa"], morango: ["mo", "ran", "go"] } },
+  { base: "auto", sBase: ["au", "to"], alt: { mx: "carro", co: "carro", pe: "carro", us: "carro", es: "coche" }, sAlt: { carro: ["ca", "rro"], coche: ["co", "che"] } },
+  { base: "torta", sBase: ["tor", "ta"], alt: { mx: "pastel", es: "pastel", pe: "pastel", co: "pastel" }, sAlt: { pastel: ["pas", "tel"] } },
+  { base: "pelota", sBase: ["pe", "lo", "ta"], alt: { mx: "balón", es: "balón" }, sAlt: { "balón": ["ba", "lón"] } },
+];
 function aplicarRegion(pais) {
-  const cambiar = (lista, de, a, sil) => {
-    const it = lista.find((x) => x.p === de || x.p === a);
-    if (it) { it.p = a; it.s = sil; }
-  };
-  TXT.plata = ["ar", "uy"].includes(pais) ? "plata" : "dinero";
-  if (["ar", "uy", "cl"].includes(pais)) cambiar(PALABRAS_DIFICIL, "fresa", "frutilla", ["fru", "ti", "lla"]);
-  else cambiar(PALABRAS_DIFICIL, "frutilla", "fresa", ["fre", "sa"]);
-  if (["mx", "es", "pe"].includes(pais)) cambiar(PALABRAS_MEDIO, "banana", "plátano", ["plá", "ta", "no"]);
-  else cambiar(PALABRAS_MEDIO, "plátano", "banana", ["ba", "na", "na"]);
+  TXT.plata = ["ar", "uy", "cl"].includes(pais) ? "plata" : "dinero";
+  REGLAS_REGION.forEach((r) => {
+    TODOS_BANCOS.forEach((banco) => {
+      banco.forEach((it) => {
+        const esEste = it.p === r.base || Object.values(r.alt).includes(it.p);
+        if (!esEste) return;
+        const nueva = r.alt[pais] || r.base;
+        it.p = nueva;
+        it.s = nueva === r.base ? r.sBase : r.sAlt[nueva];
+      });
+    });
+  });
 }
-const PACK_NATURALEZA = ["sol", "arbol", "flor", "luna", "estrella", "manzana"];
-const PACK_COSAS = ["casa", "auto", "pelota", "globo", "gato", "pez"];
-const PACK_TODO = ["sol", "gato", "pez", "flor", "pelota", "auto", "estrella", "manzana"];
 
 // ============================================================
 // ======================  MÓDULO NIÑOS  ======================
@@ -532,7 +593,7 @@ const GENERADORES = {
   },
 
   contar: (p) => () => {
-    const em = p.tema || ["🐶", "🍓", "⭐", "🐟", "🌼"][azar(5)];
+    const em = p.tema || ["🐶", "⭐", "🐟", "🌼"][azar(4)];
     const n = azar(p.max - 1) + 2;
     return {
       pregunta: (<><Consigna>¿Cuántos hay? 🔢</Consigna><Tarjeta>
@@ -610,21 +671,24 @@ const GENERADORES = {
   },
 
   palabras: (p, edad) => () => {
-    const banco = p.banco.map((id) => VOCABULARIO.find((v) => v.id === id)).filter(Boolean);
+    const banco = p.banco;
     const item = banco[azar(banco.length)];
     const ops = new Set([item.p]);
-    while (ops.size < 3) ops.add(VOCABULARIO[azar(VOCABULARIO.length)].p);
+    while (ops.size < 3) ops.add(banco[azar(banco.length)].p);
     return {
       pregunta: (<><Consigna>¿Cómo se llama esto? 👀</Consigna>
         <div className="flex h-32 w-32 items-center justify-center rounded-3xl bg-white p-3 shadow-md sm:h-40 sm:w-40">
-          <Figura id={item.id} edad={edad} className="h-full w-full" />
+          {item.id
+            ? <Figura id={item.id} edad={edad} className="h-full w-full" />
+            : <span className="text-7xl sm:text-8xl">{item.e}</span>}
         </div></>),
       opciones: mezclar([...ops]), respuesta: item.p,
     };
   },
 
   letras: (p) => () => {
-    const item = VOCABULARIO[azar(VOCABULARIO.length)];
+    const bancoL = BANCO_SILABAS.filter((x) => /^[a-z]/.test(x.p));
+    const item = bancoL[azar(bancoL.length)];
     const abec = "ABCDEFGLMNOPRSTUVZ".split("");
     if (p.modo === "primera" || p.modo === "ultima") {
       const resp = (p.modo === "primera" ? item.p[0] : item.p[item.p.length - 1]).toUpperCase();
@@ -632,7 +696,7 @@ const GENERADORES = {
       while (ops.size < 4) ops.add(abec[azar(abec.length)]);
       return {
         pregunta: (<><Consigna>¿Con qué letra {p.modo === "primera" ? "empieza" : "termina"}? ✏️</Consigna>
-          <Tarjeta><Figura id={item.id} edad="6-8" className="h-24 w-24" />
+          <Tarjeta>{item.id ? <Figura id={item.id} edad="6-8" className="h-24 w-24" /> : <span className="text-6xl">{item.e}</span>}
           <span className="text-2xl font-black text-slate-800">{p.modo === "primera" ? "_" + item.p.slice(1) : item.p.slice(0, -1) + "_"}</span></Tarjeta></>),
         opciones: mezclar([...ops]), respuesta: resp,
       };
@@ -657,7 +721,7 @@ const GENERADORES = {
   },
 
   silabas: (p) => () => {
-    const banco = p.dificil ? [...PALABRAS_MEDIO, ...PALABRAS_DIFICIL] : BANCO_SILABAS.filter((x) => x.s.length <= 3);
+    const banco = p.dificil ? BANCO_SILABAS.filter((x) => x.s.length >= 3) : BANCO_SILABAS.filter((x) => x.s.length <= 3);
     const item = banco[azar(banco.length)];
     const resp = item.s.length;
     return {
@@ -1114,132 +1178,164 @@ function JuegoPronuncia({ params, edad, alTerminar, permitirMic = true }) {
 }
 
 // ============================================================
-// CATÁLOGO DE JUEGOS (motores × variantes = 100+)
+// SERIES × NIVELES = catálogo de más de 5.000 niveles únicos.
+// Cada serie interpola su dificultad del nivel 1 al último, y cada
+// nivel usa una semilla propia: su contenido es único y siempre el
+// mismo (se puede reintentar el MISMO nivel).
 // ============================================================
-const CATALOGO = [];
-function j(id, nombre, icono, area, motor, params, edades, colorTexto) {
-  CATALOGO.push({ id, nombre, icono, area, motor, params, edades, colorTexto: colorTexto || "text-violet-600" });
+// >>> SERIES
+const SERIES = [];
+function S(id, nombre, icono, area, motor, edades, niveles, p0, p1, colorTexto) {
+  SERIES.push({ id, nombre, icono, area, motor, edades, niveles, p0: p0 || {}, p1: p1 || null, colorTexto: colorTexto || (area === "lenguaje" ? "text-amber-600" : area === "psicomotor" ? "text-emerald-600" : area === "economia" ? "text-pink-600" : "text-violet-600") });
+}
+function paramsNivel(serie, k) {
+  const t = serie.niveles <= 1 ? 1 : (k - 1) / (serie.niveles - 1);
+  const out = { ...serie.p0 };
+  if (serie.p1) {
+    Object.keys(serie.p1).forEach((c) => {
+      if (typeof serie.p1[c] === "number" && typeof out[c] === "number") out[c] = Math.round(out[c] + (serie.p1[c] - out[c]) * t);
+      else out[c] = serie.p1[c];
+    });
+  }
+  return out;
 }
 
-// --- Pensar · memoria (12) ---
-[["nat", "naturaleza", PACK_NATURALEZA], ["cos", "objetos", PACK_COSAS], ["mix", "mezclada", PACK_TODO]].forEach(([k, nom, pack]) => {
-  j(`mem-${k}-3`, `Memoria ${nom} (fácil)`, "🃏", "cognitiva", "memoria", { pares: 3, pack }, ["3-5"]);
-  j(`mem-${k}-4`, `Memoria ${nom}`, "🃏", "cognitiva", "memoria", { pares: 4, pack }, ["3-5"]);
-  j(`mem-${k}-6`, `Memoria ${nom} (media)`, "🃏", "cognitiva", "memoria", { pares: 6, pack }, ["6-8"]);
-  j(`mem-${k}-8`, `Memoria ${nom} (difícil)`, "🃏", "cognitiva", "memoria", { pares: 8, pack }, ["9-11"]);
+// --- Pensar · memoria ---
+[["nat", "naturaleza", PACK_NATURALEZA], ["cos", "objetos", PACK_COSAS], ["mix", "mezclada", PACK_TODO],
+ ["tot", "gigante", ["sol", "casa", "gato", "pez", "flor", "pelota", "auto", "manzana", "arbol", "luna", "estrella", "globo"]]].forEach(([k, nom, pack]) => {
+  S(`mem-${k}`, `Memoria ${nom}`, "🃏", "cognitiva", "memoria", ["3-5", "6-8", "9-11"], 30, { pares: 3, pack }, { pares: Math.min(pack.length, 10) });
 });
 
-// --- Pensar · patrones (16) ---
-const PACKS_PATRON = [
-  ["col", "de colores", ["🔴", "🔵", "🟡", "🟢", "🟣"]],
-  ["fru", "de frutas", ["🍎", "🍌", "🍇", "🍓", "🍊"]],
-  ["ani", "de animales", ["🐶", "🐱", "🐸", "🐰", "🦁"]],
-  ["for", "de formas", ["⬛", "🔺", "⚪", "🟦", "🔶"]],
-];
-PACKS_PATRON.forEach(([k, nom, fichas]) => {
-  j(`pat-${k}-1`, `Patrones ${nom} (fácil)`, "🔮", "cognitiva", "patrones", { fichas, cuantas: 2, largo: 4 }, ["3-5"]);
-  j(`pat-${k}-2`, `Patrones ${nom}`, "🔮", "cognitiva", "patrones", { fichas, cuantas: 3, largo: 5 }, ["6-8"]);
-  j(`pat-${k}-3`, `Patrones ${nom} (difícil)`, "🔮", "cognitiva", "patrones", { fichas, cuantas: 3, largo: 6 }, ["9-11"]);
-  j(`pat-${k}-4`, `Patrones ${nom} (experto)`, "🔮", "cognitiva", "patrones", { fichas, cuantas: 3, largo: 7 }, ["9-11"]);
+// --- Pensar · patrones ---
+[["col", "de colores", ["🔴", "🔵", "🟡", "🟢", "🟣"], ["3-5", "6-8"]],
+ ["fru", "de frutas", ["🍎", "🍌", "🍇", "🍓", "🍊"], ["3-5", "6-8"]],
+ ["ani", "de animales", ["🐶", "🐱", "🐸", "🐰", "🦁"], ["3-5", "6-8"]],
+ ["for", "de formas", ["⬛", "🔺", "⚪", "🟦", "🔶"], ["3-5", "6-8"]],
+ ["veh", "de vehículos", ["🚗", "🚌", "🚲", "✈️", "⛵"], ["3-5", "6-8"]],
+ ["car", "de caritas", ["😀", "😎", "🤠", "🥳", "😴"], ["3-5", "6-8"]],
+ ["com", "de comidas", ["🍕", "🍦", "🍪", "🥐", "🍉"], ["6-8", "9-11"]],
+ ["dep", "de deportes", ["⚽", "🏀", "🎾", "🏈", "⚾"], ["6-8", "9-11"]],
+ ["cli", "del clima", ["☀️", "🌧️", "⛈️", "🌈", "❄️"], ["6-8", "9-11"]],
+ ["ins", "de bichitos", ["🐞", "🦋", "🐝", "🐜", "🦗"], ["6-8", "9-11"]],
+ ["mar", "del mar", ["🐟", "🐙", "🦀", "🐬", "🐚"], ["6-8", "9-11"]],
+ ["esp", "del espacio", ["🌟", "🌙", "🪐", "🚀", "☄️"], ["6-8", "9-11"]]].forEach(([k, nom, fichas, ed]) => {
+  S(`pat-${k}`, `Patrones ${nom}`, "🔮", "cognitiva", "patrones", ed, 30, { fichas, cuantas: 2, largo: 4 }, { cuantas: 3, largo: 8 });
 });
 
-// --- Pensar · cuentas (16) ---
-j("cta-sumfig", "Sumar con dibujos", "🍎", "cognitiva", "sumaFiguras", {}, ["3-5"]);
-j("cta-suma5", "Sumitas hasta 5", "➕", "cognitiva", "cuentas", { tipo: "suma", tope: 4 }, ["3-5"]);
-j("cta-suma10", "Sumas hasta 10", "➕", "cognitiva", "cuentas", { tipo: "suma", tope: 9 }, ["6-8"]);
-j("cta-suma20", "Sumas hasta 20", "➕", "cognitiva", "cuentas", { tipo: "suma", tope: 19 }, ["6-8"]);
-j("cta-suma50", "Sumas hasta 50", "➕", "cognitiva", "cuentas", { tipo: "suma", tope: 49 }, ["9-11"]);
-j("cta-suma100", "Sumas grandes", "➕", "cognitiva", "cuentas", { tipo: "suma", tope: 99 }, ["9-11"]);
-j("cta-suma3", "Sumas de 3 números", "➕", "cognitiva", "cuentas", { tipo: "suma3" }, ["9-11"]);
-j("cta-resta10", "Restas hasta 10", "➖", "cognitiva", "cuentas", { tipo: "resta", tope: 9 }, ["6-8"]);
-j("cta-resta20", "Restas hasta 20", "➖", "cognitiva", "cuentas", { tipo: "resta", tope: 19 }, ["6-8"]);
-j("cta-resta50", "Restas hasta 50", "➖", "cognitiva", "cuentas", { tipo: "resta", tope: 49 }, ["9-11"]);
-j("cta-doble", "El doble", "✖️", "cognitiva", "cuentas", { tipo: "doble" }, ["6-8"]);
-j("cta-mitad", "La mitad", "➗", "cognitiva", "cuentas", { tipo: "mitad" }, ["9-11"]);
-j("cta-tab23", "Tablas del 2 y 3", "✖️", "cognitiva", "cuentas", { tipo: "mult", tablas: [2, 3] }, ["6-8", "9-11"]);
-j("cta-tab456", "Tablas del 4 al 6", "✖️", "cognitiva", "cuentas", { tipo: "mult", tablas: [4, 5, 6] }, ["9-11"]);
-j("cta-tab789", "Tablas del 7 al 9", "✖️", "cognitiva", "cuentas", { tipo: "mult", tablas: [7, 8, 9] }, ["9-11"]);
-j("cta-div", "Divisiones", "➗", "cognitiva", "cuentas", { tipo: "div" }, ["9-11"]);
+// --- Pensar · cuentas ---
+S("cta-sumi", "Sumitas con dedos", "➕", "cognitiva", "cuentas", ["3-5"], 20, { tipo: "suma", tope: 2 }, { tope: 6 });
+S("cta-suma", "Súper sumas", "➕", "cognitiva", "cuentas", ["6-8"], 60, { tipo: "suma", tope: 4 }, { tope: 40 });
+S("cta-sumax", "Sumas gigantes", "➕", "cognitiva", "cuentas", ["9-11"], 60, { tipo: "suma", tope: 20 }, { tope: 140 });
+S("cta-resta", "Restas valientes", "➖", "cognitiva", "cuentas", ["6-8"], 60, { tipo: "resta", tope: 5 }, { tope: 40 });
+S("cta-restax", "Restas gigantes", "➖", "cognitiva", "cuentas", ["9-11"], 60, { tipo: "resta", tope: 20 }, { tope: 140 });
+S("cta-suma3", "Sumas de a tres", "➕", "cognitiva", "cuentas", ["9-11"], 40, { tipo: "suma3" });
+S("cta-doble", "El doble", "✖️", "cognitiva", "cuentas", ["6-8", "9-11"], 40, { tipo: "doble" });
+S("cta-mitad", "La mitad", "➗", "cognitiva", "cuentas", ["9-11"], 40, { tipo: "mitad" });
+[2, 3, 4, 5, 6, 7, 8, 9].forEach((tabla) => {
+  S(`cta-tab${tabla}`, `Tabla del ${tabla}`, "✖️", "cognitiva", "cuentas", tabla <= 3 ? ["6-8", "9-11"] : ["9-11"], 40, { tipo: "mult", tablas: [tabla] });
+});
+S("cta-div", "Divisiones", "➗", "cognitiva", "cuentas", ["9-11"], 80, { tipo: "div" });
 
-// --- Pensar · contar (8) ---
-j("con-ani5", "Contar animalitos", "🐶", "cognitiva", "contar", { max: 5, tema: "🐶" }, ["3-5"]);
-j("con-fru5", "Contar frutas", "🍓", "cognitiva", "contar", { max: 5, tema: "🍓" }, ["3-5"]);
-j("con-est10", "Contar estrellas", "⭐", "cognitiva", "contar", { max: 10, tema: "⭐" }, ["3-5", "6-8"]);
-j("con-flo10", "Contar flores", "🌼", "cognitiva", "contar", { max: 10, tema: "🌼" }, ["3-5", "6-8"]);
-j("con-mix10", "Contar hasta 10", "🔢", "cognitiva", "contar", { max: 10 }, ["3-5", "6-8"]);
-j("con-mix15", "Contar hasta 15", "🔢", "cognitiva", "contar", { max: 15 }, ["6-8"]);
-j("con-mix20", "Contar hasta 20", "🔢", "cognitiva", "contar", { max: 20 }, ["6-8"]);
-j("con-pec20", "Contar pececitos", "🐟", "cognitiva", "contar", { max: 20, tema: "🐟" }, ["6-8"]);
+// --- Pensar · contar (temas × niveles) ---
+const TEMAS_CONTAR_A = ["🐶", "🍓", "⭐", "🐟", "🌼", "🐤", "🎈", "🍎", "🦆", "🐞", "🧁", "⚽", "🐢", "🍄", "🌙", "☂️"];
+const TEMAS_CONTAR_B = ["🚗", "✈️", "🦀", "🍪", "🐙", "🌵", "🪁", "🍩", "🦋", "🐬", "🎁", "🧸", "🍇", "🚀", "🐝", "🌈"];
+TEMAS_CONTAR_A.forEach((em, i) => S(`con-a${i}`, `Contar ${em}`, em, "cognitiva", "contar", ["3-5", "6-8"], 40, { max: 3, tema: em }, { max: 15 }));
+TEMAS_CONTAR_B.forEach((em, i) => S(`con-b${i}`, `Contar ${em}`, em, "cognitiva", "contar", ["6-8", "9-11"], 40, { max: 8, tema: em }, { max: 30 }));
 
-// --- Pensar · comparar números (6) ---
-j("may-10", "¿Cuál es más grande? (hasta 10)", "⚖️", "cognitiva", "mayorMenor", { tope: 10, modo: "mayor" }, ["3-5", "6-8"]);
-j("men-10", "¿Cuál es más chico? (hasta 10)", "⚖️", "cognitiva", "mayorMenor", { tope: 10, modo: "menor" }, ["3-5", "6-8"]);
-j("may-100", "¿Cuál es más grande? (hasta 100)", "⚖️", "cognitiva", "mayorMenor", { tope: 100, modo: "mayor" }, ["6-8"]);
-j("may-100x3", "El más grande de tres", "⚖️", "cognitiva", "mayorMenor", { tope: 100, modo: "mayor", n: 3 }, ["6-8"]);
-j("may-1000", "El más grande (hasta 1000)", "⚖️", "cognitiva", "mayorMenor", { tope: 1000, modo: "mayor", n: 3 }, ["9-11"]);
-j("par-impar", "¿Par o impar?", "🎲", "cognitiva", "parImpar", {}, ["9-11"]);
+// --- Pensar · sumar con dibujos ---
+["🍎", "⭐", "🐞", "🌸", "🐤", "🍪", "🎈", "🐟", "🚗", "🧁", "🌙", "⚽"].forEach((em, i) =>
+  S(`sfg-${i}`, `Sumar ${em}`, em, "cognitiva", "sumaFiguras", ["3-5"], 30, { tema: em })
+);
 
-// --- Pensar · secuencias numéricas (9) ---
-j("sec-1", "Contar de 1 en 1", "➡️", "cognitiva", "secuencia", { paso: 1 }, ["3-5", "6-8"]);
-j("sec-2", "De 2 en 2", "➡️", "cognitiva", "secuencia", { paso: 2 }, ["6-8"]);
-j("sec-5", "De 5 en 5", "➡️", "cognitiva", "secuencia", { paso: 5 }, ["6-8"]);
-j("sec-10", "De 10 en 10", "➡️", "cognitiva", "secuencia", { paso: 10 }, ["6-8", "9-11"]);
-j("sec-3", "De 3 en 3", "➡️", "cognitiva", "secuencia", { paso: 3 }, ["9-11"]);
-j("sec-100", "De 100 en 100", "➡️", "cognitiva", "secuencia", { paso: 100, desdeMax: 300 }, ["9-11"]);
-j("sec-atras", "Contar hacia atrás", "⬅️", "cognitiva", "secuencia", { paso: 2, atras: true }, ["9-11"]);
-j("fal-20", "¿Qué número falta? (hasta 20)", "🔍", "cognitiva", "faltaNumero", { tope: 20 }, ["6-8"]);
-j("fal-100", "¿Qué número falta? (hasta 100)", "🔍", "cognitiva", "faltaNumero", { tope: 100 }, ["9-11"]);
+// --- Pensar · comparar ---
+S("may-2g", "¿Cuál es más grande?", "⚖️", "cognitiva", "mayorMenor", ["3-5", "6-8"], 40, { tope: 8, modo: "mayor", n: 2 }, { tope: 100 });
+S("men-2c", "¿Cuál es más chico?", "⚖️", "cognitiva", "mayorMenor", ["3-5", "6-8"], 40, { tope: 8, modo: "menor", n: 2 }, { tope: 100 });
+S("may-3g", "El más grande de tres", "⚖️", "cognitiva", "mayorMenor", ["6-8", "9-11"], 40, { tope: 20, modo: "mayor", n: 3 }, { tope: 1000 });
+S("men-3c", "El más chico de tres", "⚖️", "cognitiva", "mayorMenor", ["6-8", "9-11"], 40, { tope: 20, modo: "menor", n: 3 }, { tope: 1000 });
+S("may-4g", "El más grande de cuatro", "⚖️", "cognitiva", "mayorMenor", ["9-11"], 40, { tope: 50, modo: "mayor", n: 4 }, { tope: 5000 });
+S("par-impar", "¿Par o impar?", "🎲", "cognitiva", "parImpar", ["9-11"], 40, {});
 
-// --- Hablar (8) ---
-j("pal-nat", "Nombra la naturaleza", "🌳", "lenguaje", "palabras", { banco: PACK_NATURALEZA }, ["3-5"], "text-amber-600");
-j("pal-cos", "Nombra los objetos", "🏠", "lenguaje", "palabras", { banco: PACK_COSAS }, ["3-5", "6-8"], "text-amber-600");
-j("pal-mix", "Nombra la figura", "🗣️", "lenguaje", "palabras", { banco: VOCABULARIO.map((v) => v.id) }, ["6-8"], "text-amber-600");
-j("let-pri", "Primera letra", "🔤", "lenguaje", "letras", { modo: "primera" }, ["6-8"], "text-amber-600");
-j("let-ult", "Última letra", "🔚", "lenguaje", "letras", { modo: "ultima" }, ["9-11"], "text-amber-600");
-j("let-cua", "¿Cuántas letras tiene?", "🔢", "lenguaje", "letras", { modo: "cuantasLetras" }, ["6-8"], "text-amber-600");
-j("let-voc", "¿Cuántas vocales tiene?", "🅰️", "lenguaje", "letras", { modo: "cuantasVocales" }, ["9-11"], "text-amber-600");
-j("let-emp", "¿Empieza con vocal?", "🎯", "lenguaje", "letras", { modo: "empiezaVocal" }, ["6-8", "9-11"], "text-amber-600");
-j("pro-1", "Escuchá y repetí (fácil)", "🎤", "lenguaje", "pronuncia", { banco: VOCABULARIO }, ["3-5"], "text-amber-600");
-j("pro-2", "Escuchá y repetí", "🎤", "lenguaje", "pronuncia", { banco: PALABRAS_MEDIO }, ["3-5", "6-8"], "text-amber-600");
-j("pro-3", "Palabras trabadas", "🎤", "lenguaje", "pronuncia", { banco: PALABRAS_DIFICIL }, ["6-8", "9-11"], "text-amber-600");
-j("sil-1", "¿Cuántas sílabas? (con aplausos)", "👏", "lenguaje", "silabas", {}, ["6-8"], "text-amber-600");
-j("sil-2", "¿Cuántas sílabas? (difícil)", "👏", "lenguaje", "silabas", { dificil: true }, ["9-11"], "text-amber-600");
-j("sil-3", "La primera sílaba", "🧩", "lenguaje", "primeraSilaba", {}, ["6-8", "9-11"], "text-amber-600");
+// --- Pensar · secuencias ---
+[[1, ["3-5", "6-8"]], [2, ["6-8"]], [3, ["6-8", "9-11"]], [4, ["9-11"]], [5, ["6-8"]],
+ [10, ["6-8", "9-11"]], [20, ["9-11"]], [25, ["9-11"]], [50, ["9-11"]], [100, ["9-11"]]].forEach(([paso, ed]) => {
+  S(`sec-${paso}`, `Contar de ${paso} en ${paso}`, "➡️", "cognitiva", "secuencia", ed, 40, { paso, desdeMax: paso * 3 + 8 });
+});
+[[1, ["6-8", "9-11"]], [2, ["9-11"]], [5, ["9-11"]], [10, ["9-11"]]].forEach(([paso, ed]) => {
+  S(`sea-${paso}`, `Hacia atrás de ${paso} en ${paso}`, "⬅️", "cognitiva", "secuencia", ed, 40, { paso, atras: true });
+});
+S("fal-a", "¿Qué número falta?", "🔍", "cognitiva", "faltaNumero", ["6-8"], 40, { tope: 10 }, { tope: 60 });
+S("fal-b", "¿Qué número falta? (grandes)", "🔍", "cognitiva", "faltaNumero", ["9-11"], 40, { tope: 50 }, { tope: 500 });
 
-// --- Mover (3) ---
-j("atr-1", "Bichito tranquilo", "🐞", "psicomotor", "atrapa", { velocidad: 2000, meta: 10, tam: "h-20 w-20 sm:h-24 sm:w-24" }, ["3-5"], "text-emerald-600");
-j("atr-2", "Bichito veloz", "🐞", "psicomotor", "atrapa", { velocidad: 1200, meta: 15, tam: "h-12 w-12 sm:h-16 sm:w-16" }, ["6-8"], "text-emerald-600");
-j("atr-3", "Bichito turbo", "🐞", "psicomotor", "atrapa", { velocidad: 900, meta: 18, tam: "h-10 w-10 sm:h-12 sm:w-12" }, ["9-11"], "text-emerald-600");
+// --- Hablar ---
+[["cla", "figuras clásicas", VOCABULARIO, ["3-5"]],
+ ["ani", "animales", B_ANIMALES, ["3-5", "6-8"]],
+ ["com", "comidas", B_COMIDA, ["3-5", "6-8"]],
+ ["cas", "cosas de casa", B_CASA, ["6-8"]],
+ ["nat", "naturaleza", B_NATURALEZA, ["6-8"]],
+ ["tra", "transportes", B_TRANSPORTE, ["3-5", "6-8"]]].forEach(([k, nom, banco, ed]) => {
+  S(`pal-${k}`, `Nombrar ${nom}`, "🗣️", "lenguaje", "palabras", ed, 30, { banco });
+});
+S("let-pri", "Primera letra", "🔤", "lenguaje", "letras", ["6-8"], 40, { modo: "primera" });
+S("let-ult", "Última letra", "🔚", "lenguaje", "letras", ["9-11"], 40, { modo: "ultima" });
+S("let-cua", "¿Cuántas letras tiene?", "🔢", "lenguaje", "letras", ["6-8"], 40, { modo: "cuantasLetras" });
+S("let-voc", "¿Cuántas vocales tiene?", "🅰️", "lenguaje", "letras", ["9-11"], 40, { modo: "cuantasVocales" });
+S("let-emp", "¿Empieza con vocal?", "🎯", "lenguaje", "letras", ["6-8", "9-11"], 40, { modo: "empiezaVocal" });
+S("sil-f", "¿Cuántas sílabas? (con aplausos)", "👏", "lenguaje", "silabas", ["6-8"], 40, {});
+S("sil-d", "¿Cuántas sílabas? (difícil)", "👏", "lenguaje", "silabas", ["9-11"], 40, { dificil: true });
+S("sil-p1", "La primera sílaba", "🧩", "lenguaje", "primeraSilaba", ["6-8"], 25, {});
+S("sil-p2", "La primera sílaba (experto)", "🧩", "lenguaje", "primeraSilaba", ["9-11"], 25, {});
+[["cla", "palabras fáciles", VOCABULARIO, ["3-5"]],
+ ["ani", "animales", B_ANIMALES, ["3-5", "6-8"]],
+ ["com", "comidas", B_COMIDA, ["6-8"]],
+ ["dif", "palabras trabadas", PALABRAS_DIFICIL, ["6-8", "9-11"]],
+ ["mag", "palabras mágicas", B_MAGICAS, ["6-8", "9-11"]]].forEach(([k, nom, banco, ed]) => {
+  S(`pro-${k}`, `Escuchá y repetí: ${nom}`, "🎤", "lenguaje", "pronuncia", ed, 25, { banco });
+});
 
-// --- Ahorrar · FINANZAS (22) ---
-j("alc-12", "Alcancía: monedas de 1 y 2", "🐷", "economia", "alcancia", { monedas: [1, 2], min: 4, max: 9 }, ["6-8"], "text-pink-600");
-j("alc-125", "Alcancía: monedas de 1, 2 y 5", "🐷", "economia", "alcancia", { monedas: [1, 2, 5], min: 6, max: 14 }, ["6-8"], "text-pink-600");
-j("alc-bil", "Alcancía con billetes", "🐷", "economia", "alcancia", { monedas: [1, 2, 5, 10, 20], min: 18, max: 55 }, ["9-11"], "text-pink-600");
-j("alc-gra", "Alcancía: montos grandes", "🐷", "economia", "alcancia", { monedas: [5, 10, 20, 50], min: 60, max: 145 }, ["9-11"], "text-pink-600");
-j("din-1", "¿Cuánta plata hay? (fácil)", "💵", "economia", "contarDinero", { valores: [1, 2], cant: 2 }, ["6-8"], "text-pink-600");
-j("din-2", "¿Cuánta plata hay?", "💵", "economia", "contarDinero", { valores: [1, 2, 5], cant: 3 }, ["6-8"], "text-pink-600");
-j("din-3", "¿Cuánta plata hay? (con billetes)", "💵", "economia", "contarDinero", { valores: [2, 5, 10, 20], cant: 3 }, ["9-11"], "text-pink-600");
-j("vue-10", "El vuelto (hasta 10)", "🧾", "economia", "vuelto", { tope: 9 }, ["6-8"], "text-pink-600");
-j("vue-20", "El vuelto (hasta 20)", "🧾", "economia", "vuelto", { tope: 19 }, ["6-8", "9-11"], "text-pink-600");
-j("vue-100", "El vuelto (hasta 100)", "🧾", "economia", "vuelto", { tope: 90 }, ["9-11"], "text-pink-600");
-j("pre-caro2", "¿Cuál cuesta más?", "🛒", "economia", "cualCuesta", { n: 2, modo: "caro", tope: 10 }, ["3-5", "6-8"], "text-pink-600");
-j("pre-bar2", "¿Cuál es más barato?", "🛒", "economia", "cualCuesta", { n: 2, modo: "barato", tope: 20 }, ["6-8"], "text-pink-600");
-j("pre-caro3", "El más caro de tres", "🛒", "economia", "cualCuesta", { n: 3, modo: "caro", tope: 100 }, ["9-11"], "text-pink-600");
-j("nq-1", "¿Necesito o quiero?", "🤔", "economia", "necesito", {}, ["6-8"], "text-pink-600");
-j("nq-2", "¿Necesito o quiero? (avanzado)", "🤔", "economia", "necesito", { avanzado: true }, ["9-11"], "text-pink-600");
-j("met-1", "Meta de ahorro", "🎯", "economia", "metaAhorro", {}, ["9-11"], "text-pink-600");
-j("met-2", "Meta de ahorro (grande)", "🎯", "economia", "metaAhorro", { grande: true }, ["9-11"], "text-pink-600");
-j("des-mit", "Mitad de precio", "🏷️", "economia", "descuento", { modo: "mitad" }, ["6-8"], "text-pink-600");
-j("des-10", "Descuento del 10%", "🏷️", "economia", "descuento", { modo: "diez" }, ["9-11"], "text-pink-600");
-j("des-mix", "Rebajas mezcladas", "🏷️", "economia", "descuento", { modo: "mixto" }, ["9-11"], "text-pink-600");
-j("alz-20", "¿Me alcanza?", "💭", "economia", "alcanza", { tope: 17 }, ["6-8"], "text-pink-600");
-j("alz-100", "¿Me alcanza? (hasta 100)", "💭", "economia", "alcanza", { tope: 95 }, ["9-11"], "text-pink-600");
+// --- Mover ---
+S("atr-1", "Bichito tranquilo", "🐞", "psicomotor", "atrapa", ["3-5"], 40, { velocidad: 2400, meta: 8, tam: "h-20 w-20 sm:h-24 sm:w-24" }, { velocidad: 1400, meta: 16 });
+S("atr-2", "Bichito veloz", "🐞", "psicomotor", "atrapa", ["6-8"], 40, { velocidad: 1600, meta: 12, tam: "h-12 w-12 sm:h-16 sm:w-16" }, { velocidad: 950, meta: 22 });
+S("atr-3", "Bichito turbo", "🐞", "psicomotor", "atrapa", ["9-11"], 40, { velocidad: 1200, meta: 15, tam: "h-10 w-10 sm:h-12 sm:w-12" }, { velocidad: 700, meta: 28 });
+
+// --- Ahorrar ---
+S("alc-a", "La alcancía: monedas", "🐷", "economia", "alcancia", ["6-8"], 30, { monedas: [1, 2], min: 3, max: 6 }, { monedas: [1, 2, 5], min: 8, max: 16 });
+S("alc-b", "La alcancía: con billetes", "🐷", "economia", "alcancia", ["9-11"], 30, { monedas: [1, 2, 5, 10, 20], min: 12, max: 30 }, { monedas: [5, 10, 20, 50], min: 60, max: 160 });
+S("din-a", `¿Cuánto hay en el bolsillo?`, "💵", "economia", "contarDinero", ["6-8"], 30, { valores: [1, 2], cant: 2 }, { valores: [1, 2, 5], cant: 4 });
+S("din-b", `¿Cuánto hay? (con billetes)`, "💵", "economia", "contarDinero", ["9-11"], 30, { valores: [2, 5, 10], cant: 3 }, { valores: [5, 10, 20, 50], cant: 5 });
+S("vue-a", "El vuelto", "🧾", "economia", "vuelto", ["6-8"], 30, { tope: 4 }, { tope: 18 });
+S("vue-b", "El vuelto (grandes compras)", "🧾", "economia", "vuelto", ["9-11"], 30, { tope: 15 }, { tope: 95 });
+S("pre-a", "¿Cuál cuesta más?", "🛒", "economia", "cualCuesta", ["3-5", "6-8"], 25, { n: 2, modo: "caro", tope: 8 }, { tope: 30 });
+S("pre-b", "¿Cuál es más barato?", "🛒", "economia", "cualCuesta", ["6-8"], 25, { n: 2, modo: "barato", tope: 10 }, { n: 3, tope: 60 });
+S("pre-c", "El más caro de tres", "🛒", "economia", "cualCuesta", ["9-11"], 25, { n: 3, modo: "caro", tope: 40 }, { tope: 200 });
+S("nq-a", "¿Necesito o quiero?", "🤔", "economia", "necesito", ["6-8"], 25, {});
+S("nq-b", "¿Necesito o quiero? (avanzado)", "🤔", "economia", "necesito", ["9-11"], 25, { avanzado: true });
+S("met-a", "Meta de ahorro", "🎯", "economia", "metaAhorro", ["9-11"], 25, {});
+S("met-b", "Meta de ahorro (grande)", "🎯", "economia", "metaAhorro", ["9-11"], 25, { grande: true });
+S("des-a", "Mitad de precio", "🏷️", "economia", "descuento", ["6-8"], 25, { modo: "mitad" });
+S("des-b", "Descuento del 10%", "🏷️", "economia", "descuento", ["9-11"], 25, { modo: "diez" });
+S("des-c", "Rebajas mezcladas", "🏷️", "economia", "descuento", ["9-11"], 25, { modo: "mixto" });
+S("alz-a", "¿Me alcanza?", "💭", "economia", "alcanza", ["6-8"], 25, { tope: 10 }, { tope: 40 });
+S("alz-b", "¿Me alcanza? (hasta 100)", "💭", "economia", "alcanza", ["9-11"], 25, { tope: 40 }, { tope: 120 });
+
+const TOTAL_NIVELES = SERIES.reduce((a, s) => a + s.niveles, 0);
+// <<< SERIES
+
+const idNivel = (serie, k) => `${serie.id}-n${k}`;
+function buscarSeriePorNivel(id) {
+  const m = String(id).match(/^(.*)-n(\d+)$/);
+  if (!m) return null;
+  const serie = SERIES.find((s) => s.id === m[1]);
+  return serie ? { serie, nivel: Number(m[2]) } : null;
+}
+function nombreDeJuego(id) {
+  const r = buscarSeriePorNivel(id);
+  return r ? `${r.serie.icono} ${r.serie.nombre} · Nivel ${r.nivel}` : String(id);
+}
 
 // ============================================================
 // Análisis de progreso (lectura honesta, sin promesas)
 // ============================================================
-function analizarProgreso(sesiones, disponibles) {
-  const hoyTxt = new Date().toDateString();
+function analizarProgreso(sesiones, seriesDisp) {
   const porArea = {};
   Object.keys(AREAS).forEach((a) => { porArea[a] = { jugadas: 0, prom: 0, antes: [], ahora: [] }; });
   const mitad = Math.floor(sesiones.length / 2);
@@ -1247,8 +1343,7 @@ function analizarProgreso(sesiones, disponibles) {
     const d = porArea[s.area];
     if (!d) return;
     d.jugadas++;
-    const r = s.puntos / s.maximo;
-    (i < mitad ? d.antes : d.ahora).push(r);
+    (i < mitad ? d.antes : d.ahora).push(s.puntos / s.maximo);
   });
   Object.values(porArea).forEach((d) => {
     const todas = [...d.antes, ...d.ahora];
@@ -1264,22 +1359,24 @@ function analizarProgreso(sesiones, disponibles) {
   for (let i = 0; i < 400; i++) {
     const d = new Date(); d.setDate(d.getDate() - i);
     if (dias.has(d.toDateString())) racha++;
-    else if (i === 0) continue; // hoy todavía puede jugar
+    else if (i === 0) continue;
     else break;
   }
 
   // ritmo última semana
   const hace7 = Date.now() - 7 * 86400000;
-  const ult7 = sesiones.filter((s) => s.fecha >= hace7).length;
-  const ritmo = Math.round((ult7 / 7) * 10) / 10;
+  const ritmo = Math.round((sesiones.filter((s) => s.fecha >= hace7).length / 7) * 10) / 10;
 
-  // cobertura de la etapa
-  const jugados = new Set(sesiones.map((s) => s.juego));
-  const cubiertos = disponibles.filter((jg) => jugados.has(jg.id)).length;
-  const restantes = disponibles.length - cubiertos;
-  const diasParaCubrir = ritmo > 0 ? Math.ceil(restantes / ritmo) : null;
+  // cobertura: niveles superados sobre el total de su etapa
+  const total = seriesDisp.reduce((a, s) => a + s.niveles, 0);
+  const prefijos = new Set(seriesDisp.map((s) => s.id));
+  const cubiertos = new Set(
+    sesiones.map((s) => s.juego).filter((id) => {
+      const r = buscarSeriePorNivel(id);
+      return r && prefijos.has(r.serie.id);
+    })
+  ).size;
 
-  // frases honestas
   const frases = [];
   if (sesiones.length === 0) {
     frases.push("Todavía no hay partidas: cuando empiece a jugar, acá va a aparecer una lectura de su progreso.");
@@ -1288,16 +1385,16 @@ function analizarProgreso(sesiones, disponibles) {
       const d = porArea[a];
       if (d.jugadas < 4) return;
       if (d.tendencia !== null && d.tendencia >= 10) frases.push(`En ${AREAS[a].nombre} pasó de un ${Math.max(0, d.prom - d.tendencia)}% a un ${d.prom}% de acierto: está mejorando claramente con la práctica.`);
-      else if (d.tendencia !== null && d.tendencia <= -10) frases.push(`En ${AREAS[a].nombre} bajó el acierto últimamente: puede ser cansancio o juegos nuevos más difíciles. Conviene acompañarle en una sesión.`);
+      else if (d.tendencia !== null && d.tendencia <= -10) frases.push(`En ${AREAS[a].nombre} bajó el acierto últimamente: puede ser cansancio o niveles nuevos más difíciles. Conviene acompañarle en una sesión.`);
       else frases.push(`En ${AREAS[a].nombre} sostiene un ${d.prom}% de acierto: rendimiento estable dentro de su etapa.`);
     });
     const menos = Object.keys(AREAS).reduce((a, b) => (porArea[a].jugadas <= porArea[b].jugadas ? a : b));
-    frases.push(`El área menos explorada es ${AREAS[menos].nombre}: sumar juegos variados estimula el desarrollo integral.`);
+    frases.push(`El área menos explorada es ${AREAS[menos].nombre}: sumar niveles variados estimula el desarrollo integral.`);
     if (racha >= 3) frases.push(`Lleva ${racha} días seguidos practicando. La constancia en sesiones cortas es lo que más pesa según la investigación sobre aprendizaje.`);
-    if (ritmo > 0 && restantes > 0 && diasParaCubrir) frases.push(`A este ritmo (${ritmo} juegos por día), en unos ${diasParaCubrir} días habrá probado los ${disponibles.length} juegos de su etapa al menos una vez.`);
-    if (restantes === 0 && disponibles.length > 0) frases.push(`¡Ya probó todos los juegos de su etapa! Repetirlos sigue sumando: la práctica espaciada consolida lo aprendido.`);
+    if (cubiertos > 0) frases.push(`Ya superó ${cubiertos} de los ${total.toLocaleString("es-AR")} niveles disponibles para su etapa: hay contenido de sobra para no repetirse nunca.`);
+    if (ritmo > 0) frases.push(`A este ritmo (${ritmo} niveles por día) avanza unos ${Math.round(ritmo * 30)} niveles nuevos por mes, con dificultad que sube de a poco.`);
   }
-  return { porArea, racha, ritmo, cubiertos, total: disponibles.length, frases, jugadas: sesiones.length };
+  return { porArea, racha, ritmo, cubiertos, total, frases, jugadas: sesiones.length };
 }
 
 function ResultadoPlan({ puntos, maximo, siguiente, ultimo, onSeguir, onSalir }) {
@@ -1313,13 +1410,13 @@ function ResultadoPlan({ puntos, maximo, siguiente, ultimo, onSeguir, onSalir })
       <div className="text-6xl">{ratio >= 0.8 ? "🏆" : ratio >= 0.5 ? "🎉" : "💪"}</div>
       <p className="text-2xl font-black text-slate-800">{puntos} de {maximo} puntos</p>
       {ultimo ? (
-        <p className="text-xl font-black text-emerald-600">🧭 ¡Último juego del plan!</p>
+        <p className="text-xl font-black text-emerald-600">🧭 ¡Último nivel del plan!</p>
       ) : (
-        <p className="text-lg font-bold text-slate-500">Siguiente: <span className="font-black text-slate-700">{siguiente.icono} {siguiente.nombre}</span></p>
+        siguiente && <p className="text-lg font-bold text-slate-500">Siguiente: <span className="font-black text-slate-700">{siguiente.icono} {siguiente.nombre}</span></p>
       )}
       <button onClick={onSeguir}
         className="rounded-full bg-emerald-500 px-8 py-4 text-xl font-black text-white shadow-lg active:scale-95">
-        {ultimo ? "Terminar plan 🎊" : `Seguir (${cuenta})`} 
+        {ultimo ? "Terminar plan 🎊" : `Seguir (${cuenta})`}
       </button>
       <button onClick={onSalir} className="text-sm font-bold text-slate-400">Salir del plan</button>
     </div>
@@ -1328,14 +1425,14 @@ function ResultadoPlan({ puntos, maximo, siguiente, ultimo, onSeguir, onSalir })
 
 function GuiaPadres() {
   const secciones = [
-    { t: "🤝 Jugar con ellos cambia todo", c: "Diez minutos jugando juntos valen más que una hora de pantalla en soledad. Sentate al lado, dejá que resuelva, y preguntá cómo lo pensó. La app está diseñada para eso: partidas cortas que terminan rápido." },
+    { t: "🤝 Jugar con ellos cambia todo", c: "Diez minutos jugando juntos valen más que una hora de pantalla en soledad. Sentate al lado, dejá que resuelva, y preguntá cómo lo pensó. La app está diseñada para eso: niveles cortos que terminan rápido." },
     { t: "💬 Elogiá el esfuerzo, no la inteligencia", c: "La investigación sobre mentalidad de crecimiento (Carol Dweck y colegas) sugiere celebrar el proceso: «¡Qué bien que probaste otra forma!» en lugar de «¡Qué inteligente sos!». Los chicos elogiados por esfuerzo se animan a desafíos más difíciles; los elogiados por «ser inteligentes» tienden a evitar equivocarse." },
     { t: "⏱️ Corto y seguido le gana a largo y esporádico", c: "Es mejor 10-15 minutos casi todos los días que una hora el domingo. La práctica espaciada es de los hallazgos más sólidos de la ciencia del aprendizaje. El «objetivo de hoy» y el «plan del día» de la app están calibrados para eso." },
     { t: "🧠 Pensar, fuera de la pantalla", c: "Juegos de mesa, memotest físico, contar escalones, buscar formas en la calle. Pedile que te ayude a recordar la lista del súper: la memoria de trabajo se ejercita en la vida real." },
     { t: "💬 Hablar: leer juntos es lo más poderoso", c: "La lectura compartida diaria es una de las prácticas con mejor evidencia para el lenguaje. Cantar, jugar con rimas, separar palabras en sílabas con aplausos y dejar que termine las frases del cuento. El juego «Escuchá y repetí» rinde el doble si vos también repetís la palabra con él." },
     { t: "✋ Mover: manos ocupadas, cerebro activo", c: "Dibujar, recortar con tijera de punta redonda, masa, enhebrar fideos, pelota. La motricidad fina de hoy es la escritura de mañana. La app solo complementa: el movimiento real es insustituible." },
     { t: "💰 Ahorrar: la alcancía de verdad", c: "Una alcancía física, una meta concreta («juntar para el juguete») y participar en compras chicas: que pague el pan y reciba el vuelto. Hablar de «necesito o quiero» frente a la góndola convierte cada salida en una lección. La OCDE recomienda empezar la educación financiera temprano, siempre como juego." },
-    { t: "😤 Si se frustra", c: "Validá la emoción («te dio bronca, te entiendo»), bajá a un juego que le salga bien para cerrar en positivo, y retomá otro día. Frustrarse un poco es parte de aprender; frustrarse mucho es señal de que el juego todavía no es para su momento, y no pasa nada." },
+    { t: "😤 Si se frustra", c: "Validá la emoción («te dio bronca, te entiendo»), bajá a un nivel que le salga bien para cerrar en positivo, y retomá otro día. Frustrarse un poco es parte de aprender; frustrarse mucho es señal de que el nivel todavía no es para su momento, y no pasa nada." },
     { t: "🌙 Lo que más importa no está en ninguna app", c: "Dormir bien, jugar libre, moverse y conversar en familia tienen más impacto en el desarrollo que cualquier aplicación, incluida esta. Usala como un complemento divertido, no como el plan principal. Y ante cualquier duda sobre el desarrollo (habla, atención, aprendizaje), el camino es el pediatra, no una app." },
   ];
   return (
@@ -1433,10 +1530,9 @@ function PanelPadres({ sesiones, perfil, edadAnios }) {
           <p className="text-slate-500">Todavía no hay partidas registradas.</p>
         ) : (
           ultimas.map((s, i) => {
-            const juego = CATALOGO.find((x) => x.id === s.juego);
             return (
               <div key={i} className="flex items-center justify-between border-b border-slate-100 py-2 last:border-0">
-                <span className="font-bold text-slate-700">{juego?.icono} {juego?.nombre || s.juego}</span>
+                <span className="font-bold text-slate-700">{nombreDeJuego(s.juego)}</span>
                 <span className={`font-black ${s.puntos / s.maximo >= 0.7 ? "text-green-600" : "text-amber-600"}`}>
                   {s.puntos}/{s.maximo}
                 </span>
@@ -1491,7 +1587,8 @@ function AppNinos({ alSelector, permisos = { mic: true, videos: true }, alRevisa
   const [juegoActivo, setJuegoActivo] = useState(null);
   const [resultado, setResultado] = useState(null);
   const [claveJuego, setClaveJuego] = useState(0);
-  const [plan, setPlan] = useState(null); // { lista: [ids], idx }
+  const [plan, setPlan] = useState(null); // { lista: [ids de nivel], idx }
+  const [serieAbierta, setSerieAbierta] = useState(null);
 
   const [nombreInput, setNombreInput] = useState("");
   const [nacInput, setNacInput] = useState("");
@@ -1575,33 +1672,57 @@ function AppNinos({ alSelector, permisos = { mic: true, videos: true }, alRevisa
   };
 
   const terminarJuego = (puntos, maximo) => {
-    const s = { juego: juegoActivo.id, area: juegoActivo.area, puntos, maximo, fecha: Date.now() };
+    const s = { juego: juegoActivo.id, area: juegoActivo.serie.area, puntos, maximo, fecha: Date.now() };
     const nuevas = [...sesiones, s];
     setSesiones(nuevas);
     guardar(`pequemundo:sesiones:${activo.id}`, nuevas);
     setResultado({ puntos, maximo });
   };
 
-  const abrirJuego = (jg) => { setJuegoActivo(jg); setResultado(null); setClaveJuego((k) => k + 1); setPantalla("juego"); };
-  const repetir = () => { setResultado(null); setClaveJuego((k) => k + 1); };
+  const mejorPorNivel = () => {
+    const m = {};
+    sesiones.forEach((s) => { const r = s.puntos / s.maximo; if (m[s.juego] == null || r > m[s.juego]) m[s.juego] = r; });
+    return m;
+  };
 
-  const iniciarPlan = (disponibles, cuantos) => {
-    const conteo = {};
-    sesiones.forEach((s) => { conteo[s.juego] = (conteo[s.juego] || 0) + 1; });
-    const colas = Object.keys(AREAS).map((a) =>
-      disponibles.filter((jg) => jg.area === a).sort((x, y) => (conteo[x.id] || 0) - (conteo[y.id] || 0))
-    );
+  const abrirNivel = (serie, k) => {
+    const id = idNivel(serie, k);
+    setSemilla(semillaDe(id));
+    setJuegoActivo({ serie, nivel: k, id, params: paramsNivel(serie, k) });
+    setResultado(null);
+    setClaveJuego((c) => c + 1);
+    setPantalla("juego");
+  };
+  const abrirNivelPorId = (id) => { const r = buscarSeriePorNivel(id); if (r) abrirNivel(r.serie, r.nivel); };
+  const repetir = () => { setSemilla(semillaDe(juegoActivo.id)); setResultado(null); setClaveJuego((c) => c + 1); };
+
+  const iniciarPlan = (seriesDisp, cuantos) => {
+    const mejor = mejorPorNivel();
+    const progresoSerie = (s) => {
+      let c = 0;
+      for (let k = 1; k <= s.niveles; k++) if (mejor[idNivel(s, k)] != null) c++;
+      return c / s.niveles;
+    };
+    const proximoNivel = (s) => {
+      for (let k = 1; k <= s.niveles; k++) {
+        const desbloqueado = k === 1 || mejor[idNivel(s, k - 1)] != null;
+        if (desbloqueado && mejor[idNivel(s, k)] == null) return k;
+      }
+      return 1 + Math.floor(Math.random() * s.niveles);
+    };
     const lista = [];
+    const areas = Object.keys(AREAS);
+    const usadas = new Set();
     let i = 0;
-    while (lista.length < cuantos && i < 60) {
-      const cola = colas[i % colas.length];
-      if (cola.length > 0) lista.push(cola.shift().id);
+    while (lista.length < cuantos && i < 80) {
+      const area = areas[i % areas.length];
+      const cand = seriesDisp.filter((s) => s.area === area && !usadas.has(s.id)).sort((a, b) => progresoSerie(a) - progresoSerie(b));
+      if (cand.length > 0) { const s = cand[0]; usadas.add(s.id); lista.push(idNivel(s, proximoNivel(s))); }
       i++;
     }
     if (lista.length === 0) return;
-    const nuevoPlan = { lista, idx: 0 };
-    setPlan(nuevoPlan);
-    abrirJuego(CATALOGO.find((jg) => jg.id === lista[0]));
+    setPlan({ lista, idx: 0 });
+    abrirNivelPorId(lista[0]);
   };
 
   const seguirPlan = () => {
@@ -1615,7 +1736,7 @@ function AppNinos({ alSelector, permisos = { mic: true, videos: true }, alRevisa
       return;
     }
     setPlan({ ...plan, idx: prox });
-    abrirJuego(CATALOGO.find((jg) => jg.id === plan.lista[prox]));
+    abrirNivelPorId(plan.lista[prox]);
   };
 
   const salirPlan = () => { setPlan(null); setResultado(null); setPantalla("menu"); };
@@ -1636,7 +1757,7 @@ th{background:#f1f5f9}.caja{background:#fef9c3;border-radius:12px;padding:14px;f
 <h1>🌈 PequeMundo — Informe de progreso</h1>
 <p><b>${activo.nombre}</b> · ${edadAnios} años (etapa ${rango}) · Informe generado el ${f}</p>
 <h2>Resumen</h2>
-<p>Partidas totales: <b>${an.jugadas}</b> · Racha actual: <b>${an.racha} ${an.racha === 1 ? "día" : "días"}</b> · Ritmo última semana: <b>${an.ritmo} juegos/día</b> · Juegos de su etapa ya probados: <b>${an.cubiertos} de ${an.total}</b></p>
+<p>Partidas totales: <b>${an.jugadas}</b> · Racha actual: <b>${an.racha} ${an.racha === 1 ? "día" : "días"}</b> · Ritmo última semana: <b>${an.ritmo} niveles/día</b> · Niveles superados en su etapa: <b>${an.cubiertos} de ${an.total.toLocaleString("es-AR")}</b></p>
 <h2>Por área</h2>
 <table><tr><th>Área</th><th>Partidas</th><th>Acierto promedio</th><th>Tendencia</th></tr>${filas}</table>
 <h2>Lectura del progreso</h2>
@@ -1747,7 +1868,7 @@ ${an.frases.map((x) => `<p>• ${x}</p>`).join("")}
         <div className="text-center">
           <div className="text-6xl sm:text-7xl">🌈</div>
           <h1 className="mt-2 text-4xl font-black text-sky-700 sm:text-5xl">PequeMundo</h1>
-          <p className="mt-2 text-base font-bold text-slate-500 sm:text-lg">{CATALOGO.length} juegos que crecen con tu peque</p>
+          <p className="mt-2 text-base font-bold text-slate-500 sm:text-lg">{TOTAL_NIVELES.toLocaleString("es-AR")} niveles que crecen con tu peque</p>
         </div>
         <div className="flex w-full max-w-sm flex-col gap-4 rounded-3xl bg-white p-5 shadow-lg sm:p-6">
           <label className="text-base font-black text-slate-700 sm:text-lg">¿Cómo se llama?</label>
@@ -1819,7 +1940,7 @@ ${an.frases.map((x) => `<p>• ${x}</p>`).join("")}
 
   // ---------- pantalla de juego ----------
   if (pantalla === "juego" && juegoActivo) {
-    const motor = juegoActivo.motor;
+    const motor = juegoActivo.serie.motor;
     return (
       <div className="min-h-screen bg-sky-100 p-3 sm:p-4">
         <div className="mx-auto flex max-w-lg flex-col gap-4 sm:gap-6">
@@ -1827,7 +1948,7 @@ ${an.frases.map((x) => `<p>• ${x}</p>`).join("")}
             <button onClick={() => setPantalla("menu")} className="flex items-center gap-1 rounded-full bg-white px-4 py-2 font-black text-slate-600 shadow active:scale-95">
               <ArrowLeft /> Volver
             </button>
-            <span className="text-base font-black text-slate-700 sm:text-lg">{juegoActivo.icono} {juegoActivo.nombre}</span>
+            <span className="text-base font-black text-slate-700 sm:text-lg">{juegoActivo.serie.icono} {juegoActivo.serie.nombre} · Nivel {juegoActivo.nivel}</span>
           </div>
           {plan && (
             <div className="flex items-center gap-2 rounded-full bg-emerald-100 px-4 py-2 text-sm font-black text-emerald-700">
@@ -1841,7 +1962,7 @@ ${an.frases.map((x) => `<p>• ${x}</p>`).join("")}
                 <ResultadoPlan
                   puntos={resultado.puntos} maximo={resultado.maximo}
                   ultimo={plan.idx + 1 >= plan.lista.length}
-                  siguiente={plan.idx + 1 < plan.lista.length ? CATALOGO.find((x) => x.id === plan.lista[plan.idx + 1]) : null}
+                  siguiente={plan.idx + 1 < plan.lista.length ? (() => { const r = buscarSeriePorNivel(plan.lista[plan.idx + 1]); return r ? { icono: r.serie.icono, nombre: `${r.serie.nombre} · Nivel ${r.nivel}` } : null; })() : null}
                   onSeguir={seguirPlan} onSalir={salirPlan}
                 />
               ) : (
@@ -1856,7 +1977,7 @@ ${an.frases.map((x) => `<p>• ${x}</p>`).join("")}
                 {motor !== "memoria" && motor !== "atrapa" && motor !== "alcancia" && motor !== "pronuncia" && (
                   <JuegoRondas
                     generar={GENERADORES[motor](juegoActivo.params, rango)}
-                    colorTexto={juegoActivo.colorTexto}
+                    colorTexto={juegoActivo.serie.colorTexto}
                     alTerminar={terminarJuego}
                   />
                 )}
@@ -1953,7 +2074,7 @@ ${an.frases.map((x) => `<p>• ${x}</p>`).join("")}
           </div>
 
           {(() => {
-            const disponiblesPanel = CATALOGO.filter((jg) => jg.edades.includes(rango));
+            const disponiblesPanel = SERIES.filter((s) => s.edades.includes(rango));
             const an = analizarProgreso(sesiones, disponiblesPanel);
             return (
               <div className="w-full rounded-3xl bg-white p-5 shadow-md sm:p-6">
@@ -1961,8 +2082,8 @@ ${an.frases.map((x) => `<p>• ${x}</p>`).join("")}
                 <p className="mt-1 text-xs text-slate-400">Generada automáticamente comparando a {activo.nombre} con su propio historial.</p>
                 <div className="mt-3 flex flex-wrap gap-2 text-xs font-black">
                   <span className="rounded-full bg-sky-100 px-3 py-1 text-sky-700">🔥 Racha: {an.racha} {an.racha === 1 ? "día" : "días"}</span>
-                  <span className="rounded-full bg-violet-100 px-3 py-1 text-violet-700">⚡ {an.ritmo} juegos/día</span>
-                  <span className="rounded-full bg-emerald-100 px-3 py-1 text-emerald-700">🗺️ {an.cubiertos}/{an.total} juegos probados</span>
+                  <span className="rounded-full bg-violet-100 px-3 py-1 text-violet-700">⚡ {an.ritmo} niveles/día</span>
+                  <span className="rounded-full bg-emerald-100 px-3 py-1 text-emerald-700">🗺️ {an.cubiertos}/{an.total.toLocaleString("es-AR")} niveles</span>
                 </div>
                 <div className="mt-3 flex flex-col gap-2">
                   {an.frases.map((fr, i) => (
@@ -2063,15 +2184,70 @@ ${an.frases.map((x) => `<p>• ${x}</p>`).join("")}
     );
   }
 
+  // ---------- pantalla de una serie: mapa de niveles ----------
+  if (pantalla === "serie" && serieAbierta) {
+    const s = serieAbierta;
+    const mejor = mejorPorNivel();
+    const estrellasDe = (r) => (r >= 0.8 ? 3 : r >= 0.5 ? 2 : 1);
+    let siguiente = null;
+    for (let k = 1; k <= s.niveles; k++) {
+      const desb = k === 1 || mejor[idNivel(s, k - 1)] != null;
+      if (desb && mejor[idNivel(s, k)] == null) { siguiente = k; break; }
+    }
+    const completados = Object.keys(mejor).filter((id) => id.startsWith(s.id + "-n")).length;
+    return (
+      <div className="min-h-screen bg-sky-100 p-3 pb-10 sm:p-4">
+        <div className="mx-auto flex max-w-lg flex-col gap-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <button onClick={() => setPantalla("menu")} className="flex items-center gap-1 rounded-full bg-white px-4 py-2 font-black text-slate-600 shadow active:scale-95">
+              <ArrowLeft /> Volver
+            </button>
+            <span className="text-base font-black text-slate-700 sm:text-lg">{s.icono} {s.nombre}</span>
+          </div>
+          <div className="rounded-3xl bg-white p-4 shadow-md">
+            <p className="text-sm font-bold text-slate-500">{completados} de {s.niveles} niveles superados. La dificultad sube de a poco y cada nivel es único: podés reintentar el mismo nivel las veces que quieras.</p>
+            {siguiente && (
+              <button onClick={() => abrirNivel(s, siguiente)}
+                className="mt-3 w-full rounded-full bg-emerald-500 py-3 text-lg font-black text-white shadow-md active:scale-95">
+                ▶ Jugar nivel {siguiente}
+              </button>
+            )}
+          </div>
+          <div className="grid grid-cols-5 gap-2">
+            {[...Array(s.niveles)].map((_, i) => {
+              const k = i + 1;
+              const r = mejor[idNivel(s, k)];
+              const desb = k === 1 || mejor[idNivel(s, k - 1)] != null;
+              return (
+                <button key={k} disabled={!desb} onClick={() => abrirNivel(s, k)}
+                  className={`flex aspect-square flex-col items-center justify-center rounded-2xl text-sm font-black shadow transition-transform active:scale-90 ${
+                    r != null ? "bg-emerald-400 text-white"
+                    : desb ? (k === siguiente ? "bg-white text-slate-700 ring-4 ring-emerald-300" : "bg-white text-slate-700")
+                    : "bg-slate-200 text-slate-400"
+                  }`}>
+                  <span>{desb ? k : "🔒"}</span>
+                  {r != null && <span className="text-[9px] leading-none">{"⭐".repeat(estrellasDe(r))}</span>}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // ---------- menú principal ----------
-  const disponibles = CATALOGO.filter((jg) => jg.edades.includes(rango));
+  const disponibles = SERIES.filter((s) => s.edades.includes(rango));
+  const nivelesEtapa = disponibles.reduce((a, s) => a + s.niveles, 0);
+  const mejorMenu = mejorPorNivel();
+  const completadosDe = (s) => Object.keys(mejorMenu).filter((id) => id.startsWith(s.id + "-n")).length;
   return (
     <div className="min-h-screen bg-sky-100 p-3 pb-10 sm:p-4">
       <div className="mx-auto flex max-w-lg flex-col gap-5 sm:gap-6">
         <header className="flex flex-wrap items-center justify-between gap-3 pt-2">
           <div>
             <h1 className="text-2xl font-black text-sky-700 sm:text-3xl">{activo.avatar} ¡Hola, {activo.nombre}!</h1>
-            <p className="font-bold text-slate-500">{edadAnios} años · {disponibles.length} juegos para tu edad</p>
+            <p className="font-bold text-slate-500">{edadAnios} años · {nivelesEtapa.toLocaleString("es-AR")} niveles para tu edad</p>
           </div>
           <div className="flex gap-2">
             <button onClick={abrirPanel}
@@ -2094,9 +2270,9 @@ ${an.frases.map((x) => `<p>• ${x}</p>`).join("")}
           className="rounded-3xl bg-emerald-500 p-4 text-left shadow-md transition-transform active:scale-95">
           <div className="flex items-center justify-between">
             <span className="text-lg font-black text-white">🧭 Mi plan de hoy</span>
-            <span className="rounded-full bg-white/25 px-3 py-1 text-sm font-black text-white">{Math.min(Math.max(metaHoy, 3), 8)} juegos</span>
+            <span className="rounded-full bg-white/25 px-3 py-1 text-sm font-black text-white">{Math.min(Math.max(metaHoy, 3), 8)} niveles</span>
           </div>
-          <p className="mt-1 text-sm font-bold text-emerald-50">La app elige juegos de todas las áreas y va pasando sola al siguiente. ¡Tocá y empezá!</p>
+          <p className="mt-1 text-sm font-bold text-emerald-50">La app elige niveles de todas las áreas y va pasando sola al siguiente. ¡Tocá y empezá!</p>
         </button>
 
         <button onClick={() => setPantalla("premio")}
@@ -2108,24 +2284,34 @@ ${an.frases.map((x) => `<p>• ${x}</p>`).join("")}
           <div className="mt-2 h-3 w-full overflow-hidden rounded-full bg-slate-100">
             <div className={`h-full rounded-full ${logrado ? "bg-yellow-500" : "bg-sky-400"}`} style={{ width: `${Math.min(100, (jugadasHoy / metaHoy) * 100)}%` }} />
           </div>
-          <p className="mt-1 text-xs font-bold text-slate-400">{logrado ? "Tocá para ver tu premio" : `Completá ${metaHoy} juegos y se abre el premio 🎁`}</p>
+          <p className="mt-1 text-xs font-bold text-slate-400">{logrado ? "Tocá para ver tu premio" : `Completá ${metaHoy} niveles y se abre el premio 🎁`}</p>
         </button>
 
         {Object.keys(AREAS).map((clave) => {
-          const juegosArea = disponibles.filter((jg) => jg.area === clave);
-          if (juegosArea.length === 0) return null;
+          const seriesArea = disponibles.filter((s) => s.area === clave);
+          if (seriesArea.length === 0) return null;
           const a = AREAS[clave];
+          const nivelesArea = seriesArea.reduce((x, s) => x + s.niveles, 0);
           return (
             <section key={clave} className={`rounded-3xl ${a.suave} p-4 sm:p-5`}>
-              <h2 className={`mb-3 text-xl font-black sm:text-2xl ${a.texto}`}>{a.icono} {a.nombre} <span className="text-sm font-bold opacity-60">· {juegosArea.length} juegos</span></h2>
+              <h2 className={`mb-3 text-xl font-black sm:text-2xl ${a.texto}`}>{a.icono} {a.nombre} <span className="text-sm font-bold opacity-60">· {seriesArea.length} series · {nivelesArea.toLocaleString("es-AR")} niveles</span></h2>
               <div className="grid grid-cols-2 gap-2 sm:gap-3">
-                {juegosArea.map((jg) => (
-                  <button key={jg.id} onClick={() => abrirJuego(jg)}
-                    className="flex items-center gap-2 rounded-2xl bg-white p-3 text-left shadow-md transition-transform active:scale-95">
-                    <span className="shrink-0 text-2xl sm:text-3xl">{jg.icono}</span>
-                    <span className="text-sm font-black leading-tight text-slate-700 sm:text-base">{jg.nombre}</span>
-                  </button>
-                ))}
+                {seriesArea.map((s) => {
+                  const c = completadosDe(s);
+                  return (
+                    <button key={s.id} onClick={() => { setSerieAbierta(s); setPantalla("serie"); }}
+                      className="flex flex-col gap-1 rounded-2xl bg-white p-3 text-left shadow-md transition-transform active:scale-95">
+                      <span className="flex items-center gap-2">
+                        <span className="shrink-0 text-2xl sm:text-3xl">{s.icono}</span>
+                        <span className="text-sm font-black leading-tight text-slate-700 sm:text-base">{s.nombre}</span>
+                      </span>
+                      <span className="text-[10px] font-bold text-slate-400">{c}/{s.niveles} niveles</span>
+                      <span className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
+                        <span className={`block h-full rounded-full ${a.color}`} style={{ width: `${(c / s.niveles) * 100}%` }} />
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
             </section>
           );
@@ -2662,7 +2848,7 @@ function AppAdultos({ alSelector }) {
         <div className="flex flex-col gap-4">
           {Object.keys(DOMINIOS).map((clave) => (
             <button key={clave}
-              onClick={() => { setDominioActivo(clave); setResultado(null); setClaveEj((k) => k + 1); setPantalla("ejercicio"); }}
+              onClick={() => { soltarSemilla(); setDominioActivo(clave); setResultado(null); setClaveEj((k) => k + 1); setPantalla("ejercicio"); }}
               className={`flex items-center gap-4 rounded-3xl p-5 text-left transition-transform active:scale-95 ${t.opcion}`}>
               <span className="text-5xl">{DOMINIOS[clave].icono}</span>
               <span>
@@ -2853,7 +3039,7 @@ function App() {
           className="flex flex-1 flex-col items-center gap-3 rounded-3xl bg-white p-8 shadow-lg transition-transform active:scale-95">
           <span className="text-7xl">🌈</span>
           <span className="text-2xl font-black text-sky-700">PequeMundo</span>
-          <span className="text-center font-bold text-slate-500">{CATALOGO.length} juegos para chicos de 3 a 11 años, elegidos solos según su edad</span>
+          <span className="text-center font-bold text-slate-500">{TOTAL_NIVELES.toLocaleString("es-AR")} niveles para chicos de 3 a 11 años, elegidos solos según su edad</span>
         </button>
         <button onClick={() => setModo("adulto")}
           className="flex flex-1 flex-col items-center gap-3 rounded-3xl bg-white p-8 shadow-lg transition-transform active:scale-95">
