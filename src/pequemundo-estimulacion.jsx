@@ -2151,6 +2151,115 @@ function JuegoTrazar({ params, alTerminar }) {
   );
 }
 
+// ---------- Armar con fichas (estilo Duolingo, por toque): oraciones y cuentas ----------
+const ARMAR_SUJETOS = ["El gato", "La nena", "Mi papá", "El perro", "La seño", "Mi abuela", "El pájaro", "La vaca", "El nene", "Mi amigo"];
+const ARMAR_VERBOS = ["come", "duerme", "corre", "salta", "canta", "juega", "dibuja", "lee", "baila", "sonríe"];
+const ARMAR_COMPS = ["en la casa", "en la plaza", "con mamá", "muy feliz", "en la escuela", "por la tarde", "con su amigo", "en el patio", "todos los días", "sin parar"];
+const ARMAR_EXTRAS = ["porque está contento", "cuando sale el sol", "y después descansa", "aunque llueva", "mientras escucha música"];
+function generarArmarFrase(p) {
+  const partes = Math.max(2, Math.round(p.partes || 2));
+  const trozos = [ARMAR_SUJETOS[azar(ARMAR_SUJETOS.length)], ARMAR_VERBOS[azar(ARMAR_VERBOS.length)]];
+  if (partes >= 3) trozos.push(ARMAR_COMPS[azar(ARMAR_COMPS.length)]);
+  if (partes >= 4) trozos.push(ARMAR_EXTRAS[azar(ARMAR_EXTRAS.length)]);
+  const frase = trozos.join(" ");
+  const palabras = frase.split(" ");
+  return {
+    consigna: "🧩 Ordená las palabras y armá la oración",
+    dice: "Armá la oración: " + frase,
+    chips: mezclar([...palabras.map((w, i) => ({ id: i, t: w }))]),
+    necesarias: palabras.length,
+    validar: (seq) => seq.map((c) => c.t).join(" ") === frase,
+    solucion: frase,
+    hablaChip: true,
+  };
+}
+function generarArmarCuenta(p) {
+  const ops = ["+"];
+  if ((p.ops || 1) >= 2) ops.push("−");
+  if ((p.ops || 1) >= 3) ops.push("×");
+  const op = ops[azar(ops.length)];
+  const tope = Math.max(5, Math.round(p.tope || 9));
+  let a, b, resultado;
+  if (op === "×") { a = 2 + azar(Math.min(9, Math.floor(tope / 4))); b = 2 + azar(Math.min(9, Math.floor(tope / 4))); resultado = a * b; }
+  else if (op === "−") { a = 3 + azar(tope - 2); b = 1 + azar(a - 1); resultado = a - b; }
+  else { a = 1 + azar(tope); b = 1 + azar(tope); resultado = a + b; }
+  const distNum = resultado === a + b ? a + 1 + azar(3) : 1 + azar(tope);
+  const distOp = ops.length > 1 ? ops.filter((o) => o !== op)[0] : op === "+" ? "−" : "+";
+  const chips = mezclar([{ id: 0, t: String(a) }, { id: 1, t: String(b) }, { id: 2, t: op }, { id: 3, t: String(distNum) }, { id: 4, t: distOp }]);
+  const evalua = (x, o, y) => (o === "+" ? x + y : o === "−" ? x - y : x * y);
+  return {
+    consigna: `🧮 Armá una cuenta que dé ${resultado}`,
+    dice: `Armá una cuenta que dé ${resultado}`,
+    chips, necesarias: 3, resultado,
+    validar: (seq) => {
+      if (seq.length !== 3) return false;
+      const [x, o, y] = [Number(seq[0].t), seq[1].t, Number(seq[2].t)];
+      return !Number.isNaN(x) && !Number.isNaN(y) && "+−×".includes(o) && evalua(x, o, y) === resultado;
+    },
+    solucion: `${a} ${op} ${b} = ${resultado}`,
+  };
+}
+const GENERADORES_ARMAR = { frase: generarArmarFrase, cuenta: generarArmarCuenta };
+function JuegoArmar({ params, alTerminar, solito }) {
+  const TOTAL = 5;
+  const [rondas] = useState(() => [...Array(TOTAL)].map(() => GENERADORES_ARMAR[params.tipo || "frase"](params)));
+  const [idx, setIdx] = useState(0);
+  const [armado, setArmado] = useState([]);
+  const [estado, setEstado] = useState(null); // null | "mal" | "bien"
+  const [errores, setErrores] = useState(0);
+  const [puntos, setPuntos] = useState(0);
+  const r = rondas[idx];
+  useEffect(() => {
+    setArmado([]); setEstado(null);
+    if (solito && r) { const t = setTimeout(() => hablar(r.dice, AUDIO_ON, 0.92), 350); return () => clearTimeout(t); }
+  }, [idx]); // eslint-disable-line
+  if (!r) return null;
+  const usados = new Set(armado.map((c) => c.id));
+  const poner = (c) => {
+    if (estado === "bien" || usados.has(c.id)) return;
+    sonido("tap");
+    if (r.hablaChip && solito) hablar(c.t, AUDIO_ON, 1);
+    setArmado([...armado, c]); setEstado(null);
+  };
+  const sacar = (i) => { if (estado === "bien") return; sonido("tap"); setArmado(armado.filter((_, j) => j !== i)); setEstado(null); };
+  const comprobar = () => {
+    if (r.validar(armado)) {
+      const g = errores === 0 ? 2 : 1;
+      setPuntos(puntos + g); setEstado("bien"); festejar();
+      setTimeout(() => {
+        if (idx + 1 >= TOTAL) alTerminar(puntos + g, TOTAL * 2);
+        else { setIdx(idx + 1); setErrores(0); }
+      }, 1100);
+    } else { setEstado("mal"); setErrores(errores + 1); sonido("error"); }
+  };
+  return (
+    <div className="flex w-full max-w-md flex-col items-center gap-3">
+      <p className="text-sm font-black text-slate-400">Frase {idx + 1} de {TOTAL} · ⭐ {puntos}</p>
+      <Consigna>{r.consigna}</Consigna>
+      <div className={`flex min-h-[64px] w-full flex-wrap items-center justify-center gap-2 rounded-2xl border-4 border-dashed p-3 ${estado === "mal" ? "anim-shake border-red-300 bg-red-50" : estado === "bien" ? "border-green-400 bg-green-50" : "border-sky-200 bg-white"}`}>
+        {armado.length === 0 && <span className="text-sm font-bold text-slate-300">Tocá las fichas de abajo 👇</span>}
+        {armado.map((c, i) => (
+          <button key={c.id} onClick={() => sacar(i)}
+            className="anim-pop rounded-2xl bg-sky-500 px-4 py-2 text-lg font-black text-white shadow-md active:scale-90">{c.t}</button>
+        ))}
+      </div>
+      <div className="flex min-h-[56px] w-full flex-wrap items-center justify-center gap-2">
+        {r.chips.map((c) => (
+          <button key={c.id} onClick={() => poner(c)} disabled={usados.has(c.id)}
+            className={`rounded-2xl px-4 py-2 text-lg font-black shadow-md active:scale-90 ${usados.has(c.id) ? "bg-slate-100 text-slate-200" : "bg-white text-slate-700"}`}>{c.t}</button>
+        ))}
+      </div>
+      {estado === "bien" ? (
+        <p className="anim-festejo text-lg font-black text-green-600">🎉 ¡{r.solucion}!</p>
+      ) : (
+        <button onClick={comprobar} disabled={armado.length !== r.necesarias}
+          className={`w-full rounded-full py-3 text-lg font-black shadow-md active:scale-95 ${armado.length === r.necesarias ? "bg-green-500 text-white" : "bg-slate-100 text-slate-300"}`}>✅ Comprobar</button>
+      )}
+      {estado === "mal" && <p className="text-sm font-black text-orange-500">Mmm, todavía no. Tocá una ficha azul para sacarla y probá otro orden 💪</p>}
+    </div>
+  );
+}
+
 // ---------- Plataformas con física real (Phaser 3): la aventura de Chispa ----------
 function generarNivelPlataforma(p) {
   const W = 360, H = 420;
@@ -2655,6 +2764,8 @@ S("gra-pre", "El predicado de la oración", "🧑‍🏫", "lenguaje", "lengua",
 
 // --- Pensar · ajedrez y lógica física ---
 S("aje-1", "Ajedrez: cómo mueve cada pieza", "♟️", "cognitiva", "ajedrez", ["6-8", "9-11"], 30, { nPiezas: 1, obst: 0 }, { nPiezas: 6, obst: 3 });
+S("arm-fra", "Armo oraciones (con fichas)", "🧩", "lenguaje", "armar", ["3-5", "6-8", "9-11"], 20, { tipo: "frase", partes: 2 }, { tipo: "frase", partes: 4 });
+S("arm-cta", "Armo cuentas (con fichas)", "🧮", "cognitiva", "armar", ["6-8", "9-11"], 20, { tipo: "cuenta", tope: 9, ops: 1 }, { tipo: "cuenta", tope: 50, ops: 3 });
 S("pla-fx", "La aventura de Chispa (¡con física!)", "🦊", "psicomotor", "plataforma", ["6-8", "9-11"], 20, { estrellas: 3, mov: 0 }, { estrellas: 7, mov: 2 });
 S("bal-1", "La balanza mágica", "⚖️", "cognitiva", "balanza", ["3-5", "6-8"], 25, { max: 5, nPesas: 2 }, { max: 18, nPesas: 4 });
 
@@ -4135,7 +4246,7 @@ h1{color:#7c3aed;font-size:34px;margin:8px 0}.n{font-size:28px;font-weight:bold;
           const k = Math.max(1, Math.ceil(s.niveles / 2));
           const params = paramsNivel(s, k);
           const esMC = !!GENERADORES[s.motor];
-          const CUSTOM = { memoria: JuegoMemoria, atrapa: JuegoAtrapa, alcancia: JuegoAlcancia, pronuncia: JuegoPronuncia, trazar: JuegoTrazar, ajedrez: JuegoAjedrez, balanza: JuegoBalanza, plataforma: JuegoPlataforma };
+          const CUSTOM = { memoria: JuegoMemoria, atrapa: JuegoAtrapa, alcancia: JuegoAlcancia, pronuncia: JuegoPronuncia, trazar: JuegoTrazar, ajedrez: JuegoAjedrez, balanza: JuegoBalanza, plataforma: JuegoPlataforma, armar: JuegoArmar };
           const Comp = CUSTOM[s.motor];
           const repetirDemo = () => { setSemilla((Date.now() % 2147483647) || 7); setDemoJuego({ serie: s, clave: Date.now() }); };
           return (
@@ -4498,7 +4609,8 @@ h1{color:#7c3aed;font-size:34px;margin:8px 0}.n{font-size:28px;font-weight:bold;
                 {motor === "ajedrez" && <JuegoAjedrez params={juegoActivo.params} alTerminar={terminarJuego} solito={modoSolito} />}
                 {motor === "balanza" && <JuegoBalanza params={juegoActivo.params} alTerminar={terminarJuego} solito={modoSolito} />}
                 {motor === "plataforma" && <JuegoPlataforma params={juegoActivo.params} alTerminar={terminarJuego} solito={modoSolito} />}
-                {motor !== "memoria" && motor !== "atrapa" && motor !== "alcancia" && motor !== "pronuncia" && motor !== "trazar" && motor !== "ajedrez" && motor !== "balanza" && motor !== "plataforma" && (
+                {motor === "armar" && <JuegoArmar params={juegoActivo.params} alTerminar={terminarJuego} solito={modoSolito} />}
+                {motor !== "memoria" && motor !== "atrapa" && motor !== "alcancia" && motor !== "pronuncia" && motor !== "trazar" && motor !== "ajedrez" && motor !== "balanza" && motor !== "plataforma" && motor !== "armar" && (
                   <JuegoRondas
                     generar={GENERADORES[motor](juegoActivo.params, rango)}
                     colorTexto={juegoActivo.serie.colorTexto}
