@@ -957,7 +957,7 @@ const VOCAB_IDIOMAS = {
     ],
   },
 };
-function hablarIdioma(texto, lang) {
+function hablarIdioma(texto, lang, ritmo = 0.8) {
   try {
     if (!window.speechSynthesis) return;
     window.speechSynthesis.cancel();
@@ -966,7 +966,7 @@ function hablarIdioma(texto, lang) {
     const v = voces.find((x) => x.lang && x.lang.toLowerCase().startsWith(lang.slice(0, 2).toLowerCase()));
     if (v) u.voice = v;
     u.lang = lang;
-    u.rate = 0.8;
+    u.rate = ritmo;
     window.speechSynthesis.speak(u);
   } catch (e) { /* sin audio */ }
 }
@@ -1399,19 +1399,26 @@ const GENERADORES = {
       while (ops.size < 3) ops.add(items[azar(items.length)].e);
       return {
         pregunta: (<><Consigna>Escuchá y tocá el dibujito 👂 {idi.bandera}</Consigna>
-          <Tarjeta><button onClick={() => hablarIdioma(palabra, idi.lang)}
-            className="rounded-full bg-indigo-500 px-8 py-4 text-2xl font-black text-white shadow-md active:scale-95">🔊 Escuchar</button></Tarjeta></>),
+          <Tarjeta><span className="flex items-center gap-2"><button onClick={() => hablarIdioma(palabra, idi.lang)}
+            className="rounded-full bg-indigo-500 px-8 py-4 text-2xl font-black text-white shadow-md active:scale-95">🔊 Escuchar</button>
+          <button onClick={() => hablarIdioma(palabra, idi.lang, 0.5)} title="Más lento"
+            className="rounded-full bg-indigo-100 px-4 py-4 text-2xl shadow active:scale-95">🐢</button></span></Tarjeta></>),
         opciones: mezclar([...ops]), respuesta: it.e,
         explicacion: `«${palabra}» es ${it.es} en ${idi.nombre.toLowerCase()}.`,
         decir: () => hablarIdioma(palabra, idi.lang),
+        decirLento: () => hablarIdioma(palabra, idi.lang, 0.5),
         hablarOpcion: (op) => { const x = items.find((y) => y.e === op); hablarIdioma(x ? x[p.idioma] : palabra, idi.lang); },
         sonoro: true,
       };
     }
     const inverso = sorteo < (p.pAud || 0) + (p.pInv || 0);
     const boton = (
-      <button onClick={() => hablarIdioma(palabra, idi.lang)}
-        className="rounded-full bg-indigo-100 px-5 py-2 text-lg font-black text-indigo-700 active:scale-95">🔊 Escuchar</button>
+      <span className="flex items-center justify-center gap-2">
+        <button onClick={() => hablarIdioma(palabra, idi.lang)}
+          className="rounded-full bg-indigo-100 px-5 py-2 text-lg font-black text-indigo-700 active:scale-95">🔊 Escuchar</button>
+        <button onClick={() => hablarIdioma(palabra, idi.lang, 0.5)} title="Más lento"
+          className="rounded-full bg-indigo-50 px-3 py-2 text-lg shadow-sm active:scale-95">🐢</button>
+      </span>
     );
     if (inverso) {
       const ops = new Set([it.es]);
@@ -1422,6 +1429,7 @@ const GENERADORES = {
         opciones: mezclar([...ops]), respuesta: it.es,
         explicacion: `«${palabra}» significa ${it.es} en ${idi.nombre.toLowerCase()}.`,
         decir: () => hablarIdioma(palabra, idi.lang),
+        decirLento: () => hablarIdioma(palabra, idi.lang, 0.5),
         sonoro: true,
       };
     }
@@ -2814,6 +2822,56 @@ function compararInformes(prev, cur) {
   });
   return { prom: cur.prom - prev.prom, sesiones: cur.sesiones - prev.sesiones, dias: cur.dias - prev.dias, areas };
 }
+function htmlInformePeriodo(inf, comp, nombre, edad, historial) {
+  const f = (t) => new Date(t).toLocaleDateString("es-AR");
+  const nomA = (a) => (AREAS[a] ? AREAS[a].icono + " " + AREAS[a].nombre : a);
+  const flecha = (v) => (v > 0 ? `<span style="color:#059669">▲ +${v}</span>` : v < 0 ? `<span style="color:#d97706">▼ ${v}</span>` : "→ igual");
+  const areas = Object.keys(inf.porArea).sort((a, b) => inf.porArea[b].jugados - inf.porArea[a].jugados);
+  const fuertes = areas.filter((a) => inf.porArea[a].prom >= 85 && inf.porArea[a].jugados >= 8);
+  const refuerzo = areas.filter((a) => inf.porArea[a].prom <= 40 && inf.porArea[a].jugados >= 8);
+  const tipo = refuerzo.length ? "refuerzo" : fuertes.length ? "adelantado" : "tipico";
+  const tema = { refuerzo: ["#fff7ed", "#ea580c", "🔎"], adelantado: ["#eff6ff", "#0284c7", "🚀"], tipico: ["#fefce8", "#d97706", "🌟"] }[tipo];
+  const evol = [...(historial || []), inf].slice(-6).map((x) => x.prom + "%").join(" → ");
+  const resumen = `${nombre} jugó <b>${inf.sesiones} juegos</b> en <b>${inf.dias} días distintos</b>, con <b>${inf.prom}% de acierto promedio</b> y <b>${inf.superados} niveles superados</b>. ` +
+    (comp ? `Respecto del informe anterior, su acierto ${comp.prom >= 0 ? "subió" : "bajó"} ${flecha(comp.prom)} puntos.` : `Es su <b>primer informe</b>: la línea de base de su propio camino. 🌱`) +
+    (fuertes.length ? ` En ${fuertes.map(nomA).join(" y ")} va volando (85%+ de acierto sostenido).` : "") +
+    (refuerzo.length ? ` En ${refuerzo.map(nomA).join(" y ")} la app detectó dificultad sostenida y activó el refuerzo automático.` : "");
+  const porArea = areas.map((a) => `<li>${nomA(a)}: <span class="b">${inf.porArea[a].prom}%</span> de acierto en ${inf.porArea[a].jugados} juegos${comp && comp.areas[a] != null ? " · " + flecha(comp.areas[a]) + " vs anterior" : ""}${refuerzo.includes(a) ? ' · <span class="b" style="color:#ea580c">refuerzo activo</span> (niveles más fáciles y más repetición; ' + nombre + " no ve nada de esto: solo siente que ahora le sale más)" : ""}${fuertes.includes(a) ? ' · <span class="b" style="color:#0284c7">dominio destacado</span>' : ""}</li>`).join("");
+  const queSignifica = tipo === "adelantado"
+    ? `Estudios longitudinales poblacionales (p. ej., el seguimiento de Dunedin, Nueva Zelanda) asocian el desarrollo temprano de habilidades cognitivas y de autorregulación con mejores resultados educativos años después, <span class="b">como tendencia de grupo</span>. Esto NO predice el futuro de ${nombre} ni constituye una medición de inteligencia o "edad mental": describe lo que hoy domina en la app.`
+    : `${nombre} se compara <span class="b">siempre consigo mismo/a</span>, nunca con otros chicos. Las bajadas suaves suelen significar que la app le subió la dificultad (¡eso es crecer!). Miren la tendencia entre varios informes, nunca un número aislado.`;
+  const senal = refuerzo.length
+    ? `<div class="caja" style="background:#fef2f2"><span class="b">👀 Una señal para conversar con su pediatra:</span> una dificultad sostenida en ${refuerzo.map(nomA).join(" y ")} a los ${edad} años es, en algunos casos, un área que se beneficia de una mirada profesional temprana. <span class="b">Esto NO es un diagnóstico ni indica que algo esté mal</span>: es una observación de juego que puede ser útil llevar al próximo control pediátrico, junto con este informe. El profesional (pediatría, fonoaudiología o psicopedagogía) es quien puede evaluar con herramientas validadas. La intervención temprana, cuando hace falta, tiene la mejor evidencia de resultados.</div>`
+    : "";
+  const enCasa = tipo === "refuerzo"
+    ? `leerle en voz alta todos los días, jugar en lo cotidiano con lo que le cuesta (rimas y palmas por sílabas, contar objetos de la casa, turnarse para hablar), y festejar el esfuerzo más que el resultado. ${nombre} está trabajando MUY bien.`
+    : tipo === "adelantado"
+    ? `ofrecerle desafíos (si domina su etapa, la app ya le abre niveles de la siguiente), avisarle a su docente para que lo alimente en el aula, y cuidar el juego libre y el aburrimiento creativo: un niño adelantado sigue siendo, ante todo, un niño de ${edad}.`
+    : `constancia serena: mejor 10 minutos por día que una hora un domingo. Jugar juntos de vez en cuando, preguntarle qué juego le gusta más, y festejar el esfuerzo.`;
+  return `<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Informe de avance — ${nombre}</title>
+<style>body{font-family:Georgia,serif;background:${tema[0]};margin:0;padding:32px;display:flex;justify-content:center}
+.c{background:#fff;border:14px double ${tema[1]};border-radius:18px;max-width:720px;padding:44px;color:#1e293b;line-height:1.5}
+h1{color:${tema[1]};font-size:30px;margin:6px 0;text-align:center}
+.centro{text-align:center}
+.caja{background:#f8fafc;border-radius:12px;padding:14px 18px;margin:12px 0;font-size:15px}
+.s{margin-top:32px;display:flex;justify-content:space-around;font-size:13px;color:#64748b}.s div{border-top:2px solid #cbd5e1;padding-top:6px;width:200px;text-align:center}
+.pie{margin-top:16px;font-size:11px;color:#94a3b8;text-align:center}
+.b{font-weight:bold} ul{margin:6px 0 6px 20px;padding:0} li{margin:5px 0;font-size:15px}
+.tag{display:inline-block;background:#e0f2fe;color:#0369a1;border-radius:999px;padding:2px 12px;font-size:12px;font-weight:bold;margin:2px}</style></head>
+<body><div class="c">
+<h1>${tema[2]} Informe de avance — ${nombre}, ${edad} años</h1>
+<p class="centro" style="color:#64748b">Período: ${f(inf.desde)} al ${f(inf.hasta)} · ${inf.sesiones} sesiones · comparado SIEMPRE consigo mismo/a</p>
+<p class="centro"><span class="tag">🎮 ${inf.sesiones} juegos</span> <span class="tag">⭐ ${inf.prom}% acierto</span> <span class="tag">🏁 ${inf.superados} superados</span> <span class="tag">🔥 ${inf.dias} días</span></p>
+<div class="caja"><span class="b">Resumen:</span> ${resumen}</div>
+<ul>${porArea}</ul>
+${(historial || []).length >= 1 ? `<div class="caja"><span class="b">📈 Evolución del acierto, informe a informe:</span> ${evol}</div>` : ""}
+<div class="caja"><span class="b">Qué significa (y qué NO):</span> ${queSignifica}</div>
+${senal}
+<div class="caja"><span class="b">Mientras tanto, en casa:</span> ${enCasa}</div>
+<div class="s"><div>Generado por Mente en Juego</div><div>Para la familia de ${nombre}</div></div>
+<p class="pie">Herramienta educativa. NO diagnostica condiciones del desarrollo ni reemplaza la evaluación profesional. Generado el ${f(inf.fecha)}. Compartir con la escuela o el pediatra queda a criterio de la familia.</p>
+</div></body></html>`;
+}
 const MIN_SESIONES_INFORME = 10; // regla anti-ruido: sin datos suficientes no hay estadística honesta
 function tocaInforme(informes, sesiones, cadaMeses) {
   const ultimo = informes[informes.length - 1];
@@ -3578,20 +3636,13 @@ function AppNinos({ alSelector, permisos = { mic: true, videos: true }, alRevisa
   const salirPlan = () => { setPlan(null); setResultado(null); setPantalla("menu"); };
 
   const descargarInformePeriodo = (inf, comp) => {
-    const f = (t) => new Date(t).toLocaleDateString("es-AR");
-    const flecha = (v) => (v > 0 ? `<span style="color:#059669">▲ +${v}</span>` : v < 0 ? `<span style="color:#d97706">▼ ${v}</span>` : "→ igual");
-    const html = `<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><title>Informe ${f(inf.desde)}–${f(inf.hasta)} — ${activo.nombre}</title>
-<style>body{font-family:sans-serif;max-width:640px;margin:24px auto;padding:0 16px;color:#1e293b;line-height:1.5}h1{color:#0284c7}.caja{background:#f0f9ff;border-radius:14px;padding:14px 18px;margin:12px 0}.a{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #e2e8f0;font-size:15px}.pie{font-size:11px;color:#94a3b8;margin-top:18px}</style></head><body>
-<h1>🧠 Informe de ${activo.nombre} · ${f(inf.desde)} al ${f(inf.hasta)}</h1>
-<div class="caja"><b>${inf.sesiones}</b> juegos en <b>${inf.dias}</b> días distintos · <b>${inf.prom}%</b> de acierto promedio · <b>${inf.superados}</b> niveles superados${comp ? `<br/>Comparado con el informe anterior: acierto ${flecha(comp.prom)} puntos · ${comp.sesiones >= 0 ? "jugó " + comp.sesiones + " juegos más" : "jugó " + (-comp.sesiones) + " juegos menos"}` : "<br/>🌱 Primer informe: la línea de base de su propio camino."}</div>
-${Object.keys(inf.porArea).map((a) => `<div class="a"><span>${AREAS[a] ? AREAS[a].icono + " " + AREAS[a].nombre : a}</span><span><b>${inf.porArea[a].prom}%</b> en ${inf.porArea[a].jugados} juegos${comp && comp.areas[a] != null ? " · " + (comp.areas[a] > 0 ? "▲ +" + comp.areas[a] : comp.areas[a] < 0 ? "▼ " + comp.areas[a] : "→") : ""}</span></div>`).join("")}
-<div class="caja">📖 <b>Cómo leerlo:</b> ${activo.nombre} se compara SIEMPRE consigo mismo. Las bajadas suaves suelen significar que la app le subió la dificultad (¡eso es crecer!). Miren la tendencia entre varios informes, nunca un número aislado.</div>
-<p class="pie">Herramienta educativa: no diagnostica ni mide inteligencia. Si quieren, llévenlo al control pediátrico como registro de juego. Generado el ${f(inf.fecha)}.</p></body></html>`;
+    const idx = informes.indexOf(inf);
+    const html = htmlInformePeriodo(inf, comp, activo.nombre, edadAnios, informes.slice(0, idx >= 0 ? idx : informes.length));
     try {
       const blob = new Blob([html], { type: "text/html;charset=utf-8" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
-      a.href = url; a.download = `informe-${activo.nombre.toLowerCase()}-${f(inf.hasta).replace(/\//g, "-")}.html`;
+      a.href = url; a.download = `informe-${activo.nombre.toLowerCase()}-${new Date(inf.hasta).toLocaleDateString("es-AR").replace(/\//g, "-")}.html`;
       document.body.appendChild(a); a.click(); document.body.removeChild(a);
       URL.revokeObjectURL(url);
     } catch (e) { /* nada */ }
