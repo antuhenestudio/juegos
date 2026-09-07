@@ -28,14 +28,42 @@ async function leer(clave) {
 const mezclar = (arr) => [...arr].sort(() => Math.random() - 0.5);
 const azar = (n) => Math.floor(Math.random() * n);
 
-function hablar(texto, activo = true) {
+let vozElegida = null;
+function elegirVoz() {
+  try {
+    if (!window.speechSynthesis) return null;
+    if (vozElegida) return vozElegida;
+    const voces = window.speechSynthesis.getVoices() || [];
+    const esp = voces.filter((v) => v.lang && v.lang.toLowerCase().startsWith("es"));
+    if (esp.length === 0) return null;
+    const orden = ["es-ar", "es-419", "es-mx", "es-us", "es-es", "es"];
+    const femeninas = ["paulina", "mónica", "monica", "sabina", "helena", "laura", "isabela", "francisca", "lupe", "camila", "female", "mujer", "google español"];
+    esp.sort((a, b) => {
+      const pa = orden.findIndex((o) => a.lang.toLowerCase().startsWith(o));
+      const pb = orden.findIndex((o) => b.lang.toLowerCase().startsWith(o));
+      if (pa !== pb) return (pa < 0 ? 9 : pa) - (pb < 0 ? 9 : pb);
+      const fa = femeninas.some((f) => a.name.toLowerCase().includes(f)) ? 0 : 1;
+      const fb = femeninas.some((f) => b.name.toLowerCase().includes(f)) ? 0 : 1;
+      return fa - fb;
+    });
+    vozElegida = esp[0];
+    return vozElegida;
+  } catch (e) { return null; }
+}
+try {
+  if (window.speechSynthesis) window.speechSynthesis.onvoiceschanged = () => { vozElegida = null; elegirVoz(); };
+} catch (e) { /* nada */ }
+
+function hablar(texto, activo = true, ritmo = 0.95) {
   if (!activo) return;
   try {
     if (!window.speechSynthesis) return;
     window.speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(texto);
-    u.lang = "es-AR";
-    u.rate = 0.95;
+    const v = elegirVoz();
+    if (v) { u.voice = v; u.lang = v.lang; } else { u.lang = "es-AR"; }
+    u.rate = ritmo;
+    u.pitch = 1.05;
     window.speechSynthesis.speak(u);
   } catch (e) { /* sin audio */ }
 }
@@ -245,10 +273,28 @@ function Dinero({ valor, edad = "6-8", chico = false }) {
 }
 
 const VOCABULARIO = [
-  { id: "sol", p: "sol" }, { id: "casa", p: "casa" }, { id: "gato", p: "gato" }, { id: "pez", p: "pez" },
-  { id: "flor", p: "flor" }, { id: "pelota", p: "pelota" }, { id: "auto", p: "auto" }, { id: "manzana", p: "manzana" },
-  { id: "arbol", p: "árbol" }, { id: "luna", p: "luna" }, { id: "estrella", p: "estrella" }, { id: "globo", p: "globo" },
+  { id: "sol", p: "sol", s: ["sol"] }, { id: "casa", p: "casa", s: ["ca", "sa"] },
+  { id: "gato", p: "gato", s: ["ga", "to"] }, { id: "pez", p: "pez", s: ["pez"] },
+  { id: "flor", p: "flor", s: ["flor"] }, { id: "pelota", p: "pelota", s: ["pe", "lo", "ta"] },
+  { id: "auto", p: "auto", s: ["au", "to"] }, { id: "manzana", p: "manzana", s: ["man", "za", "na"] },
+  { id: "arbol", p: "árbol", s: ["ár", "bol"] }, { id: "luna", p: "luna", s: ["lu", "na"] },
+  { id: "estrella", p: "estrella", s: ["es", "tre", "lla"] }, { id: "globo", p: "globo", s: ["glo", "bo"] },
 ];
+// Palabras extra para práctica de pronunciación (con emoji en lugar de figura SVG)
+const PALABRAS_MEDIO = [
+  { e: "🐸", p: "rana", s: ["ra", "na"] }, { e: "🦒", p: "jirafa", s: ["ji", "ra", "fa"] },
+  { e: "🥁", p: "tambor", s: ["tam", "bor"] }, { e: "🧊", p: "hielo", s: ["hie", "lo"] },
+  { e: "🦋", p: "mariposa", s: ["ma", "ri", "po", "sa"] }, { e: "🐘", p: "elefante", s: ["e", "le", "fan", "te"] },
+  { e: "🍌", p: "banana", s: ["ba", "na", "na"] }, { e: "🧤", p: "guante", s: ["guan", "te"] },
+];
+const PALABRAS_DIFICIL = [
+  { e: "🚂", p: "tren", s: ["tren"] }, { e: "🍓", p: "frutilla", s: ["fru", "ti", "lla"] },
+  { e: "🐊", p: "cocodrilo", s: ["co", "co", "dri", "lo"] }, { e: "⚡", p: "relámpago", s: ["re", "lám", "pa", "go"] },
+  { e: "🌧️", p: "lluvia", s: ["llu", "via"] }, { e: "🚁", p: "helicóptero", s: ["he", "li", "cóp", "te", "ro"] },
+  { e: "🐉", p: "dragón", s: ["dra", "gón"] }, { e: "🐯", p: "tigre", s: ["ti", "gre"] },
+  { e: "🧙", p: "bruja", s: ["bru", "ja"] }, { e: "🌍", p: "planeta", s: ["pla", "ne", "ta"] },
+];
+const BANCO_SILABAS = [...VOCABULARIO, ...PALABRAS_MEDIO, ...PALABRAS_DIFICIL];
 const PACK_NATURALEZA = ["sol", "arbol", "flor", "luna", "estrella", "manzana"];
 const PACK_COSAS = ["casa", "auto", "pelota", "globo", "gato", "pez"];
 const PACK_TODO = ["sol", "gato", "pez", "flor", "pelota", "auto", "estrella", "manzana"];
@@ -297,6 +343,40 @@ const PRODUCTOS = [
   { e: "🧸", p: "peluche" }, { e: "⚽", p: "pelota" }, { e: "📒", p: "cuaderno" }, { e: "✏️", p: "lápiz" },
   { e: "🍫", p: "chocolate" }, { e: "🚲", p: "bicicleta" }, { e: "🎒", p: "mochila" }, { e: "🧢", p: "gorra" },
 ];
+
+// ---------- catálogo de videos de premio (links reales verificados por búsqueda web; los padres eligen cuáles habilitar) ----------
+const CATALOGO_VIDEOS = [
+  {
+    cat: "🎵 Canciones para cantar y bailar", edades: "3 a 6 años",
+    items: [
+      { t: "Plim Plim — Top 30 canciones más escuchadas", url: "https://www.youtube.com/watch?v=LrNpYPRG1Yc" },
+      { t: "Plim Plim — Canciones para cantar en familia (15 min)", url: "https://www.youtube.com/watch?v=ZgFfF4FsfiI" },
+      { t: "Plim Plim — Para bailar con sus amigos (30 min)", url: "https://www.youtube.com/watch?v=8OymvrjGvyE" },
+      { t: "Canticuénticos — Mejores videos (60 min)", url: "https://www.youtube.com/watch?v=HggpDfQWbTc" },
+      { t: "Canticuénticos — Compilado de canciones (41 min)", url: "https://www.youtube.com/watch?v=v7CSDAFW0nE" },
+      { t: "Canticuénticos — Con el Monstruo de la laguna (35 min)", url: "https://www.youtube.com/watch?v=10wSTVLK9hk" },
+    ],
+  },
+  {
+    cat: "📚 Cuentos clásicos narrados", edades: "3 a 8 años",
+    items: [
+      { t: "El Patito Feo — cuento para dormir", url: "https://www.youtube.com/watch?v=2plf_JFa4VA" },
+      { t: "El Zorro y la Cigüeña — cuento con moraleja", url: "https://www.youtube.com/watch?v=FmisFJpCim0" },
+      { t: "El Rey Midas — cuento clásico narrado", url: "https://www.youtube.com/watch?v=R5VTpUrkVCs" },
+    ],
+  },
+  {
+    cat: "🧠 Aprender e historia (Zamba · Pakapaka)", edades: "6 a 11 años",
+    items: [
+      { t: "Zamba recorre la vida de San Martín (maratón de historia)", url: "https://www.youtube.com/watch?v=57KIUyJ4H04" },
+      { t: "El asombroso mundo de Zamba: San Martín", url: "https://www.youtube.com/watch?v=X1Sfpo2oUaA" },
+      { t: "El asombroso musical de Zamba con San Martín", url: "https://www.youtube.com/watch?v=KYVyFJxxo-U" },
+    ],
+  },
+];
+const TITULO_VIDEO = {};
+CATALOGO_VIDEOS.forEach((c) => c.items.forEach((it) => { TITULO_VIDEO[it.url] = it.t; }));
+const URLS_CATALOGO = new Set(Object.keys(TITULO_VIDEO));
 
 // ============================================================
 // Motor genérico de juegos por rondas de opción múltiple
@@ -526,6 +606,47 @@ const GENERADORES = {
         <Tarjeta><span className="text-4xl font-black tracking-widest text-slate-800">{item.p.toUpperCase()}</span></Tarjeta></>),
       opciones: ["Sí", "No"], respuesta: esVocal ? "Sí" : "No",
       explicacion: `"${item.p}" empieza con la letra ${item.p[0].toUpperCase()}${esVocal ? ", que es una vocal (A, E, I, O, U)." : ", que es una consonante."}`,
+    };
+  },
+
+  silabas: (p) => () => {
+    const banco = p.dificil ? [...PALABRAS_MEDIO, ...PALABRAS_DIFICIL] : BANCO_SILABAS.filter((x) => x.s.length <= 3);
+    const item = banco[azar(banco.length)];
+    const resp = item.s.length;
+    return {
+      pregunta: (<><Consigna>¿Cuántas sílabas tiene? Aplaudí cada parte 👏</Consigna>
+        <Tarjeta>
+          <span className="text-5xl">{item.e || ""}</span>
+          {item.id && <Figura id={item.id} edad="6-8" className="h-20 w-20" />}
+          <span className="text-3xl font-black text-slate-800">{item.p}</span>
+          <button onClick={() => hablar(item.s.join(", "), true, 0.6)}
+            className="rounded-full bg-amber-100 px-5 py-2 text-lg font-black text-amber-700 active:scale-95">🔊 Escuchar por partes</button>
+        </Tarjeta></>),
+      opciones: opcionesNum(resp, 3, 2, 1), respuesta: resp,
+      explicacion: `${item.p.toUpperCase()} tiene ${resp} ${resp === 1 ? "sílaba" : "sílabas"}: ${item.s.join(" - ")}.`,
+    };
+  },
+
+  primeraSilaba: () => () => {
+    const banco = BANCO_SILABAS.filter((x) => x.s.length >= 2);
+    const item = banco[azar(banco.length)];
+    const resp = item.s[0];
+    const ops = new Set([resp]);
+    while (ops.size < 3) {
+      const otra = banco[azar(banco.length)].s[0];
+      if (otra !== resp) ops.add(otra);
+    }
+    return {
+      pregunta: (<><Consigna>¿Con qué sílaba empieza? 🔤</Consigna>
+        <Tarjeta>
+          <span className="text-5xl">{item.e || ""}</span>
+          {item.id && <Figura id={item.id} edad="6-8" className="h-20 w-20" />}
+          <span className="text-3xl font-black text-slate-800">{item.p}</span>
+          <button onClick={() => hablar(item.p, true, 0.75)}
+            className="rounded-full bg-amber-100 px-5 py-2 text-lg font-black text-amber-700 active:scale-95">🔊 Escuchar</button>
+        </Tarjeta></>),
+      opciones: mezclar([...ops]), respuesta: resp,
+      explicacion: `${item.p.toUpperCase()} se separa así: ${item.s.join(" - ")}.`,
     };
   },
 
@@ -835,6 +956,116 @@ function JuegoAlcancia({ params, edad, alTerminar }) {
   );
 }
 
+function JuegoPronuncia({ params, edad, alTerminar }) {
+  const TOTAL = 6;
+  const SR = typeof window !== "undefined" ? (window.SpeechRecognition || window.webkitSpeechRecognition) : null;
+  const [items] = useState(() => mezclar(params.banco).slice(0, TOTAL));
+  const [idx, setIdx] = useState(0);
+  const [puntos, setPuntos] = useState(0);
+  const [escuchado, setEscuchado] = useState(false);
+  const [escuchando, setEscuchando] = useState(false);
+  const [robot, setRobot] = useState(null); // {ok, texto}
+  const recRef = useRef(null);
+  const item = items[idx];
+
+  const normalizar = (t) => String(t).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zñ ]/g, "").trim();
+
+  const porPartes = () => { hablar(item.s.join(", "), true, 0.55); setEscuchado(true); };
+  const completa = () => { hablar(item.p, true, 0.8); setEscuchado(true); };
+
+  const escucharMic = () => {
+    if (!SR || escuchando) return;
+    try {
+      if (window.speechSynthesis) window.speechSynthesis.cancel();
+      const rec = new SR();
+      recRef.current = rec;
+      rec.lang = "es-AR";
+      rec.interimResults = false;
+      rec.maxAlternatives = 4;
+      setRobot(null);
+      setEscuchando(true);
+      const objetivo = normalizar(item.p);
+      rec.onresult = (ev) => {
+        const alternativas = [];
+        for (let i = 0; i < ev.results[0].length; i++) alternativas.push(ev.results[0][i].transcript);
+        const ok = alternativas.some((a) => normalizar(a).includes(objetivo));
+        setRobot({ ok, texto: alternativas[0] || "" });
+        setEscuchando(false);
+        if (ok) hablar("¡Te entendí perfecto!", true);
+      };
+      rec.onerror = () => { setRobot({ ok: null, texto: "" }); setEscuchando(false); };
+      rec.onend = () => setEscuchando(false);
+      rec.start();
+      setTimeout(() => { try { rec.stop(); } catch (e) { /* nada */ } }, 5000);
+    } catch (e) { setEscuchando(false); }
+  };
+
+  useEffect(() => () => { try { if (recRef.current) recRef.current.abort(); } catch (e) { /* nada */ } }, []);
+
+  const evaluar = (salio) => {
+    try { if (recRef.current) recRef.current.abort(); } catch (e) { /* nada */ }
+    const nuevos = puntos + (salio ? 10 : 7);
+    setPuntos(nuevos);
+    hablar(salio ? "¡Muy bien!" : "¡Buen intento! Practicar es lo que importa.", true);
+    setTimeout(() => {
+      if (idx + 1 >= TOTAL) alTerminar(nuevos, TOTAL * 10);
+      else { setIdx(idx + 1); setEscuchado(false); setRobot(null); setEscuchando(false); }
+    }, 900);
+  };
+
+  return (
+    <div className="flex flex-col items-center gap-5 sm:gap-6">
+      <Consigna>Escuchá la palabra y decila en voz alta 🎤</Consigna>
+      <Tarjeta>
+        {item.id
+          ? <Figura id={item.id} edad={edad} className="h-24 w-24 sm:h-28 sm:w-28" />
+          : <span className="text-6xl sm:text-7xl">{item.e}</span>}
+        <span className="text-3xl font-black text-slate-800 sm:text-4xl">{item.p}</span>
+        <span className="text-xl font-bold tracking-widest text-amber-600">{item.s.join(" · ")}</span>
+      </Tarjeta>
+      <div className="flex flex-wrap justify-center gap-3">
+        <button onClick={porPartes}
+          className="rounded-full bg-amber-400 px-6 py-3 text-lg font-black text-white shadow-md active:scale-95">🐢 Por partes</button>
+        <button onClick={completa}
+          className="rounded-full bg-amber-500 px-6 py-3 text-lg font-black text-white shadow-md active:scale-95">🔊 Completa</button>
+      </div>
+      <div className={`flex flex-col items-center gap-2 transition-opacity ${escuchado ? "opacity-100" : "pointer-events-none opacity-30"}`}>
+        <p className="font-bold text-slate-500">Ahora repetila vos, fuerte y claro.</p>
+        {SR && (
+          <button onClick={escucharMic} disabled={escuchando}
+            className={`rounded-full px-6 py-3 text-lg font-black text-white shadow-md active:scale-95 ${escuchando ? "animate-pulse bg-red-400" : "bg-violet-500"}`}>
+            {escuchando ? "🎙️ Te escucho…" : "🤖 ¿Me entiende el robot?"}
+          </button>
+        )}
+        {robot && robot.ok === true && (
+          <p className="max-w-sm text-center text-lg font-black text-green-600">🤖✅ ¡El robot te entendió clarito!</p>
+        )}
+        {robot && robot.ok === false && (
+          <p className="max-w-sm text-center text-base font-bold text-amber-700">
+            🤖 El robot escuchó: «{robot.texto}». ¡Probá de nuevo, más fuerte y despacio! (A veces el robot se equivoca, no vos 😉)
+          </p>
+        )}
+        {robot && robot.ok === null && (
+          <p className="max-w-sm text-center text-base font-bold text-slate-500">🤖 No pude escuchar. Fijate que el micrófono tenga permiso.</p>
+        )}
+        <p className="font-bold text-slate-500">¿Cómo te salió?</p>
+        <div className="flex gap-3">
+          <button onClick={() => evaluar(true)}
+            className="rounded-full bg-green-400 px-6 py-3 text-lg font-black text-white shadow-md active:scale-95">😀 ¡Me salió!</button>
+          <button onClick={() => evaluar(false)}
+            className="rounded-full bg-sky-400 px-6 py-3 text-lg font-black text-white shadow-md active:scale-95">🙂 Sigo practicando</button>
+        </div>
+      </div>
+      <p className="text-base font-bold text-amber-600 sm:text-lg">Palabra {idx + 1} de {TOTAL} · Puntos: {puntos}</p>
+      {SR && (
+        <p className="max-w-sm text-center text-[11px] leading-snug text-slate-400">
+          El botón del robot usa el reconocimiento de voz del navegador: necesita internet y permiso de micrófono, y el audio lo procesa el servicio de voz del navegador. Es un juego aproximado, no una evaluación del habla.
+        </p>
+      )}
+    </div>
+  );
+}
+
 // ============================================================
 // CATÁLOGO DE JUEGOS (motores × variantes = 100+)
 // ============================================================
@@ -921,6 +1152,12 @@ j("let-ult", "Última letra", "🔚", "lenguaje", "letras", { modo: "ultima" }, 
 j("let-cua", "¿Cuántas letras tiene?", "🔢", "lenguaje", "letras", { modo: "cuantasLetras" }, ["6-8"], "text-amber-600");
 j("let-voc", "¿Cuántas vocales tiene?", "🅰️", "lenguaje", "letras", { modo: "cuantasVocales" }, ["9-11"], "text-amber-600");
 j("let-emp", "¿Empieza con vocal?", "🎯", "lenguaje", "letras", { modo: "empiezaVocal" }, ["6-8", "9-11"], "text-amber-600");
+j("pro-1", "Escuchá y repetí (fácil)", "🎤", "lenguaje", "pronuncia", { banco: VOCABULARIO }, ["3-5"], "text-amber-600");
+j("pro-2", "Escuchá y repetí", "🎤", "lenguaje", "pronuncia", { banco: PALABRAS_MEDIO }, ["3-5", "6-8"], "text-amber-600");
+j("pro-3", "Palabras trabadas", "🎤", "lenguaje", "pronuncia", { banco: PALABRAS_DIFICIL }, ["6-8", "9-11"], "text-amber-600");
+j("sil-1", "¿Cuántas sílabas? (con aplausos)", "👏", "lenguaje", "silabas", {}, ["6-8"], "text-amber-600");
+j("sil-2", "¿Cuántas sílabas? (difícil)", "👏", "lenguaje", "silabas", { dificil: true }, ["9-11"], "text-amber-600");
+j("sil-3", "La primera sílaba", "🧩", "lenguaje", "primeraSilaba", {}, ["6-8", "9-11"], "text-amber-600");
 
 // --- Mover (3) ---
 j("atr-1", "Bichito tranquilo", "🐞", "psicomotor", "atrapa", { velocidad: 2000, meta: 10, tam: "h-20 w-20 sm:h-24 sm:w-24" }, ["3-5"], "text-emerald-600");
@@ -950,6 +1187,121 @@ j("des-10", "Descuento del 10%", "🏷️", "economia", "descuento", { modo: "di
 j("des-mix", "Rebajas mezcladas", "🏷️", "economia", "descuento", { modo: "mixto" }, ["9-11"], "text-pink-600");
 j("alz-20", "¿Me alcanza?", "💭", "economia", "alcanza", { tope: 17 }, ["6-8"], "text-pink-600");
 j("alz-100", "¿Me alcanza? (hasta 100)", "💭", "economia", "alcanza", { tope: 95 }, ["9-11"], "text-pink-600");
+
+// ============================================================
+// Análisis de progreso (lectura honesta, sin promesas)
+// ============================================================
+function analizarProgreso(sesiones, disponibles) {
+  const hoyTxt = new Date().toDateString();
+  const porArea = {};
+  Object.keys(AREAS).forEach((a) => { porArea[a] = { jugadas: 0, prom: 0, antes: [], ahora: [] }; });
+  const mitad = Math.floor(sesiones.length / 2);
+  sesiones.forEach((s, i) => {
+    const d = porArea[s.area];
+    if (!d) return;
+    d.jugadas++;
+    const r = s.puntos / s.maximo;
+    (i < mitad ? d.antes : d.ahora).push(r);
+  });
+  Object.values(porArea).forEach((d) => {
+    const todas = [...d.antes, ...d.ahora];
+    d.prom = todas.length ? Math.round((todas.reduce((a, b) => a + b, 0) / todas.length) * 100) : 0;
+    const pa = d.antes.length ? d.antes.reduce((a, b) => a + b, 0) / d.antes.length : null;
+    const ph = d.ahora.length ? d.ahora.reduce((a, b) => a + b, 0) / d.ahora.length : null;
+    d.tendencia = pa !== null && ph !== null ? Math.round((ph - pa) * 100) : null;
+  });
+
+  // racha de días seguidos
+  let racha = 0;
+  const dias = new Set(sesiones.map((s) => new Date(s.fecha).toDateString()));
+  for (let i = 0; i < 400; i++) {
+    const d = new Date(); d.setDate(d.getDate() - i);
+    if (dias.has(d.toDateString())) racha++;
+    else if (i === 0) continue; // hoy todavía puede jugar
+    else break;
+  }
+
+  // ritmo última semana
+  const hace7 = Date.now() - 7 * 86400000;
+  const ult7 = sesiones.filter((s) => s.fecha >= hace7).length;
+  const ritmo = Math.round((ult7 / 7) * 10) / 10;
+
+  // cobertura de la etapa
+  const jugados = new Set(sesiones.map((s) => s.juego));
+  const cubiertos = disponibles.filter((jg) => jugados.has(jg.id)).length;
+  const restantes = disponibles.length - cubiertos;
+  const diasParaCubrir = ritmo > 0 ? Math.ceil(restantes / ritmo) : null;
+
+  // frases honestas
+  const frases = [];
+  if (sesiones.length === 0) {
+    frases.push("Todavía no hay partidas: cuando empiece a jugar, acá va a aparecer una lectura de su progreso.");
+  } else {
+    Object.keys(AREAS).forEach((a) => {
+      const d = porArea[a];
+      if (d.jugadas < 4) return;
+      if (d.tendencia !== null && d.tendencia >= 10) frases.push(`En ${AREAS[a].nombre} pasó de un ${Math.max(0, d.prom - d.tendencia)}% a un ${d.prom}% de acierto: está mejorando claramente con la práctica.`);
+      else if (d.tendencia !== null && d.tendencia <= -10) frases.push(`En ${AREAS[a].nombre} bajó el acierto últimamente: puede ser cansancio o juegos nuevos más difíciles. Conviene acompañarle en una sesión.`);
+      else frases.push(`En ${AREAS[a].nombre} sostiene un ${d.prom}% de acierto: rendimiento estable dentro de su etapa.`);
+    });
+    const menos = Object.keys(AREAS).reduce((a, b) => (porArea[a].jugadas <= porArea[b].jugadas ? a : b));
+    frases.push(`El área menos explorada es ${AREAS[menos].nombre}: sumar juegos variados estimula el desarrollo integral.`);
+    if (racha >= 3) frases.push(`Lleva ${racha} días seguidos practicando. La constancia en sesiones cortas es lo que más pesa según la investigación sobre aprendizaje.`);
+    if (ritmo > 0 && restantes > 0 && diasParaCubrir) frases.push(`A este ritmo (${ritmo} juegos por día), en unos ${diasParaCubrir} días habrá probado los ${disponibles.length} juegos de su etapa al menos una vez.`);
+    if (restantes === 0 && disponibles.length > 0) frases.push(`¡Ya probó todos los juegos de su etapa! Repetirlos sigue sumando: la práctica espaciada consolida lo aprendido.`);
+  }
+  return { porArea, racha, ritmo, cubiertos, total: disponibles.length, frases, jugadas: sesiones.length };
+}
+
+function ResultadoPlan({ puntos, maximo, siguiente, ultimo, onSeguir, onSalir }) {
+  const [cuenta, setCuenta] = useState(4);
+  useEffect(() => {
+    if (cuenta <= 0) { onSeguir(); return; }
+    const t = setTimeout(() => setCuenta(cuenta - 1), 1000);
+    return () => clearTimeout(t);
+  }, [cuenta]); // eslint-disable-line
+  const ratio = maximo > 0 ? puntos / maximo : 0;
+  return (
+    <div className="flex flex-col items-center gap-4 py-8">
+      <div className="text-6xl">{ratio >= 0.8 ? "🏆" : ratio >= 0.5 ? "🎉" : "💪"}</div>
+      <p className="text-2xl font-black text-slate-800">{puntos} de {maximo} puntos</p>
+      {ultimo ? (
+        <p className="text-xl font-black text-emerald-600">🧭 ¡Último juego del plan!</p>
+      ) : (
+        <p className="text-lg font-bold text-slate-500">Siguiente: <span className="font-black text-slate-700">{siguiente.icono} {siguiente.nombre}</span></p>
+      )}
+      <button onClick={onSeguir}
+        className="rounded-full bg-emerald-500 px-8 py-4 text-xl font-black text-white shadow-lg active:scale-95">
+        {ultimo ? "Terminar plan 🎊" : `Seguir (${cuenta})`} 
+      </button>
+      <button onClick={onSalir} className="text-sm font-bold text-slate-400">Salir del plan</button>
+    </div>
+  );
+}
+
+function GuiaPadres() {
+  const secciones = [
+    { t: "🤝 Jugar con ellos cambia todo", c: "Diez minutos jugando juntos valen más que una hora de pantalla en soledad. Sentate al lado, dejá que resuelva, y preguntá cómo lo pensó. La app está diseñada para eso: partidas cortas que terminan rápido." },
+    { t: "💬 Elogiá el esfuerzo, no la inteligencia", c: "La investigación sobre mentalidad de crecimiento (Carol Dweck y colegas) sugiere celebrar el proceso: «¡Qué bien que probaste otra forma!» en lugar de «¡Qué inteligente sos!». Los chicos elogiados por esfuerzo se animan a desafíos más difíciles; los elogiados por «ser inteligentes» tienden a evitar equivocarse." },
+    { t: "⏱️ Corto y seguido le gana a largo y esporádico", c: "Es mejor 10-15 minutos casi todos los días que una hora el domingo. La práctica espaciada es de los hallazgos más sólidos de la ciencia del aprendizaje. El «objetivo de hoy» y el «plan del día» de la app están calibrados para eso." },
+    { t: "🧠 Pensar, fuera de la pantalla", c: "Juegos de mesa, memotest físico, contar escalones, buscar formas en la calle. Pedile que te ayude a recordar la lista del súper: la memoria de trabajo se ejercita en la vida real." },
+    { t: "💬 Hablar: leer juntos es lo más poderoso", c: "La lectura compartida diaria es una de las prácticas con mejor evidencia para el lenguaje. Cantar, jugar con rimas, separar palabras en sílabas con aplausos y dejar que termine las frases del cuento. El juego «Escuchá y repetí» rinde el doble si vos también repetís la palabra con él." },
+    { t: "✋ Mover: manos ocupadas, cerebro activo", c: "Dibujar, recortar con tijera de punta redonda, masa, enhebrar fideos, pelota. La motricidad fina de hoy es la escritura de mañana. La app solo complementa: el movimiento real es insustituible." },
+    { t: "💰 Ahorrar: la alcancía de verdad", c: "Una alcancía física, una meta concreta («juntar para el juguete») y participar en compras chicas: que pague el pan y reciba el vuelto. Hablar de «necesito o quiero» frente a la góndola convierte cada salida en una lección. La OCDE recomienda empezar la educación financiera temprano, siempre como juego." },
+    { t: "😤 Si se frustra", c: "Validá la emoción («te dio bronca, te entiendo»), bajá a un juego que le salga bien para cerrar en positivo, y retomá otro día. Frustrarse un poco es parte de aprender; frustrarse mucho es señal de que el juego todavía no es para su momento, y no pasa nada." },
+    { t: "🌙 Lo que más importa no está en ninguna app", c: "Dormir bien, jugar libre, moverse y conversar en familia tienen más impacto en el desarrollo que cualquier aplicación, incluida esta. Usala como un complemento divertido, no como el plan principal. Y ante cualquier duda sobre el desarrollo (habla, atención, aprendizaje), el camino es el pediatra, no una app." },
+  ];
+  return (
+    <div className="flex w-full flex-col gap-3">
+      {secciones.map((s, i) => (
+        <div key={i} className="rounded-3xl bg-white p-5 shadow-md">
+          <p className="font-black text-slate-800">{s.t}</p>
+          <p className="mt-1 text-sm leading-relaxed text-slate-600">{s.c}</p>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 // ============================================================
 // Pantalla de resultado
@@ -1063,31 +1415,87 @@ function PanelPadres({ sesiones, perfil, edadAnios }) {
 }
 
 // ============================================================
-// Sub-app NIÑOS
+// Sub-app NIÑOS — multiperfil con PIN, objetivo diario y premio
 // ============================================================
+const AVATARES = ["🦁", "🐼", "🦊", "🐸", "🦄", "🐯", "🐙", "🦖", "🐨", "🐥"];
+
+function idYoutube(url) {
+  const m = String(url).match(/(?:youtu\.be\/|v=|shorts\/|embed\/)([A-Za-z0-9_-]{11})/);
+  return m ? m[1] : null;
+}
+const esHoy = (ts) => new Date(ts).toDateString() === new Date().toDateString();
+
+function CampoPin({ valor, setValor, placeholder = "PIN de 4 números" }) {
+  return (
+    <input type="password" inputMode="numeric" maxLength={4} value={valor} placeholder={placeholder}
+      onChange={(e) => setValor(e.target.value.replace(/\D/g, "").slice(0, 4))}
+      className="rounded-2xl border-4 border-sky-200 px-4 py-3 text-center text-2xl font-black tracking-[0.5em] text-slate-700 outline-none focus:border-sky-400" />
+  );
+}
+
 function AppNinos({ alSelector }) {
   const [pantalla, setPantalla] = useState("cargando");
-  const [perfil, setPerfil] = useState(null);
+  const [perfiles, setPerfiles] = useState([]);
+  const [activo, setActivo] = useState(null);
   const [sesiones, setSesiones] = useState([]);
+  const [premio, setPremio] = useState({ meta: 5, videos: [] });
+  const [pinPadres, setPinPadres] = useState(null);
+
   const [juegoActivo, setJuegoActivo] = useState(null);
   const [resultado, setResultado] = useState(null);
+  const [claveJuego, setClaveJuego] = useState(0);
+  const [plan, setPlan] = useState(null); // { lista: [ids], idx }
+
   const [nombreInput, setNombreInput] = useState("");
   const [nacInput, setNacInput] = useState("");
+  const [pinNuevo, setPinNuevo] = useState("");
   const [errorPerfil, setErrorPerfil] = useState(null);
-  const [claveJuego, setClaveJuego] = useState(0);
+  const [pendiente, setPendiente] = useState(null);
+  const [pinIntento, setPinIntento] = useState("");
+  const [errorPin, setErrorPin] = useState(null);
+  const [pinPA, setPinPA] = useState("");
+  const [pinPA2, setPinPA2] = useState("");
+  const [metaInput, setMetaInput] = useState(5);
+  const [videosTxt, setVideosTxt] = useState("");
+  const [videosSel, setVideosSel] = useState([]);
+  const [borrando, setBorrando] = useState(null);
 
   useEffect(() => {
     (async () => {
-      const p = await leer("pequemundo:perfil");
-      const s = await leer("pequemundo:sesiones");
-      if (s) setSesiones(s);
-      if (p && p.nacimiento) { setPerfil(p); setPantalla("menu"); }
-      else {
-        if (p && p.nombre) setNombreInput(p.nombre); // migración de perfiles viejos
-        setPantalla("perfil");
+      let lista = (await leer("pequemundo:perfiles")) || [];
+      // migración desde la versión de un solo perfil
+      if (lista.length === 0) {
+        const viejo = await leer("pequemundo:perfil");
+        if (viejo && viejo.nacimiento) {
+          lista = [{ id: "p1", nombre: viejo.nombre, nacimiento: viejo.nacimiento, pin: null, avatar: AVATARES[0] }];
+          await guardar("pequemundo:perfiles", lista);
+          const viejasSes = await leer("pequemundo:sesiones");
+          if (viejasSes) await guardar("pequemundo:sesiones:p1", viejasSes);
+        }
       }
+      const pr = await leer("pequemundo:premio");
+      const pp = await leer("pequemundo:pinpadres");
+      if (pr) setPremio(pr);
+      if (pp) setPinPadres(pp);
+      setPerfiles(lista);
+      setPantalla(lista.length > 0 ? "elegirPerfil" : "nuevoPerfil");
     })();
   }, []);
+
+  const activar = async (p) => {
+    const s = (await leer(`pequemundo:sesiones:${p.id}`)) || [];
+    setActivo(p);
+    setSesiones(s);
+    setPendiente(null);
+    setPinIntento("");
+    setErrorPin(null);
+    setPantalla("menu");
+  };
+
+  const elegir = (p) => {
+    if (p.pin) { setPendiente(p); setPinIntento(""); setErrorPin(null); setPantalla("pinNino"); }
+    else activar(p);
+  };
 
   const crearPerfil = () => {
     setErrorPerfil(null);
@@ -1096,58 +1504,273 @@ function AppNinos({ alSelector }) {
     if (isNaN(edad) || edad < 0 || edad > 17) { setErrorPerfil("Revisá la fecha: no parece correcta."); return; }
     if (edad < 3) { setErrorPerfil("PequeMundo está diseñado desde los 3 años. ¡Los esperamos pronto! 💛"); return; }
     if (edad > 11) { setErrorPerfil("PequeMundo llega hasta los 11 años. Para más grandes, pronto habrá una etapa nueva."); return; }
-    const p = { nombre: nombreInput.trim(), nacimiento: nacInput };
-    setPerfil(p);
-    guardar("pequemundo:perfil", p);
-    setPantalla("menu");
+    if (pinNuevo && pinNuevo.length !== 4) { setErrorPerfil("El PIN debe tener 4 números (o dejalo vacío)."); return; }
+    const p = {
+      id: "p" + Date.now(),
+      nombre: nombreInput.trim(),
+      nacimiento: nacInput,
+      pin: pinNuevo || null,
+      avatar: AVATARES[perfiles.length % AVATARES.length],
+    };
+    const lista = [...perfiles, p];
+    setPerfiles(lista);
+    guardar("pequemundo:perfiles", lista);
+    setNombreInput(""); setNacInput(""); setPinNuevo("");
+    activar(p);
+  };
+
+  const borrarPerfil = (id) => {
+    const lista = perfiles.filter((p) => p.id !== id);
+    setPerfiles(lista);
+    guardar("pequemundo:perfiles", lista);
+    setBorrando(null);
+    if (activo && activo.id === id) { setActivo(null); setSesiones([]); }
   };
 
   const terminarJuego = (puntos, maximo) => {
     const s = { juego: juegoActivo.id, area: juegoActivo.area, puntos, maximo, fecha: Date.now() };
     const nuevas = [...sesiones, s];
     setSesiones(nuevas);
-    guardar("pequemundo:sesiones", nuevas);
+    guardar(`pequemundo:sesiones:${activo.id}`, nuevas);
     setResultado({ puntos, maximo });
   };
 
   const abrirJuego = (jg) => { setJuegoActivo(jg); setResultado(null); setClaveJuego((k) => k + 1); setPantalla("juego"); };
   const repetir = () => { setResultado(null); setClaveJuego((k) => k + 1); };
 
+  const iniciarPlan = (disponibles, cuantos) => {
+    const conteo = {};
+    sesiones.forEach((s) => { conteo[s.juego] = (conteo[s.juego] || 0) + 1; });
+    const colas = Object.keys(AREAS).map((a) =>
+      disponibles.filter((jg) => jg.area === a).sort((x, y) => (conteo[x.id] || 0) - (conteo[y.id] || 0))
+    );
+    const lista = [];
+    let i = 0;
+    while (lista.length < cuantos && i < 60) {
+      const cola = colas[i % colas.length];
+      if (cola.length > 0) lista.push(cola.shift().id);
+      i++;
+    }
+    if (lista.length === 0) return;
+    const nuevoPlan = { lista, idx: 0 };
+    setPlan(nuevoPlan);
+    abrirJuego(CATALOGO.find((jg) => jg.id === lista[0]));
+  };
+
+  const seguirPlan = () => {
+    if (!plan) return;
+    const prox = plan.idx + 1;
+    if (prox >= plan.lista.length) {
+      setPlan(null);
+      setResultado(null);
+      setPantalla("menu");
+      hablar("¡Plan del día completo! Excelente trabajo.", true);
+      return;
+    }
+    setPlan({ ...plan, idx: prox });
+    abrirJuego(CATALOGO.find((jg) => jg.id === plan.lista[prox]));
+  };
+
+  const salirPlan = () => { setPlan(null); setResultado(null); setPantalla("menu"); };
+
+  const descargarInforme = (disponibles) => {
+    const an = analizarProgreso(sesiones, disponibles);
+    const f = new Date().toLocaleDateString("es-AR");
+    const filas = Object.keys(AREAS).map((a) => {
+      const d = an.porArea[a];
+      const tend = d.tendencia === null ? "—" : d.tendencia > 5 ? "▲ mejorando" : d.tendencia < -5 ? "▼ atención" : "= estable";
+      return `<tr><td>${AREAS[a].icono} ${AREAS[a].nombre}</td><td>${d.jugadas}</td><td>${d.jugadas ? d.prom + "%" : "—"}</td><td>${tend}</td></tr>`;
+    }).join("");
+    const html = `<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><title>Informe de progreso — ${activo.nombre}</title>
+<style>body{font-family:system-ui,sans-serif;max-width:720px;margin:24px auto;padding:0 16px;color:#1e293b;line-height:1.5}
+h1{color:#0369a1}h2{color:#334155;margin-top:28px}table{border-collapse:collapse;width:100%}td,th{border:1px solid #cbd5e1;padding:8px;text-align:left}
+th{background:#f1f5f9}.caja{background:#fef9c3;border-radius:12px;padding:14px;font-size:14px}
+.pie{margin-top:32px;font-size:12px;color:#64748b;border-top:1px solid #e2e8f0;padding-top:12px}</style></head><body>
+<h1>🌈 PequeMundo — Informe de progreso</h1>
+<p><b>${activo.nombre}</b> · ${edadAnios} años (etapa ${rango}) · Informe generado el ${f}</p>
+<h2>Resumen</h2>
+<p>Partidas totales: <b>${an.jugadas}</b> · Racha actual: <b>${an.racha} ${an.racha === 1 ? "día" : "días"}</b> · Ritmo última semana: <b>${an.ritmo} juegos/día</b> · Juegos de su etapa ya probados: <b>${an.cubiertos} de ${an.total}</b></p>
+<h2>Por área</h2>
+<table><tr><th>Área</th><th>Partidas</th><th>Acierto promedio</th><th>Tendencia</th></tr>${filas}</table>
+<h2>Lectura del progreso</h2>
+${an.frases.map((x) => `<p>• ${x}</p>`).join("")}
+<h2>Cómo seguir en casa</h2>
+<p>Sesiones cortas y frecuentes (10-15 minutos), jugar juntos cuando se pueda, elogiar el esfuerzo y la estrategia, leer juntos todos los días y llevar el área Ahorrar a la vida real con una alcancía física. La guía completa está en el panel de padres de la app.</p>
+<div class="caja"><b>Nota de honestidad científica.</b> Este informe describe el desempeño de ${activo.nombre} <b>dentro de la app y comparado con su propio historial</b>. No es una evaluación del desarrollo, no calcula «edad mental» ni predice notas o resultados futuros: eso no puede hacerlo ninguna app con seriedad — las evaluaciones del desarrollo usan pruebas estandarizadas administradas por profesionales, y el futuro de un niño no se predice desde un juego. Las habilidades que se ejercitan acá están asociadas en estudios poblacionales con buenos resultados educativos, pero son tendencias generales, no promesas individuales. Ante cualquier inquietud sobre el desarrollo, consulte al pediatra.</div>
+<p class="pie">Generado localmente por Mente en Juego. Los datos viven solo en su dispositivo; este archivo no se envió a ningún servidor. Puede imprimirlo o guardarlo como PDF desde el navegador (Imprimir → Guardar como PDF).</p>
+</body></html>`;
+    try {
+      const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `informe-${activo.nombre.toLowerCase().replace(/\s+/g, "-")}-${new Date().toISOString().slice(0, 10)}.html`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (e) { /* sin descarga */ }
+  };
+
+  const abrirPanel = () => {
+    setPinPA(""); setPinPA2(""); setErrorPin(null);
+    setMetaInput(premio.meta || 5);
+    const vs = premio.videos || [];
+    setVideosSel(vs.filter((u) => URLS_CATALOGO.has(u)));
+    setVideosTxt(vs.filter((u) => !URLS_CATALOGO.has(u)).join("\n"));
+    setPantalla(pinPadres ? "panelPin" : "panelPinCrear");
+  };
+
+  const guardarPremio = (sel = videosSel) => {
+    const propios = videosTxt.split("\n").map((l) => l.trim()).filter((l) => l && idYoutube(l));
+    const videos = [...sel, ...propios.filter((u) => !sel.includes(u))];
+    const cfg = { meta: Math.min(20, Math.max(1, Number(metaInput) || 5)), videos };
+    setPremio(cfg);
+    guardar("pequemundo:premio", cfg);
+  };
+
+  const alternarVideo = (url) => {
+    const sel = videosSel.includes(url) ? videosSel.filter((u) => u !== url) : [...videosSel, url];
+    setVideosSel(sel);
+    guardarPremio(sel);
+  };
+  const alternarPack = (items) => {
+    const urls = items.map((it) => it.url);
+    const todos = urls.every((u) => videosSel.includes(u));
+    const sel = todos ? videosSel.filter((u) => !urls.includes(u)) : [...new Set([...videosSel, ...urls])];
+    setVideosSel(sel);
+    guardarPremio(sel);
+  };
+
   if (pantalla === "cargando") {
     return <div className="flex min-h-screen items-center justify-center bg-sky-100 text-2xl font-black text-sky-600">Cargando… 🎈</div>;
   }
 
-  if (pantalla === "perfil") {
+  // ---------- elegir perfil (tablet compartida) ----------
+  if (pantalla === "elegirPerfil") {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-6 bg-sky-100 p-4 sm:gap-8 sm:p-6">
+      <div className="flex min-h-screen flex-col items-center justify-center gap-6 bg-sky-100 p-4 sm:p-6">
+        <div className="text-center">
+          <div className="text-6xl sm:text-7xl">🌈</div>
+          <h1 className="mt-2 text-4xl font-black text-sky-700 sm:text-5xl">PequeMundo</h1>
+          <p className="mt-2 text-base font-bold text-slate-500 sm:text-lg">¿Quién va a jugar hoy?</p>
+        </div>
+        <div className="grid w-full max-w-md grid-cols-2 gap-3 sm:gap-4">
+          {perfiles.map((p) => (
+            <button key={p.id} onClick={() => elegir(p)}
+              className="flex flex-col items-center gap-1 rounded-3xl bg-white p-5 shadow-lg transition-transform active:scale-95">
+              <span className="text-5xl">{p.avatar}</span>
+              <span className="text-lg font-black text-slate-700">{p.nombre}</span>
+              <span className="text-xs font-bold text-slate-400">{calcularEdad(p.nacimiento)} años {p.pin ? "· 🔒" : ""}</span>
+            </button>
+          ))}
+          <button onClick={() => { setErrorPerfil(null); setPantalla("nuevoPerfil"); }}
+            className="flex flex-col items-center justify-center gap-1 rounded-3xl border-4 border-dashed border-sky-300 p-5 text-sky-500 transition-transform active:scale-95">
+            <span className="text-4xl">➕</span>
+            <span className="font-black">Nuevo peque</span>
+          </button>
+        </div>
+        <button onClick={alSelector} className="text-sm font-bold text-slate-400">← Volver al inicio</button>
+      </div>
+    );
+  }
+
+  // ---------- PIN del niño ----------
+  if (pantalla === "pinNino" && pendiente) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-5 bg-sky-100 p-4">
+        <span className="text-6xl">{pendiente.avatar}</span>
+        <h2 className="text-2xl font-black text-slate-700">Hola, {pendiente.nombre} 🔒</h2>
+        <div className="flex w-full max-w-xs flex-col gap-3 rounded-3xl bg-white p-6 shadow-lg">
+          <CampoPin valor={pinIntento} setValor={setPinIntento} placeholder="Tu PIN" />
+          {errorPin && <p className="text-center text-sm font-bold text-red-500">{errorPin}</p>}
+          <button onClick={() => { if (pinIntento === pendiente.pin) activar(pendiente); else { setErrorPin("Ese PIN no es. ¡Probá de nuevo!"); setPinIntento(""); } }}
+            disabled={pinIntento.length !== 4}
+            className="rounded-full bg-emerald-500 py-3 text-xl font-black text-white shadow-lg active:scale-95 disabled:opacity-40">Entrar</button>
+          <button onClick={() => setPantalla("elegirPerfil")} className="text-sm font-bold text-slate-400">← Elegir otro perfil</button>
+        </div>
+      </div>
+    );
+  }
+
+  // ---------- crear perfil ----------
+  if (pantalla === "nuevoPerfil") {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-6 bg-sky-100 p-4 sm:p-6">
         <div className="text-center">
           <div className="text-6xl sm:text-7xl">🌈</div>
           <h1 className="mt-2 text-4xl font-black text-sky-700 sm:text-5xl">PequeMundo</h1>
           <p className="mt-2 text-base font-bold text-slate-500 sm:text-lg">{CATALOGO.length} juegos que crecen con tu peque</p>
         </div>
         <div className="flex w-full max-w-sm flex-col gap-4 rounded-3xl bg-white p-5 shadow-lg sm:p-6">
-          <label className="text-base font-black text-slate-700 sm:text-lg">¿Cómo se llama tu peque?</label>
+          <label className="text-base font-black text-slate-700 sm:text-lg">¿Cómo se llama?</label>
           <input value={nombreInput} onChange={(e) => setNombreInput(e.target.value)} placeholder="Escribí su nombre"
             className="rounded-2xl border-4 border-sky-200 px-4 py-3 text-lg font-bold text-slate-700 outline-none focus:border-sky-400 sm:text-xl" />
           <label className="text-base font-black text-slate-700 sm:text-lg">¿Cuándo nació? 🎂</label>
           <input type="date" value={nacInput} onChange={(e) => setNacInput(e.target.value)}
             className="rounded-2xl border-4 border-sky-200 px-4 py-3 text-lg font-bold text-slate-700 outline-none focus:border-sky-400" />
-          <p className="text-xs text-slate-400">Con la fecha de nacimiento, los juegos se eligen solos para su edad y se van renovando automáticamente con cada cumpleaños.</p>
+          <p className="text-xs text-slate-400">Con la fecha de nacimiento los juegos se eligen solos para su edad y se renuevan automáticamente con cada cumpleaños.</p>
+          <label className="text-base font-black text-slate-700 sm:text-lg">PIN del peque (opcional)</label>
+          <CampoPin valor={pinNuevo} setValor={setPinNuevo} placeholder="4 números" />
+          <p className="text-xs text-slate-400">Útil en tablets compartidas: cada peque entra a su propio perfil con su PIN y el progreso no se mezcla.</p>
           {errorPerfil && <p className="rounded-2xl bg-amber-50 p-3 text-sm font-bold text-amber-700">{errorPerfil}</p>}
           <button onClick={crearPerfil} disabled={!nombreInput.trim() || !nacInput}
             className="mt-1 rounded-full bg-emerald-500 py-3 text-xl font-black text-white shadow-lg transition-transform active:scale-95 disabled:opacity-40 sm:py-4 sm:text-2xl">
             ¡Empezar a jugar!
           </button>
-          <button onClick={alSelector} className="text-sm font-bold text-slate-400">← Volver al inicio</button>
+          <button onClick={() => setPantalla(perfiles.length > 0 ? "elegirPerfil" : "cargando") || (perfiles.length === 0 && alSelector())}
+            className="text-sm font-bold text-slate-400">← Volver</button>
         </div>
       </div>
     );
   }
 
-  const edadAnios = calcularEdad(perfil.nacimiento);
-  const rango = rangoDeEdad(Math.min(Math.max(edadAnios, 3), 11));
-  const cumple = esCumpleHoy(perfil.nacimiento);
+  // ---------- PIN de padres: crear o verificar ----------
+  if (pantalla === "panelPinCrear" || pantalla === "panelPin") {
+    const crear = pantalla === "panelPinCrear";
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-5 bg-sky-100 p-4">
+        <span className="text-6xl">🔐</span>
+        <h2 className="text-2xl font-black text-slate-700">{crear ? "Creá el PIN de padres" : "Zona de padres"}</h2>
+        <div className="flex w-full max-w-xs flex-col gap-3 rounded-3xl bg-white p-6 shadow-lg">
+          {crear ? (
+            <>
+              <p className="text-sm text-slate-500">Este PIN protege el panel, los perfiles y la configuración del premio para que los peques no lo cambien.</p>
+              <CampoPin valor={pinPA} setValor={setPinPA} placeholder="Nuevo PIN" />
+              <CampoPin valor={pinPA2} setValor={setPinPA2} placeholder="Repetilo" />
+              {errorPin && <p className="text-center text-sm font-bold text-red-500">{errorPin}</p>}
+              <button onClick={() => {
+                  if (pinPA.length !== 4) { setErrorPin("El PIN debe tener 4 números."); return; }
+                  if (pinPA !== pinPA2) { setErrorPin("Los PIN no coinciden."); return; }
+                  setPinPadres(pinPA); guardar("pequemundo:pinpadres", pinPA); setPantalla("panel");
+                }}
+                className="rounded-full bg-emerald-500 py-3 text-xl font-black text-white shadow-lg active:scale-95">Guardar y entrar</button>
+            </>
+          ) : (
+            <>
+              <CampoPin valor={pinPA} setValor={setPinPA} placeholder="PIN de padres" />
+              {errorPin && <p className="text-center text-sm font-bold text-red-500">{errorPin}</p>}
+              <button onClick={() => { if (pinPA === pinPadres) { setErrorPin(null); setPantalla("panel"); } else { setErrorPin("PIN incorrecto."); setPinPA(""); } }}
+                disabled={pinPA.length !== 4}
+                className="rounded-full bg-emerald-500 py-3 text-xl font-black text-white shadow-lg active:scale-95 disabled:opacity-40">Entrar</button>
+            </>
+          )}
+          <button onClick={() => setPantalla("menu")} className="text-sm font-bold text-slate-400">← Volver</button>
+        </div>
+      </div>
+    );
+  }
 
+  if (!activo) { setPantalla("elegirPerfil"); return null; }
+
+  const edadAnios = calcularEdad(activo.nacimiento);
+  const rango = rangoDeEdad(Math.min(Math.max(edadAnios, 3), 11));
+  const cumple = esCumpleHoy(activo.nacimiento);
+  const jugadasHoy = sesiones.filter((s) => esHoy(s.fecha)).length;
+  const metaHoy = premio.meta || 5;
+  const logrado = jugadasHoy >= metaHoy;
+
+  // ---------- pantalla de juego ----------
   if (pantalla === "juego" && juegoActivo) {
     const motor = juegoActivo.motor;
     return (
@@ -1159,15 +1782,31 @@ function AppNinos({ alSelector }) {
             </button>
             <span className="text-base font-black text-slate-700 sm:text-lg">{juegoActivo.icono} {juegoActivo.nombre}</span>
           </div>
+          {plan && (
+            <div className="flex items-center gap-2 rounded-full bg-emerald-100 px-4 py-2 text-sm font-black text-emerald-700">
+              🧭 Plan del día: juego {plan.idx + 1} de {plan.lista.length}
+              <span className="flex gap-1">{plan.lista.map((_, i) => <span key={i} className={`h-2 w-2 rounded-full ${i <= plan.idx ? "bg-emerald-500" : "bg-emerald-200"}`} />)}</span>
+            </div>
+          )}
           <div className="rounded-3xl bg-sky-50 p-3 sm:p-4">
             {resultado ? (
-              <Resultado puntos={resultado.puntos} maximo={resultado.maximo} onRepetir={repetir} onSalir={() => setPantalla("menu")} />
+              plan ? (
+                <ResultadoPlan
+                  puntos={resultado.puntos} maximo={resultado.maximo}
+                  ultimo={plan.idx + 1 >= plan.lista.length}
+                  siguiente={plan.idx + 1 < plan.lista.length ? CATALOGO.find((x) => x.id === plan.lista[plan.idx + 1]) : null}
+                  onSeguir={seguirPlan} onSalir={salirPlan}
+                />
+              ) : (
+                <Resultado puntos={resultado.puntos} maximo={resultado.maximo} onRepetir={repetir} onSalir={() => setPantalla("menu")} />
+              )
             ) : (
               <div key={claveJuego}>
                 {motor === "memoria" && <JuegoMemoria params={juegoActivo.params} edad={rango} alTerminar={terminarJuego} />}
                 {motor === "atrapa" && <JuegoAtrapa params={juegoActivo.params} alTerminar={terminarJuego} />}
                 {motor === "alcancia" && <JuegoAlcancia params={juegoActivo.params} edad={rango} alTerminar={terminarJuego} />}
-                {motor !== "memoria" && motor !== "atrapa" && motor !== "alcancia" && (
+                {motor === "pronuncia" && <JuegoPronuncia params={juegoActivo.params} edad={rango} alTerminar={terminarJuego} />}
+                {motor !== "memoria" && motor !== "atrapa" && motor !== "alcancia" && motor !== "pronuncia" && (
                   <JuegoRondas
                     generar={GENERADORES[motor](juegoActivo.params, rango)}
                     colorTexto={juegoActivo.colorTexto}
@@ -1182,6 +1821,73 @@ function AppNinos({ alSelector }) {
     );
   }
 
+  // ---------- premio (YouTube habilitado por objetivo) ----------
+  if (pantalla === "premio") {
+    const ids = (premio.videos || []).map(idYoutube).filter(Boolean);
+    return (
+      <div className="min-h-screen bg-sky-100 p-3 sm:p-4">
+        <div className="mx-auto flex max-w-lg flex-col gap-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <button onClick={() => setPantalla("menu")} className="flex items-center gap-1 rounded-full bg-white px-4 py-2 font-black text-slate-600 shadow active:scale-95">
+              <ArrowLeft /> Volver
+            </button>
+            <span className="text-lg font-black text-slate-700">🎁 Tu premio</span>
+          </div>
+          {!logrado ? (
+            <div className="rounded-3xl bg-white p-6 text-center shadow-md">
+              <p className="text-5xl">🔒</p>
+              <p className="mt-2 text-xl font-black text-slate-700">Todavía no, {activo.nombre}</p>
+              <p className="mt-1 font-bold text-slate-500">Completá {metaHoy - jugadasHoy} {metaHoy - jugadasHoy === 1 ? "juego más" : "juegos más"} y se abre el premio de hoy.</p>
+            </div>
+          ) : ids.length === 0 ? (
+            <div className="rounded-3xl bg-white p-6 text-center shadow-md">
+              <p className="text-5xl">🎉</p>
+              <p className="mt-2 text-xl font-black text-slate-700">¡Objetivo del día cumplido!</p>
+              <p className="mt-1 font-bold text-slate-500">Pedile a tu papá o mamá que elija los videos del premio en el panel de padres.</p>
+            </div>
+          ) : (
+            <>
+              <div className="rounded-3xl bg-yellow-100 p-4 text-center">
+                <p className="text-xl font-black text-amber-700">🎉 ¡Lo lograste, {activo.nombre}! Estos son tus videos de hoy:</p>
+              </div>
+              {(premio.videos || []).filter((u) => idYoutube(u)).map((u) => (
+                <div key={u} className="overflow-hidden rounded-3xl bg-white p-2 shadow-md">
+                  {TITULO_VIDEO[u] && <p className="px-2 py-1 text-sm font-black text-slate-600">{TITULO_VIDEO[u]}</p>}
+                  <iframe
+                    className="aspect-video w-full rounded-2xl"
+                    src={`https://www.youtube-nocookie.com/embed/${idYoutube(u)}?rel=0&modestbranding=1`}
+                    title={TITULO_VIDEO[u] || "Video premio"}
+                    allow="accelerometer; encrypted-media; picture-in-picture"
+                    allowFullScreen
+                  />
+                </div>
+              ))}
+              <p className="rounded-2xl bg-white p-3 text-center text-xs text-slate-400">Solo se muestran los videos que eligieron tus papás. 💛</p>
+            </>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // ---------- guía para padres ----------
+  if (pantalla === "guia") {
+    return (
+      <div className="min-h-screen bg-sky-100 p-3 sm:p-4">
+        <div className="mx-auto flex max-w-md flex-col items-center gap-4">
+          <div className="flex w-full flex-wrap items-center justify-between gap-2">
+            <button onClick={() => setPantalla("panel")} className="flex items-center gap-1 rounded-full bg-white px-4 py-2 font-black text-slate-600 shadow active:scale-95">
+              <ArrowLeft /> Volver
+            </button>
+            <span className="text-lg font-black text-slate-700">📖 Guía para enseñar en casa</span>
+          </div>
+          <GuiaPadres />
+        </div>
+      </div>
+    );
+  }
+
+  // ---------- panel de padres (protegido por PIN) ----------
   if (pantalla === "panel") {
     return (
       <div className="min-h-screen bg-sky-100 p-3 sm:p-4">
@@ -1192,37 +1898,161 @@ function AppNinos({ alSelector }) {
             </button>
             <span className="text-lg font-black text-slate-700 sm:text-xl">📊 Panel para padres</span>
           </div>
-          <PanelPadres sesiones={sesiones} perfil={perfil} edadAnios={edadAnios} />
+
+          {(() => {
+            const disponiblesPanel = CATALOGO.filter((jg) => jg.edades.includes(rango));
+            const an = analizarProgreso(sesiones, disponiblesPanel);
+            return (
+              <div className="w-full rounded-3xl bg-white p-5 shadow-md sm:p-6">
+                <h3 className="text-lg font-black text-slate-800 sm:text-xl">🤖 Lectura del progreso</h3>
+                <p className="mt-1 text-xs text-slate-400">Generada automáticamente comparando a {activo.nombre} con su propio historial.</p>
+                <div className="mt-3 flex flex-wrap gap-2 text-xs font-black">
+                  <span className="rounded-full bg-sky-100 px-3 py-1 text-sky-700">🔥 Racha: {an.racha} {an.racha === 1 ? "día" : "días"}</span>
+                  <span className="rounded-full bg-violet-100 px-3 py-1 text-violet-700">⚡ {an.ritmo} juegos/día</span>
+                  <span className="rounded-full bg-emerald-100 px-3 py-1 text-emerald-700">🗺️ {an.cubiertos}/{an.total} juegos probados</span>
+                </div>
+                <div className="mt-3 flex flex-col gap-2">
+                  {an.frases.map((fr, i) => (
+                    <p key={i} className="rounded-2xl bg-slate-50 p-3 text-sm text-slate-600">• {fr}</p>
+                  ))}
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <button onClick={() => descargarInforme(disponiblesPanel)}
+                    className="rounded-full bg-sky-500 px-5 py-2 font-black text-white shadow active:scale-95">📄 Descargar informe</button>
+                  <button onClick={() => setPantalla("guia")}
+                    className="rounded-full bg-violet-500 px-5 py-2 font-black text-white shadow active:scale-95">📖 Guía para enseñar</button>
+                </div>
+                <p className="mt-3 rounded-2xl bg-amber-50 p-3 text-xs text-slate-500">
+                  Esta lectura compara a su hijo <b>consigo mismo</b>. A propósito no calcula «edad mental» ni promete notas futuras:
+                  eso requeriría evaluaciones profesionales estandarizadas y ninguna app puede predecir el futuro de un niño con seriedad.
+                  Preferimos decirle la verdad: la práctica constante ejercita habilidades valiosas, y eso ya es mucho.
+                </p>
+              </div>
+            );
+          })()}
+
+          <PanelPadres sesiones={sesiones} perfil={activo} edadAnios={edadAnios} />
+
+          <div className="w-full rounded-3xl bg-white p-5 shadow-md sm:p-6">
+            <h3 className="text-lg font-black text-slate-800 sm:text-xl">🎁 Premio diario</h3>
+            <p className="mt-1 text-sm text-slate-500">Cuando {activo.nombre} completa el objetivo del día, se le habilitan únicamente los videos de YouTube que ustedes elijan acá (uno por línea).</p>
+            <label className="mt-3 block text-sm font-black text-slate-600">Juegos por día para desbloquear el premio</label>
+            <input type="number" min={1} max={20} value={metaInput} onChange={(e) => setMetaInput(e.target.value)}
+              className="mt-1 w-24 rounded-2xl border-4 border-sky-200 px-3 py-2 text-lg font-black text-slate-700 outline-none focus:border-sky-400" />
+            <label className="mt-4 block text-sm font-black text-slate-600">Packs sugeridos — tocá para habilitar ✅</label>
+            <p className="text-xs text-slate-400">Videos de canales infantiles conocidos, ya cargados. Solo se le muestran al peque los que ustedes activen.</p>
+            <div className="mt-2 flex flex-col gap-3">
+              {CATALOGO_VIDEOS.map((c, i) => {
+                const todosActivos = c.items.every((it) => videosSel.includes(it.url));
+                return (
+                  <div key={i} className="rounded-2xl bg-slate-50 p-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <p className="text-sm font-black text-slate-700">{c.cat} <span className="font-bold text-slate-400">· {c.edades}</span></p>
+                      <button onClick={() => alternarPack(c.items)}
+                        className={`rounded-full px-3 py-1 text-xs font-black active:scale-95 ${todosActivos ? "bg-emerald-500 text-white" : "bg-white text-slate-600 shadow"}`}>
+                        {todosActivos ? "Pack activado ✓" : "Activar todo el pack"}
+                      </button>
+                    </div>
+                    <div className="mt-2 flex flex-col gap-1">
+                      {c.items.map((it) => {
+                        const on = videosSel.includes(it.url);
+                        return (
+                          <button key={it.url} onClick={() => alternarVideo(it.url)}
+                            className={`flex items-center justify-between gap-2 rounded-xl px-3 py-2 text-left text-xs font-bold active:scale-[0.98] ${on ? "bg-emerald-100 text-emerald-800" : "bg-white text-slate-600 shadow-sm"}`}>
+                            <span>{it.t}</span>
+                            <span className="shrink-0">{on ? "✅" : "＋"}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <label className="mt-4 block text-sm font-black text-slate-600">Agregar otros videos (links de YouTube, uno por línea)</label>
+            <textarea value={videosTxt} onChange={(e) => setVideosTxt(e.target.value)} rows={3}
+              placeholder={"https://www.youtube.com/watch?v=...\nhttps://youtu.be/..."}
+              className="mt-1 w-full rounded-2xl border-4 border-sky-200 px-3 py-2 text-sm font-bold text-slate-700 outline-none focus:border-sky-400" />
+            <button onClick={() => guardarPremio()}
+              className="mt-3 rounded-full bg-emerald-500 px-6 py-2 font-black text-white shadow active:scale-95">Guardar premio</button>
+            <p className="mt-2 text-xs text-slate-400">Activados ahora: {videosSel.length + videosTxt.split("\n").filter((l) => idYoutube(l.trim())).length} videos. Los links del catálogo fueron verificados al armar la app, pero YouTube puede eliminarlos con el tiempo: si alguno no carga, desactivalo. La responsabilidad final sobre el contenido es siempre de ustedes.</p>
+            <p className="mt-3 rounded-2xl bg-amber-50 p-3 text-xs text-slate-500">
+              💡 Sugerencia: premios cortos (1 o 2 videos) y elegidos por ustedes. La pantalla como recompensa funciona mejor con límites claros, y este premio solo muestra lo que ustedes aprobaron: no abre YouTube libre.
+            </p>
+          </div>
+
+          <div className="w-full rounded-3xl bg-white p-5 shadow-md sm:p-6">
+            <h3 className="text-lg font-black text-slate-800 sm:text-xl">👨‍👩‍👧‍👦 Peques del dispositivo</h3>
+            <div className="mt-3 flex flex-col gap-2">
+              {perfiles.map((p) => (
+                <div key={p.id} className="flex items-center justify-between rounded-2xl bg-slate-50 px-4 py-2">
+                  <span className="font-bold text-slate-700">{p.avatar} {p.nombre} · {calcularEdad(p.nacimiento)} años {p.pin ? "· 🔒 con PIN" : ""}</span>
+                  {borrando === p.id ? (
+                    <button onClick={() => borrarPerfil(p.id)} className="rounded-full bg-red-500 px-3 py-1 text-sm font-black text-white">¿Seguro?</button>
+                  ) : (
+                    <button onClick={() => setBorrando(p.id)} className="rounded-full bg-slate-200 px-3 py-1 text-sm font-black text-slate-600">Borrar</button>
+                  )}
+                </div>
+              ))}
+            </div>
+            <button onClick={() => { setErrorPerfil(null); setPantalla("nuevoPerfil"); }}
+              className="mt-3 rounded-full bg-sky-500 px-6 py-2 font-black text-white shadow active:scale-95">➕ Agregar peque</button>
+            <p className="mt-3 text-xs text-slate-400">
+              Los perfiles y PIN viven solo en este dispositivo (no son cuentas en internet). Sirven para ordenar el progreso en tablets compartidas, no como seguridad fuerte. Las cuentas reales con contraseña llegan con la versión con servidor.
+            </p>
+          </div>
         </div>
       </div>
     );
   }
 
+  // ---------- menú principal ----------
   const disponibles = CATALOGO.filter((jg) => jg.edades.includes(rango));
   return (
     <div className="min-h-screen bg-sky-100 p-3 pb-10 sm:p-4">
       <div className="mx-auto flex max-w-lg flex-col gap-5 sm:gap-6">
         <header className="flex flex-wrap items-center justify-between gap-3 pt-2">
           <div>
-            <h1 className="text-2xl font-black text-sky-700 sm:text-3xl">🌈 ¡Hola, {perfil.nombre}!</h1>
+            <h1 className="text-2xl font-black text-sky-700 sm:text-3xl">{activo.avatar} ¡Hola, {activo.nombre}!</h1>
             <p className="font-bold text-slate-500">{edadAnios} años · {disponibles.length} juegos para tu edad</p>
           </div>
           <div className="flex gap-2">
-            <button onClick={() => setPantalla("panel")}
+            <button onClick={abrirPanel}
               className="flex items-center gap-2 rounded-full bg-white px-4 py-2 font-black text-slate-600 shadow active:scale-95">
               <BarChart3 /> Padres
             </button>
-            <button onClick={alSelector} aria-label="Cambiar de usuario"
+            <button onClick={() => setPantalla("elegirPerfil")} aria-label="Cambiar de peque"
               className="rounded-full bg-white px-4 py-2 font-black text-slate-600 shadow active:scale-95">👤</button>
           </div>
         </header>
 
         {cumple && (
           <div className="rounded-3xl bg-yellow-100 p-4 text-center">
-            <p className="text-2xl font-black text-amber-700">🎂 ¡FELIZ CUMPLEAÑOS, {perfil.nombre.toUpperCase()}! 🎉</p>
+            <p className="text-2xl font-black text-amber-700">🎂 ¡FELIZ CUMPLEAÑOS, {activo.nombre.toUpperCase()}! 🎉</p>
             <p className="font-bold text-amber-600">Hoy cumplís {edadAnios}. ¡Tus juegos crecen con vos!</p>
           </div>
         )}
+
+        <button onClick={() => iniciarPlan(disponibles, Math.min(Math.max(metaHoy, 3), 8))}
+          className="rounded-3xl bg-emerald-500 p-4 text-left shadow-md transition-transform active:scale-95">
+          <div className="flex items-center justify-between">
+            <span className="text-lg font-black text-white">🧭 Mi plan de hoy</span>
+            <span className="rounded-full bg-white/25 px-3 py-1 text-sm font-black text-white">{Math.min(Math.max(metaHoy, 3), 8)} juegos</span>
+          </div>
+          <p className="mt-1 text-sm font-bold text-emerald-50">La app elige juegos de todas las áreas y va pasando sola al siguiente. ¡Tocá y empezá!</p>
+        </button>
+
+        <button onClick={() => setPantalla("premio")}
+          className={`rounded-3xl p-4 text-left shadow-md transition-transform active:scale-95 ${logrado ? "bg-yellow-200" : "bg-white"}`}>
+          <div className="flex items-center justify-between">
+            <span className="text-lg font-black text-slate-700">{logrado ? "🎁 ¡Premio desbloqueado!" : "🎯 Objetivo de hoy"}</span>
+            <span className="font-black text-slate-500">{Math.min(jugadasHoy, metaHoy)}/{metaHoy}</span>
+          </div>
+          <div className="mt-2 h-3 w-full overflow-hidden rounded-full bg-slate-100">
+            <div className={`h-full rounded-full ${logrado ? "bg-yellow-500" : "bg-sky-400"}`} style={{ width: `${Math.min(100, (jugadasHoy / metaHoy) * 100)}%` }} />
+          </div>
+          <p className="mt-1 text-xs font-bold text-slate-400">{logrado ? "Tocá para ver tu premio" : `Completá ${metaHoy} juegos y se abre el premio 🎁`}</p>
+        </button>
 
         {Object.keys(AREAS).map((clave) => {
           const juegosArea = disponibles.filter((jg) => jg.area === clave);
