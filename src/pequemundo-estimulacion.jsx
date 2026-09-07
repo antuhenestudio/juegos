@@ -4318,9 +4318,9 @@ h1{color:#7c3aed;font-size:34px;margin:8px 0}.n{font-size:28px;font-weight:bold;
 
   const edadAnios = calcularEdad(activo.nacimiento);
   const rango = rangoDeEdad(Math.min(Math.max(edadAnios, 3), 11));
+  const apoyo = (activo && activo.apoyo) || {};
   const modoSolito = apoyo.leer ? true : activo.solito != null ? !!activo.solito : edadAnios <= 5;
   const esPremium = planPago.tipo === "premium";
-  const apoyo = (activo && activo.apoyo) || {};
   const cientifico = sesiones.filter((x) => x.area === "descubrir" && x.puntos / x.maximo >= 0.8).length >= 12;
   const puntosGanados = sesiones.reduce((a, x) => a + x.puntos, 0);
   const puntosGastados = canjes.reduce((a, x) => a + x.puntos, 0);
