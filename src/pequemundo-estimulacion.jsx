@@ -84,6 +84,47 @@ function hablar(texto, activo = true, ritmo = 0.95) {
   } catch (e) { /* sin audio */ }
 }
 
+// ---------- audio: efectos de sonido sintetizados + festejos ----------
+let AUDIO_ON = true;
+const setAudioOn = (v) => { AUDIO_ON = !!v; };
+let _ctxAudio = null;
+function ctxAudio() {
+  try {
+    if (!_ctxAudio) _ctxAudio = new (window.AudioContext || window.webkitAudioContext)();
+    if (_ctxAudio.state === "suspended") _ctxAudio.resume();
+    return _ctxAudio;
+  } catch (e) { return null; }
+}
+function tono(c, frec, t0, dur, tipo = "sine", vol = 0.16) {
+  const o = c.createOscillator();
+  const g = c.createGain();
+  o.type = tipo;
+  o.frequency.value = frec;
+  g.gain.setValueAtTime(0.0001, t0);
+  g.gain.linearRampToValueAtTime(vol, t0 + 0.015);
+  g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+  o.connect(g); g.connect(c.destination);
+  o.start(t0); o.stop(t0 + dur + 0.05);
+}
+function sonido(nombre) {
+  if (!AUDIO_ON) return;
+  const c = ctxAudio();
+  if (!c) return;
+  const t = c.currentTime;
+  if (nombre === "acierto") { tono(c, 523, t, 0.12); tono(c, 659, t + 0.1, 0.12); tono(c, 784, t + 0.2, 0.22); }
+  else if (nombre === "error") { tono(c, 220, t, 0.2, "sine", 0.09); tono(c, 185, t + 0.12, 0.22, "sine", 0.08); }
+  else if (nombre === "tap") { tono(c, 880, t, 0.05, "triangle", 0.07); }
+  else if (nombre === "pop") { tono(c, 620, t, 0.05, "triangle", 0.14); tono(c, 930, t + 0.04, 0.07, "triangle", 0.12); }
+  else if (nombre === "moneda") { tono(c, 988, t, 0.06, "square", 0.08); tono(c, 1319, t + 0.06, 0.12, "square", 0.08); }
+  else if (nombre === "estrella") { tono(c, 1047, t, 0.1); tono(c, 1568, t + 0.1, 0.28); }
+  else if (nombre === "fanfarria") { tono(c, 523, t, 0.12); tono(c, 659, t + 0.11, 0.12); tono(c, 784, t + 0.22, 0.12); tono(c, 1047, t + 0.33, 0.34, "sine", 0.2); tono(c, 1319, t + 0.5, 0.3, "sine", 0.12); }
+}
+const FRASES_FESTEJO = ["¡Muy bien!", "¡Excelente!", "¡Genial!", "¡Eso es!", "¡Perfecto!", "¡Bravo!", "¡Qué bien lo hiciste!", "¡Sos increíble!", "¡Sigue así, campeón!", "¡Lo lograste!"];
+function festejar() {
+  sonido("acierto");
+  hablar(FRASES_FESTEJO[Math.floor(Math.random() * FRASES_FESTEJO.length)], AUDIO_ON);
+}
+
 // ---------- edad a partir de la fecha de nacimiento ----------
 function calcularEdad(isoNacimiento) {
   const hoy = new Date();
@@ -388,6 +429,10 @@ const AREAS = {
     habilidad: "Ejercita vocabulario y conciencia de las letras y sonidos, que la investigación identifica como bases de la lectura comprensiva." },
   psicomotor: { nombre: "Mover", icono: "✋", color: "bg-emerald-500", suave: "bg-emerald-100", texto: "text-emerald-700", desc: "Coordinación ojo-mano",
     habilidad: "Ejercita coordinación ojo-mano y velocidad de respuesta, vinculadas con la motricidad fina que después requiere la escritura." },
+  convivir: { nombre: "Convivir", icono: "💛", color: "bg-rose-500", suave: "bg-rose-100", texto: "text-rose-700", desc: "Modales, palabras mágicas y ayudar en casa",
+    habilidad: "Ejercita habilidades socioemocionales: reconocer conductas positivas, usar las palabras mágicas (por favor, gracias, perdón), colaborar en el hogar y tratar con cariño. Los programas de aprendizaje socioemocional en la infancia muestran, en la investigación educativa, asociaciones con mejor convivencia y clima familiar y escolar." },
+  idiomas: { nombre: "Idiomas", icono: "🌍", color: "bg-indigo-500", suave: "bg-indigo-100", texto: "text-indigo-700", desc: "Inglés, francés, portugués, chino y árabe",
+    habilidad: "Primeras palabras en otros idiomas: colores, números, saludos y familia, siempre con audio. Aprender idiomas es valioso en sí mismo (comunicación, cultura); sobre ventajas cognitivas adicionales del bilingüismo la evidencia científica está en debate, y por eso no las prometemos. Este módulo se habilita desde los 6 años: la exposición natural temprana a otros idiomas (canciones, juego en familia) es positiva según la investigación sobre bilingüismo, pero las lecciones estructuradas en pantalla rinden mejor cuando el niño ya afianzó la pronunciación de su propia lengua." },
   economia: { nombre: "Ahorrar", icono: "💰", color: "bg-pink-500", suave: "bg-pink-100", texto: "text-pink-700", desc: "Dinero, precios, ahorro y decisiones",
     habilidad: "Introduce nociones de ahorro, valor del dinero, precios y diferencia entre necesidades y deseos. La OCDE recomienda comenzar la educación financiera en edades tempranas, y estudios longitudinales como el de Dunedin (Moffitt y colegas) asociaron el autocontrol en la infancia con mejores resultados financieros y de salud en la adultez." },
 };
@@ -422,38 +467,161 @@ const PRODUCTOS = [
   { e: "🍫", p: "chocolate" }, { e: "🚲", p: "bicicleta" }, { e: "🎒", p: "mochila" }, { e: "🧢", p: "gorra" },
 ];
 
+// ---------- datos de Convivir (modales y conductas) ----------
+const BIEN_MAL = [
+  { e: "🧸", t: "Guardar los juguetes después de jugar", ok: true, por: "Ordenar lo que usaste es cuidar tu casa y ayudar a tu familia." },
+  { e: "🗣️", t: "Gritarle a mamá o papá cuando me enojo", ok: false, por: "Enojarse está bien, gritar lastima. Podés decir con palabras: «estoy enojado»." },
+  { e: "🤝", t: "Prestarle un juguete a un amigo", ok: true, por: "Compartir hace que jugar sea más lindo para todos." },
+  { e: "🍽️", t: "Llevar mi plato a la cocina al terminar", ok: true, por: "Cada uno puede ayudar con algo chiquito: así la casa funciona en equipo." },
+  { e: "✋", t: "Pegarle a alguien que me sacó algo", ok: false, por: "Pegar nunca arregla nada. Podés pedirlo con palabras o buscar a un grande." },
+  { e: "🙏", t: "Pedir las cosas con «por favor»", ok: true, por: "Las palabras mágicas abren puertas: la gente ayuda con más ganas." },
+  { e: "🤥", t: "Decir una mentira para no tener problemas", ok: false, por: "Decir la verdad, aunque cueste, hace que confíen en vos." },
+  { e: "🧹", t: "Ayudar a barrer o poner la mesa", ok: true, por: "Ayudar en casa te hace parte del equipo de tu familia." },
+  { e: "😜", t: "Burlarme de un compañero", ok: false, por: "Las burlas lastiman por dentro. Tratá a los demás como te gusta que te traten." },
+  { e: "👂", t: "Escuchar cuando otro habla, sin interrumpir", ok: true, por: "Escuchar es una forma de decir «me importás»." },
+  { e: "🚿", t: "Lavarme las manos antes de comer", ok: true, por: "La higiene cuida tu salud y la de tu familia." },
+  { e: "🥱", t: "Decir «no quiero» a los gritos y tirarme al piso", ok: false, por: "Podés decir que no con calma. Los berrinches no consiguen nada bueno." },
+];
+const MAGICAS = [
+  { e: "🎁", q: "Te regalan algo que te encanta. ¿Qué decís?", ops: ["¡Gracias!", "¡Dame otro!", "Nada"], ok: 0, por: "«Gracias» es la palabra mágica cuando alguien te da algo." },
+  { e: "🥤", q: "Querés que te alcancen el jugo. ¿Cómo lo pedís?", ops: ["¿Me das el jugo, por favor?", "¡Jugo ya!", "Lo agarro sin pedir"], ok: 0, por: "«Por favor» convierte una orden en un pedido amable." },
+  { e: "💥", q: "Sin querer chocaste a alguien. ¿Qué decís?", ops: ["¡Perdón!", "¡Salí del medio!", "Nada, sigo caminando"], ok: 0, por: "«Perdón» arregla los accidentes chiquitos y cuida a los demás." },
+  { e: "🌅", q: "Te levantás y ves a tu familia. ¿Qué decís?", ops: ["¡Buen día!", "Nada, tengo sueño", "¿Dónde está mi desayuno?"], ok: 0, por: "Saludar al despertar arranca el día con cariño." },
+  { e: "🚪", q: "Llegás a la casa de tu abuela. ¿Qué hacés primero?", ops: ["Saludo con un beso o un hola", "Voy directo a la tele", "Pido comida"], ok: 0, por: "Saludar al llegar es mostrar que la otra persona te importa." },
+  { e: "🌙", q: "Te vas a dormir. ¿Qué decís?", ops: ["¡Buenas noches!", "Nada", "¡No me quiero dormir!"], ok: 0, por: "Despedirse con «buenas noches» es un mimo antes de dormir." },
+  { e: "🍪", q: "Tu amigo te convida una galletita. ¿Qué decís?", ops: ["¡Gracias!", "¿Solo una?", "Nada"], ok: 0, por: "Agradecer lo que te convidan hace que quieran compartir de nuevo." },
+  { e: "🆘", q: "Necesitás ayuda con algo difícil. ¿Cómo la pedís?", ops: ["¿Me ayudás, por favor?", "¡Vení ya!", "Lloro fuerte"], ok: 0, por: "Pedir ayuda con «por favor» funciona mucho mejor que a los gritos." },
+];
+const AYUDAR = [
+  { e: "🍽️", q: "Terminaron de comer. ¿Cómo podés ayudar?", ops: ["Llevo mi plato a la cocina", "Me voy corriendo a jugar", "Dejo todo tirado"], ok: 0, por: "Levantar tu plato es una ayuda chiquita que suma un montón." },
+  { e: "🧦", q: "Hay ropa limpia doblada. ¿Cómo ayudás?", ops: ["Guardo mis medias en el cajón", "La desarmo toda", "No es mi problema"], ok: 0, por: "Guardar tu propia ropa es tu parte del equipo de la casa." },
+  { e: "🐕", q: "El perro tiene el plato vacío. ¿Qué hacés?", ops: ["Aviso o le pongo comida con ayuda", "Nada, que se arregle", "Le doy mi golosina"], ok: 0, por: "Cuidar a las mascotas es una responsabilidad linda para compartir." },
+  { e: "🛒", q: "Mamá llega con las bolsas del súper. ¿Qué hacés?", ops: ["Ayudo a llevar una bolsita", "Miro", "Pido lo que compró"], ok: 0, por: "Ayudar con lo que puedas, aunque sea una bolsita, dice «te cuido»." },
+  { e: "🧸", q: "Tu cuarto quedó lleno de juguetes. ¿Qué hacés?", ops: ["Los guardo antes de otra cosa", "Los dejo para mañana", "Los escondo abajo de la cama"], ok: 0, por: "Ordenar lo que usaste es parte de jugar." },
+  { e: "🍰", q: "Van a cocinar una torta. ¿Cómo participás?", ops: ["Pido ayudar a mezclar o alcanzar cosas", "Meto los dedos en todo", "Solo quiero comerla"], ok: 0, por: "Cocinar juntos es ayudar y aprender al mismo tiempo." },
+  { e: "🌱", q: "Las plantas están secas. ¿Qué hacés?", ops: ["Ofrezco regarlas con ayuda", "Les arranco las hojas", "Nada"], ok: 0, por: "Regar las plantas es un trabajo perfecto para vos." },
+  { e: "🪥", q: "Es hora de dormir. ¿Qué hacés sin que te lo pidan?", ops: ["Me lavo los dientes y me pongo el pijama", "Me escondo", "Pido cinco minutos mil veces"], ok: 0, por: "Hacer tu rutina solo demuestra lo grande que estás." },
+];
+const SITUACIONES = [
+  { e: "😢", q: "Tu hermanito se cayó y está llorando.", ops: ["Lo ayudo y llamo a un grande", "Me río", "Sigo jugando como si nada"], ok: 0, por: "Ayudar a quien lo necesita es lo más valiente que hay." },
+  { e: "🎮", q: "Perdiste en un juego con tus amigos.", ops: ["Felicito al que ganó", "Tiro el juego al piso", "Digo que hicieron trampa"], ok: 0, por: "Saber perder es de campeones: la próxima te toca a vos." },
+  { e: "🍬", q: "Quedó un solo caramelo y tu amigo también quiere.", ops: ["Propongo compartirlo", "Me lo como rápido", "Lo escondo"], ok: 0, por: "Compartir a la mitad: los dos contentos." },
+  { e: "😠", q: "Estás muy enojado con tu mamá.", ops: ["Le digo con palabras que estoy enojado", "Le grito", "Rompo algo"], ok: 0, por: "Todas las emociones están bien; lo que elegimos hacer con ellas importa." },
+  { e: "🆕", q: "Llega un compañero nuevo que no conoce a nadie.", ops: ["Lo invito a jugar", "Lo ignoro", "Me burlo de su ropa"], ok: 0, por: "Incluir al que está solo puede cambiarle el día entero." },
+  { e: "💔", q: "Rompiste sin querer algo de tu papá.", ops: ["Le cuento la verdad y pido perdón", "Lo escondo", "Culpo a mi hermano"], ok: 0, por: "La verdad más perdón es la fórmula que arregla casi todo." },
+  { e: "👵", q: "Tu abuela cuenta una historia larga.", ops: ["La escucho con atención", "Miro el celular", "La interrumpo"], ok: 0, por: "Escuchar a los abuelos es un regalo para ellos y para vos." },
+  { e: "🤫", q: "Un amigo te pide hacer algo que sabés que está mal.", ops: ["Digo que no y aviso a un grande si hace falta", "Lo hago para que no se enoje", "Lo hago si nadie mira"], ok: 0, por: "Decir «no» a lo que está mal es de valientes, aunque cueste." },
+];
+
+// ---------- datos de Idiomas ----------
+const IDIOMAS = {
+  en: { nombre: "Inglés", bandera: "🇬🇧", lang: "en-US" },
+  fr: { nombre: "Francés", bandera: "🇫🇷", lang: "fr-FR" },
+  pt: { nombre: "Portugués", bandera: "🇧🇷", lang: "pt-BR" },
+  zh: { nombre: "Chino", bandera: "🇨🇳", lang: "zh-CN" },
+  ar: { nombre: "Árabe", bandera: "🇸🇦", lang: "ar-SA" },
+};
+const VOCAB_IDIOMAS = {
+  colores: {
+    nombre: "Los colores",
+    items: [
+      { e: "🔴", es: "rojo", en: "red", fr: "rouge", pt: "vermelho", zh: "hóngsè", ar: "ahmar" },
+      { e: "🔵", es: "azul", en: "blue", fr: "bleu", pt: "azul", zh: "lánsè", ar: "azraq" },
+      { e: "🟡", es: "amarillo", en: "yellow", fr: "jaune", pt: "amarelo", zh: "huángsè", ar: "asfar" },
+      { e: "🟢", es: "verde", en: "green", fr: "vert", pt: "verde", zh: "lǜsè", ar: "akhdar" },
+      { e: "🟣", es: "violeta", en: "purple", fr: "violet", pt: "roxo", zh: "zǐsè", ar: "banafsaji" },
+      { e: "🟠", es: "naranja", en: "orange", fr: "orange", pt: "laranja", zh: "chéngsè", ar: "burtuqali" },
+      { e: "⚪", es: "blanco", en: "white", fr: "blanc", pt: "branco", zh: "báisè", ar: "abyad" },
+      { e: "⚫", es: "negro", en: "black", fr: "noir", pt: "preto", zh: "hēisè", ar: "aswad" },
+    ],
+  },
+  numeros: {
+    nombre: "Los números",
+    items: [
+      { e: "1️⃣", es: "uno", en: "one", fr: "un", pt: "um", zh: "yī", ar: "wahid" },
+      { e: "2️⃣", es: "dos", en: "two", fr: "deux", pt: "dois", zh: "èr", ar: "ithnan" },
+      { e: "3️⃣", es: "tres", en: "three", fr: "trois", pt: "três", zh: "sān", ar: "thalatha" },
+      { e: "4️⃣", es: "cuatro", en: "four", fr: "quatre", pt: "quatro", zh: "sì", ar: "arbaa" },
+      { e: "5️⃣", es: "cinco", en: "five", fr: "cinq", pt: "cinco", zh: "wǔ", ar: "khamsa" },
+      { e: "6️⃣", es: "seis", en: "six", fr: "six", pt: "seis", zh: "liù", ar: "sitta" },
+      { e: "7️⃣", es: "siete", en: "seven", fr: "sept", pt: "sete", zh: "qī", ar: "sabaa" },
+      { e: "8️⃣", es: "ocho", en: "eight", fr: "huit", pt: "oito", zh: "bā", ar: "thamaniya" },
+      { e: "9️⃣", es: "nueve", en: "nine", fr: "neuf", pt: "nove", zh: "jiǔ", ar: "tisaa" },
+      { e: "🔟", es: "diez", en: "ten", fr: "dix", pt: "dez", zh: "shí", ar: "ashara" },
+    ],
+  },
+  saludos: {
+    nombre: "Saludos y palabras mágicas",
+    items: [
+      { e: "👋", es: "hola", en: "hello", fr: "bonjour", pt: "olá", zh: "nǐ hǎo", ar: "marhaba" },
+      { e: "🙏", es: "por favor", en: "please", fr: "s'il te plaît", pt: "por favor", zh: "qǐng", ar: "min fadlik" },
+      { e: "💖", es: "gracias", en: "thank you", fr: "merci", pt: "obrigado", zh: "xièxie", ar: "shukran" },
+      { e: "😔", es: "perdón", en: "sorry", fr: "pardon", pt: "desculpa", zh: "duìbuqǐ", ar: "asif" },
+      { e: "🌅", es: "buen día", en: "good morning", fr: "bonjour", pt: "bom dia", zh: "zǎoshang hǎo", ar: "sabah al-khayr" },
+      { e: "🌙", es: "buenas noches", en: "good night", fr: "bonne nuit", pt: "boa noite", zh: "wǎn'ān", ar: "layla saida" },
+      { e: "👋", es: "chau", en: "goodbye", fr: "au revoir", pt: "tchau", zh: "zàijiàn", ar: "maa salama" },
+    ],
+  },
+  familia: {
+    nombre: "La familia",
+    items: [
+      { e: "👩", es: "mamá", en: "mom", fr: "maman", pt: "mamãe", zh: "māma", ar: "mama" },
+      { e: "👨", es: "papá", en: "dad", fr: "papa", pt: "papai", zh: "bàba", ar: "baba" },
+      { e: "👶", es: "bebé", en: "baby", fr: "bébé", pt: "bebê", zh: "bǎobǎo", ar: "tifl" },
+      { e: "🧑‍🤝‍🧑", es: "amigo", en: "friend", fr: "ami", pt: "amigo", zh: "péngyou", ar: "sadiq" },
+      { e: "🏠", es: "casa", en: "house", fr: "maison", pt: "casa", zh: "jiā", ar: "bayt" },
+      { e: "💧", es: "agua", en: "water", fr: "eau", pt: "água", zh: "shuǐ", ar: "ma" },
+    ],
+  },
+};
+function hablarIdioma(texto, lang) {
+  try {
+    if (!window.speechSynthesis) return;
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(texto);
+    const voces = window.speechSynthesis.getVoices() || [];
+    const v = voces.find((x) => x.lang && x.lang.toLowerCase().startsWith(lang.slice(0, 2).toLowerCase()));
+    if (v) u.voice = v;
+    u.lang = lang;
+    u.rate = 0.8;
+    window.speechSynthesis.speak(u);
+  } catch (e) { /* sin audio */ }
+}
+
 // ---------- catálogo de videos de premio (links reales verificados por búsqueda web; los padres eligen cuáles habilitar) ----------
 const CATALOGO_VIDEOS = [
   {
     cat: "🎵 Canciones para cantar y bailar", edades: "3 a 6 años",
     items: [
-      { t: "Plim Plim — Top 30 canciones más escuchadas", url: "https://www.youtube.com/watch?v=LrNpYPRG1Yc" },
-      { t: "Plim Plim — Canciones para cantar en familia (15 min)", url: "https://www.youtube.com/watch?v=ZgFfF4FsfiI" },
-      { t: "Plim Plim — Para bailar con sus amigos (30 min)", url: "https://www.youtube.com/watch?v=8OymvrjGvyE" },
-      { t: "Canticuénticos — Mejores videos (60 min)", url: "https://www.youtube.com/watch?v=HggpDfQWbTc" },
-      { t: "Canticuénticos — Compilado de canciones (41 min)", url: "https://www.youtube.com/watch?v=v7CSDAFW0nE" },
-      { t: "Canticuénticos — Con el Monstruo de la laguna (35 min)", url: "https://www.youtube.com/watch?v=10wSTVLK9hk" },
+      { t: "Plim Plim — Top 30 canciones más escuchadas", url: "https://www.youtube.com/watch?v=LrNpYPRG1Yc", dur: null },
+      { t: "Plim Plim — Canciones para cantar en familia", url: "https://www.youtube.com/watch?v=ZgFfF4FsfiI", dur: 15 },
+      { t: "Plim Plim — Para bailar con sus amigos", url: "https://www.youtube.com/watch?v=8OymvrjGvyE", dur: 30 },
+      { t: "Canticuénticos — Mejores videos", url: "https://www.youtube.com/watch?v=HggpDfQWbTc", dur: 60 },
+      { t: "Canticuénticos — Compilado de canciones", url: "https://www.youtube.com/watch?v=v7CSDAFW0nE", dur: 41 },
+      { t: "Canticuénticos — Con el Monstruo de la laguna", url: "https://www.youtube.com/watch?v=10wSTVLK9hk", dur: 35 },
     ],
   },
   {
     cat: "📚 Cuentos clásicos narrados", edades: "3 a 8 años",
     items: [
-      { t: "El Patito Feo — cuento para dormir", url: "https://www.youtube.com/watch?v=2plf_JFa4VA" },
-      { t: "El Zorro y la Cigüeña — cuento con moraleja", url: "https://www.youtube.com/watch?v=FmisFJpCim0" },
-      { t: "El Rey Midas — cuento clásico narrado", url: "https://www.youtube.com/watch?v=R5VTpUrkVCs" },
+      { t: "El Patito Feo — cuento para dormir", url: "https://www.youtube.com/watch?v=2plf_JFa4VA", dur: null },
+      { t: "El Zorro y la Cigüeña — cuento con moraleja", url: "https://www.youtube.com/watch?v=FmisFJpCim0", dur: null },
+      { t: "El Rey Midas — cuento clásico narrado", url: "https://www.youtube.com/watch?v=R5VTpUrkVCs", dur: null },
     ],
   },
   {
     cat: "🧠 Aprender e historia (Zamba · Pakapaka)", edades: "6 a 11 años",
     items: [
-      { t: "Zamba recorre la vida de San Martín (maratón de historia)", url: "https://www.youtube.com/watch?v=57KIUyJ4H04" },
-      { t: "El asombroso mundo de Zamba: San Martín", url: "https://www.youtube.com/watch?v=X1Sfpo2oUaA" },
-      { t: "El asombroso musical de Zamba con San Martín", url: "https://www.youtube.com/watch?v=KYVyFJxxo-U" },
+      { t: "Zamba recorre la vida de San Martín (maratón)", url: "https://www.youtube.com/watch?v=57KIUyJ4H04", dur: null },
+      { t: "El asombroso mundo de Zamba: San Martín", url: "https://www.youtube.com/watch?v=X1Sfpo2oUaA", dur: null },
+      { t: "El asombroso musical de Zamba con San Martín", url: "https://www.youtube.com/watch?v=KYVyFJxxo-U", dur: null },
     ],
   },
 ];
 const TITULO_VIDEO = {};
-CATALOGO_VIDEOS.forEach((c) => c.items.forEach((it) => { TITULO_VIDEO[it.url] = it.t; }));
+const DUR_VIDEO = {};
+CATALOGO_VIDEOS.forEach((c) => c.items.forEach((it) => { TITULO_VIDEO[it.url] = it.t; DUR_VIDEO[it.url] = it.dur || null; }));
+const durTexto = (url) => (DUR_VIDEO[url] ? `${DUR_VIDEO[url]} min` : "duración s/d");
 const URLS_CATALOGO = new Set(Object.keys(TITULO_VIDEO));
 
 // ============================================================
@@ -472,6 +640,7 @@ function JuegoRondas({ total = 8, generar, alTerminar, colorTexto = "text-violet
   const responder = (op) => {
     if (marca !== null) return;
     const ok = op === r.respuesta;
+    if (ok) festejar(); else sonido("error");
     setMarca(op);
     const nuevos = ok ? puntos + 1 : puntos;
     if (ok) setPuntos(nuevos);
@@ -731,6 +900,81 @@ const GENERADORES = {
     };
   },
 
+  masMenos: (p) => () => {
+    const em = ["🐤", "🍎", "⭐", "🌸", "🐟", "🎈"][azar(6)];
+    let a = azar(p.max) + 1, b = azar(p.max) + 1;
+    while (a === b) b = azar(p.max) + 1;
+    const resp = p.modo === "menos" ? (a < b ? "A" : "B") : (a > b ? "A" : "B");
+    return {
+      pregunta: (<><Consigna>¿Dónde hay {p.modo === "menos" ? "menos" : "más"}? 👀</Consigna>
+        <div className="flex gap-3">
+          {[["A", a], ["B", b]].map(([et, n]) => (
+            <div key={et} className="flex min-w-[8rem] flex-col items-center gap-1 rounded-3xl bg-white px-4 py-3 shadow-md">
+              <span className="text-lg font-black text-slate-400">{et}</span>
+              <span className="max-w-[8rem] text-center text-2xl leading-tight">{em.repeat(n)}</span>
+            </div>
+          ))}
+        </div></>),
+      opciones: ["A", "B"], respuesta: resp,
+      explicacion: `A tiene ${a} y B tiene ${b}: hay ${p.modo === "menos" ? "menos" : "más"} en ${resp}.`,
+    };
+  },
+
+  convivir: (p) => () => {
+    if (p.tipo === "bienmal") {
+      const it = BIEN_MAL[azar(BIEN_MAL.length)];
+      return {
+        pregunta: (<><Consigna>¿Está bien o está mal? 💛</Consigna>
+          <Tarjeta><span className="text-5xl">{it.e}</span>
+          <span className="max-w-xs text-center text-xl font-black text-slate-700">{it.t}</span></Tarjeta></>),
+        opciones: ["Está bien 😊", "Está mal 😕"],
+        respuesta: it.ok ? "Está bien 😊" : "Está mal 😕",
+        explicacion: it.por,
+      };
+    }
+    const banco = p.tipo === "magicas" ? MAGICAS : p.tipo === "ayudar" ? AYUDAR : SITUACIONES;
+    const it = banco[azar(banco.length)];
+    return {
+      pregunta: (<><Consigna>{p.tipo === "magicas" ? "Las palabras mágicas ✨" : p.tipo === "ayudar" ? "Ayudo en mi casa 🏠" : "¿Qué hago si...? 🤗"}</Consigna>
+        <Tarjeta><span className="text-5xl">{it.e}</span>
+        <span className="max-w-xs text-center text-lg font-black text-slate-700">{it.q}</span></Tarjeta></>),
+      opciones: mezclar([...it.ops]), respuesta: it.ops[it.ok],
+      explicacion: it.por,
+    };
+  },
+
+  idioma: (p) => () => {
+    const cat = VOCAB_IDIOMAS[p.cat];
+    const items = cat.items;
+    const it = items[azar(items.length)];
+    const idi = IDIOMAS[p.idioma];
+    const palabra = it[p.idioma];
+    const inverso = azar(100) < (p.pInv || 0);
+    const boton = (
+      <button onClick={() => hablarIdioma(palabra, idi.lang)}
+        className="rounded-full bg-indigo-100 px-5 py-2 text-lg font-black text-indigo-700 active:scale-95">🔊 Escuchar</button>
+    );
+    if (inverso) {
+      const ops = new Set([it.es]);
+      while (ops.size < 3) ops.add(items[azar(items.length)].es);
+      return {
+        pregunta: (<><Consigna>¿Qué significa en castellano? {idi.bandera}</Consigna>
+          <Tarjeta><span className="text-3xl font-black text-indigo-700 sm:text-4xl">{palabra}</span>{boton}</Tarjeta></>),
+        opciones: mezclar([...ops]), respuesta: it.es,
+        explicacion: `«${palabra}» significa ${it.es} en ${idi.nombre.toLowerCase()}.`,
+      };
+    }
+    const ops = new Set([palabra]);
+    while (ops.size < 3) ops.add(items[azar(items.length)][p.idioma]);
+    return {
+      pregunta: (<><Consigna>¿Cómo se dice en {idi.nombre.toLowerCase()}? {idi.bandera}</Consigna>
+        <Tarjeta><span className="text-5xl">{it.e}</span>
+        <span className="text-2xl font-black text-slate-700">{it.es}</span>{boton}</Tarjeta></>),
+      opciones: mezclar([...ops]), respuesta: palabra,
+      explicacion: `${it.es} se dice «${palabra}» en ${idi.nombre.toLowerCase()}. ¡Tocá 🔊 y repetilo!`,
+    };
+  },
+
   // ---------------- FINANZAS ----------------
   contarDinero: (p, edad) => () => {
     const cant = p.cant + azar(2);
@@ -870,6 +1114,7 @@ function JuegoMemoria({ params, edad, alTerminar }) {
 
   const tocar = (idx) => {
     if (bloqueo.current || cartas[idx].vista || cartas[idx].lista) return;
+    sonido("tap");
     const nuevas = cartas.map((c, i) => (i === idx ? { ...c, vista: true } : c));
     const sel = [...seleccion, idx];
     setCartas(nuevas);
@@ -881,6 +1126,8 @@ function JuegoMemoria({ params, edad, alTerminar }) {
       setTimeout(() => {
         setCartas((prev) => {
           const acierto = prev[a].figura === prev[b].figura;
+          if (acierto) { sonido("acierto"); hablar("¡Pareja!", AUDIO_ON); }
+          else sonido("error");
           const res = prev.map((c, i) =>
             i === a || i === b ? { ...c, vista: acierto, lista: acierto ? true : c.lista } : c
           );
@@ -964,7 +1211,7 @@ function JuegoAtrapa({ params, alTerminar }) {
         <span className={tiempo <= 5 ? "text-red-500" : "text-slate-600"}>⏰ {tiempo}s</span>
       </div>
       <div className="relative h-72 w-full max-w-md overflow-hidden rounded-3xl bg-lime-100 shadow-inner sm:h-96">
-        <button onClick={() => { setAtrapados((v) => v + 1); mover(); }}
+        <button onClick={() => { sonido("pop"); setAtrapados((v) => v + 1); mover(); }}
           className={`absolute ${tam} active:scale-75`}
           style={{ left: `${pos.x}%`, top: `${pos.y}%` }}
           aria-label="Atrapar bichito">
@@ -995,16 +1242,20 @@ function JuegoAlcancia({ params, edad, alTerminar }) {
       const nuevos = puntos + ganados;
       setPuntos(nuevos);
       setSuma(nueva);
+      sonido("fanfarria");
+      hablar("¡Justo! ¡Llenaste la alcancía!", AUDIO_ON);
       setMensaje(`🎉 ¡Justo! +${ganados} puntos`);
       setTimeout(() => {
         if (num >= TOTAL) alTerminar(nuevos, TOTAL * 10);
         else { setNum(num + 1); setMeta(generarMeta()); setSuma(0); setFallo(false); setMensaje(null); }
       }, 1100);
     } else if (nueva > meta) {
+      sonido("error");
       setFallo(true);
       setMensaje("😅 ¡Te pasaste! Empezá de nuevo");
       setTimeout(() => { setSuma(0); setMensaje(null); }, 1000);
     } else {
+      sonido("moneda");
       setSuma(nueva);
     }
   };
@@ -1072,7 +1323,7 @@ function JuegoPronuncia({ params, edad, alTerminar, permitirMic = true }) {
         const ok = alternativas.some((a) => normalizar(a).includes(objetivo));
         setRobot({ ok, texto: alternativas[0] || "" });
         setEscuchando(false);
-        if (ok) hablar("¡Te entendí perfecto!", true);
+        if (ok) { sonido("acierto"); hablar("¡Te entendí perfecto!", AUDIO_ON); }
       };
       rec.onerror = () => { setRobot({ ok: null, texto: "" }); setEscuchando(false); };
       rec.onend = () => setEscuchando(false);
@@ -1087,7 +1338,8 @@ function JuegoPronuncia({ params, edad, alTerminar, permitirMic = true }) {
     try { if (recRef.current) recRef.current.abort(); } catch (e) { /* nada */ }
     const nuevos = puntos + (salio ? 10 : 7);
     setPuntos(nuevos);
-    hablar(salio ? "¡Muy bien!" : "¡Buen intento! Practicar es lo que importa.", true);
+    sonido(salio ? "acierto" : "estrella");
+    hablar(salio ? "¡Muy bien!" : "¡Buen intento! Practicar es lo que importa.", AUDIO_ON);
     setTimeout(() => {
       if (idx + 1 >= TOTAL) alTerminar(nuevos, TOTAL * 10);
       else { setIdx(idx + 1); setEscuchado(false); setRobot(null); setEscuchando(false); }
@@ -1143,6 +1395,143 @@ function JuegoPronuncia({ params, edad, alTerminar, permitirMic = true }) {
           El botón del robot usa el reconocimiento de voz del navegador: necesita internet y permiso de micrófono, y el audio lo procesa el servicio de voz del navegador. Es un juego aproximado, no una evaluación del habla.
         </p>
       )}
+    </div>
+  );
+}
+
+const PALABRAS_TRAZO = ["mamá", "papá", "yo", "sol", "pan", "oso", "mimo", "nene", "hola", "luna", "casa", "agua", "amor", "vida", "abuela", "familia", "escuela", "gracias", "amigo", "te amo"];
+
+function JuegoTrazar({ params, alTerminar }) {
+  const TOTAL = 4;
+  const ANCHO = 320, ALTO = 240;
+  const [items] = useState(() => {
+    if (params.tipo === "letras") return mezclar(params.banco.split("")).slice(0, TOTAL);
+    const candidatas = PALABRAS_TRAZO.filter((p) => (params.largas ? p.length >= 5 : p.length <= (params.maxLargo || 4)));
+    return mezclar(candidatas).slice(0, TOTAL);
+  });
+  const [idx, setIdx] = useState(0);
+  const [puntos, setPuntos] = useState(0);
+  const [intento, setIntento] = useState(1);
+  const [mensaje, setMensaje] = useState(null); // {ok, texto}
+  const lienzoRef = useRef(null);
+  const trazosRef = useRef([]);
+  const dibujandoRef = useRef(false);
+  const item = items[idx];
+  const esLetra = params.tipo === "letras";
+
+  const pintar = () => {
+    const cv = lienzoRef.current;
+    if (!cv) return;
+    const ctx = cv.getContext("2d");
+    ctx.clearRect(0, 0, ANCHO, ALTO);
+    // modelo en gris clarito
+    ctx.font = `900 ${params.tam || 180}px system-ui, sans-serif`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillStyle = "#dbe4ee";
+    ctx.fillText(item, ANCHO / 2, ALTO / 2 + 8);
+    // trazos del peque
+    ctx.strokeStyle = "#0ea5e9";
+    ctx.lineWidth = 13;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    trazosRef.current.forEach((t) => {
+      if (t.length < 2) return;
+      ctx.beginPath();
+      ctx.moveTo(t[0].x, t[0].y);
+      t.slice(1).forEach((p) => ctx.lineTo(p.x, p.y));
+      ctx.stroke();
+    });
+  };
+  useEffect(pintar, [idx]); // eslint-disable-line
+
+  const punto = (ev) => {
+    const r = lienzoRef.current.getBoundingClientRect();
+    return { x: ((ev.clientX - r.left) / r.width) * ANCHO, y: ((ev.clientY - r.top) / r.height) * ALTO };
+  };
+  const bajar = (ev) => { if (mensaje && mensaje.ok) return; dibujandoRef.current = true; trazosRef.current.push([punto(ev)]); pintar(); };
+  const mover = (ev) => { if (!dibujandoRef.current) return; trazosRef.current[trazosRef.current.length - 1].push(punto(ev)); pintar(); };
+  const soltar = () => { dibujandoRef.current = false; };
+  const borrar = () => { sonido("tap"); trazosRef.current = []; setMensaje(null); pintar(); };
+
+  const evaluar = () => {
+    if (trazosRef.current.reduce((a, t) => a + t.length, 0) < 6) { setMensaje({ ok: false, texto: "Dibujá sobre las letras grises 😊" }); return; }
+    // máscara del modelo
+    const m = document.createElement("canvas"); m.width = ANCHO; m.height = ALTO;
+    const mc = m.getContext("2d");
+    mc.font = `900 ${params.tam || 180}px system-ui, sans-serif`;
+    mc.textAlign = "center"; mc.textBaseline = "middle"; mc.fillStyle = "#000";
+    mc.fillText(item, ANCHO / 2, ALTO / 2 + 8);
+    const mm = mc.getImageData(0, 0, ANCHO, ALTO).data;
+    // máscara del modelo agrandada (para medir qué quedó afuera)
+    mc.lineWidth = 26; mc.strokeStyle = "#000"; mc.strokeText(item, ANCHO / 2, ALTO / 2 + 8);
+    const mg = mc.getImageData(0, 0, ANCHO, ALTO).data;
+    // máscara del trazo del peque, con pincel gordo
+    const h = document.createElement("canvas"); h.width = ANCHO; h.height = ALTO;
+    const hc = h.getContext("2d");
+    hc.strokeStyle = "#000"; hc.lineWidth = 30; hc.lineCap = "round"; hc.lineJoin = "round";
+    trazosRef.current.forEach((t) => {
+      if (t.length < 2) { hc.fillStyle = "#000"; hc.beginPath(); hc.arc(t[0].x, t[0].y, 15, 0, 7); hc.fill(); return; }
+      hc.beginPath(); hc.moveTo(t[0].x, t[0].y);
+      t.slice(1).forEach((p) => hc.lineTo(p.x, p.y));
+      hc.stroke();
+    });
+    const hh = hc.getImageData(0, 0, ANCHO, ALTO).data;
+    let modelo = 0, cubierto = 0, chico = 0, adentro = 0;
+    for (let i = 3; i < mm.length; i += 8) { // muestreo
+      const esModelo = mm[i] > 60, esGrande = mg[i] > 60, esChico = hh[i] > 60;
+      if (esModelo) { modelo++; if (esChico) cubierto++; }
+      if (esChico) { chico++; if (esGrande) adentro++; }
+    }
+    const cobertura = modelo > 0 ? cubierto / modelo : 0;
+    const precision = chico > 0 ? adentro / chico : 0;
+    const minCob = (params.minCob || 55) / 100;
+    const ok = cobertura >= minCob && precision >= 0.4;
+    if (ok) {
+      const ganados = intento === 1 ? 10 : intento === 2 ? 8 : 6;
+      const nuevos = puntos + ganados;
+      setPuntos(nuevos);
+      sonido(intento === 1 ? "fanfarria" : "acierto");
+      setMensaje({ ok: true, texto: `🎉 ¡${esLetra ? `Qué linda te salió la ${item}` : `Escribiste "${item}"`}! +${ganados}` });
+      hablar(esLetra ? `¡Muy bien! Esa es la ${item}.` : `¡Excelente! Escribiste ${item}.`, AUDIO_ON);
+      setTimeout(() => {
+        if (idx + 1 >= TOTAL) alTerminar(nuevos, TOTAL * 10);
+        else { trazosRef.current = []; setIdx(idx + 1); setIntento(1); setMensaje(null); }
+      }, 1400);
+    } else if (intento >= 3) {
+      const nuevos = puntos + 5;
+      setPuntos(nuevos);
+      sonido("estrella");
+      hablar("¡Buen intento! Practicar es lo que vale.", AUDIO_ON);
+      setMensaje({ ok: true, texto: "💪 ¡Buen intento! Practicar es lo que vale. +5" });
+      setTimeout(() => {
+        if (idx + 1 >= TOTAL) alTerminar(nuevos, TOTAL * 10);
+        else { trazosRef.current = []; setIdx(idx + 1); setIntento(1); setMensaje(null); }
+      }, 1400);
+    } else {
+      sonido("error");
+      setIntento(intento + 1);
+      setMensaje({ ok: false, texto: cobertura < minCob ? "¡Casi! Repasá las partes grises que faltan ✏️" : "¡Casi! Tratá de no salirte tanto del modelo 🎯" });
+    }
+  };
+
+  return (
+    <div className="flex flex-col items-center gap-4 sm:gap-5">
+      <Consigna>{esLetra ? <>Dibujá con el dedo: <span className="text-sky-600">{item}</span></> : <>Escribí: <span className="text-sky-600">{item}</span></>} ✍️</Consigna>
+      <button onClick={() => hablar(esLetra ? `Dibujá la ${item}` : `Escribí ${item}`, true, 0.85)}
+        className="rounded-full bg-emerald-100 px-5 py-2 text-lg font-black text-emerald-700 active:scale-95">🔊 Escuchar</button>
+      <canvas ref={lienzoRef} width={ANCHO} height={ALTO}
+        onPointerDown={bajar} onPointerMove={mover} onPointerUp={soltar} onPointerLeave={soltar}
+        className="w-full max-w-sm touch-none rounded-3xl bg-white shadow-md"
+        style={{ touchAction: "none" }} />
+      {mensaje && (
+        <p className={`max-w-sm text-center text-lg font-black ${mensaje.ok ? "text-green-600" : "text-amber-600"}`}>{mensaje.texto}</p>
+      )}
+      <div className="flex gap-3">
+        <button onClick={borrar} className="rounded-full bg-slate-200 px-6 py-3 font-black text-slate-600 active:scale-95">🧽 Borrar</button>
+        <button onClick={evaluar} className="rounded-full bg-emerald-500 px-8 py-3 text-lg font-black text-white shadow-md active:scale-95">¡Listo! ✅</button>
+      </div>
+      <p className="text-base font-bold text-emerald-600">Trazo {idx + 1} de {TOTAL} · Puntos: {puntos}</p>
     </div>
   );
 }
@@ -1218,8 +1607,8 @@ TEMAS_CONTAR_B.forEach((em, i) => S(`con-b${i}`, `Contar ${em}`, em, "cognitiva"
 );
 
 // --- Pensar · comparar ---
-S("may-2g", "¿Cuál es más grande?", "⚖️", "cognitiva", "mayorMenor", ["3-5", "6-8"], 40, { tope: 8, modo: "mayor", n: 2 }, { tope: 100 });
-S("men-2c", "¿Cuál es más chico?", "⚖️", "cognitiva", "mayorMenor", ["3-5", "6-8"], 40, { tope: 8, modo: "menor", n: 2 }, { tope: 100 });
+S("may-2g", "¿Cuál es más grande?", "⚖️", "cognitiva", "mayorMenor", ["6-8"], 40, { tope: 8, modo: "mayor", n: 2 }, { tope: 100 });
+S("men-2c", "¿Cuál es más chico?", "⚖️", "cognitiva", "mayorMenor", ["6-8"], 40, { tope: 8, modo: "menor", n: 2 }, { tope: 100 });
 S("may-3g", "El más grande de tres", "⚖️", "cognitiva", "mayorMenor", ["6-8", "9-11"], 40, { tope: 20, modo: "mayor", n: 3 }, { tope: 1000 });
 S("men-3c", "El más chico de tres", "⚖️", "cognitiva", "mayorMenor", ["6-8", "9-11"], 40, { tope: 20, modo: "menor", n: 3 }, { tope: 1000 });
 S("may-4g", "El más grande de cuatro", "⚖️", "cognitiva", "mayorMenor", ["9-11"], 40, { tope: 50, modo: "mayor", n: 4 }, { tope: 5000 });
@@ -1267,6 +1656,13 @@ S("atr-1", "Bichito tranquilo", "🐞", "psicomotor", "atrapa", ["3-5"], 40, { v
 S("atr-2", "Bichito veloz", "🐞", "psicomotor", "atrapa", ["6-8"], 40, { velocidad: 1600, meta: 12, tam: "h-12 w-12 sm:h-16 sm:w-16" }, { velocidad: 950, meta: 22 });
 S("atr-3", "Bichito turbo", "🐞", "psicomotor", "atrapa", ["9-11"], 40, { velocidad: 1200, meta: 15, tam: "h-10 w-10 sm:h-12 sm:w-12" }, { velocidad: 700, meta: 28 });
 
+// --- Mover · trazado de letras, números y palabras ---
+S("tra-voc", "Trazar las vocales", "✍️", "psicomotor", "trazar", ["3-5"], 20, { tipo: "letras", banco: "AEIOU", tam: 190, minCob: 45 }, { minCob: 68 });
+S("tra-abc", "Trazar el abecedario", "✍️", "psicomotor", "trazar", ["3-5", "6-8"], 30, { tipo: "letras", banco: "ABCDEFGHIJKLMNÑOPQRSTUVWXYZ", tam: 190, minCob: 45 }, { minCob: 72 });
+S("tra-num", "Trazar los números", "✍️", "psicomotor", "trazar", ["3-5", "6-8"], 25, { tipo: "letras", banco: "0123456789", tam: 190, minCob: 45 }, { minCob: 72 });
+S("tra-pal", "Mis primeras palabras: mamá, papá…", "📝", "psicomotor", "trazar", ["3-5", "6-8"], 25, { tipo: "palabras", maxLargo: 4, tam: 105, minCob: 42 }, { maxLargo: 5, minCob: 62 });
+S("tra-lar", "Palabras grandes", "📝", "psicomotor", "trazar", ["6-8", "9-11"], 25, { tipo: "palabras", largas: true, tam: 72, minCob: 48 }, { minCob: 68 });
+
 // --- Ahorrar ---
 S("alc-a", "La alcancía: monedas", "🐷", "economia", "alcancia", ["6-8"], 30, { monedas: [1, 2], min: 3, max: 6 }, { monedas: [1, 2, 5], min: 8, max: 16 });
 S("alc-b", "La alcancía: con billetes", "🐷", "economia", "alcancia", ["9-11"], 30, { monedas: [1, 2, 5, 10, 20], min: 12, max: 30 }, { monedas: [5, 10, 20, 50], min: 60, max: 160 });
@@ -1274,7 +1670,7 @@ S("din-a", `¿Cuánto hay en el bolsillo?`, "💵", "economia", "contarDinero", 
 S("din-b", `¿Cuánto hay? (con billetes)`, "💵", "economia", "contarDinero", ["9-11"], 30, { valores: [2, 5, 10], cant: 3 }, { valores: [5, 10, 20, 50], cant: 5 });
 S("vue-a", "El vuelto", "🧾", "economia", "vuelto", ["6-8"], 30, { tope: 4 }, { tope: 18 });
 S("vue-b", "El vuelto (grandes compras)", "🧾", "economia", "vuelto", ["9-11"], 30, { tope: 15 }, { tope: 95 });
-S("pre-a", "¿Cuál cuesta más?", "🛒", "economia", "cualCuesta", ["3-5", "6-8"], 25, { n: 2, modo: "caro", tope: 8 }, { tope: 30 });
+S("pre-a", "¿Cuál cuesta más?", "🛒", "economia", "cualCuesta", ["6-8"], 25, { n: 2, modo: "caro", tope: 8 }, { tope: 30 });
 S("pre-b", "¿Cuál es más barato?", "🛒", "economia", "cualCuesta", ["6-8"], 25, { n: 2, modo: "barato", tope: 10 }, { n: 3, tope: 60 });
 S("pre-c", "El más caro de tres", "🛒", "economia", "cualCuesta", ["9-11"], 25, { n: 3, modo: "caro", tope: 40 }, { tope: 200 });
 S("nq-a", "¿Necesito o quiero?", "🤔", "economia", "necesito", ["6-8"], 25, {});
@@ -1286,6 +1682,24 @@ S("des-b", "Descuento del 10%", "🏷️", "economia", "descuento", ["9-11"], 25
 S("des-c", "Rebajas mezcladas", "🏷️", "economia", "descuento", ["9-11"], 25, { modo: "mixto" });
 S("alz-a", "¿Me alcanza?", "💭", "economia", "alcanza", ["6-8"], 25, { tope: 10 }, { tope: 40 });
 S("alz-b", "¿Me alcanza? (hasta 100)", "💭", "economia", "alcanza", ["9-11"], 25, { tope: 40 }, { tope: 120 });
+
+// --- Pensar · comparar cantidades a ojo (aptas para 3-5) ---
+S("mas-1", "¿Dónde hay más?", "👀", "cognitiva", "masMenos", ["3-5"], 20, { max: 3, modo: "mas" }, { max: 8 });
+S("men-1", "¿Dónde hay menos?", "👀", "cognitiva", "masMenos", ["3-5"], 20, { max: 3, modo: "menos" }, { max: 8 });
+
+// --- Convivir (modales y conductas, desde los 3) ---
+S("cvv-bm", "¿Está bien o está mal?", "💛", "convivir", "convivir", ["3-5", "6-8"], 20, { tipo: "bienmal" });
+S("cvv-mg", "Las palabras mágicas", "✨", "convivir", "convivir", ["3-5", "6-8"], 20, { tipo: "magicas" });
+S("cvv-ay", "Ayudo en mi casa", "🏠", "convivir", "convivir", ["3-5", "6-8"], 20, { tipo: "ayudar" });
+S("cvv-sc", "¿Qué hago si...?", "🤗", "convivir", "convivir", ["6-8", "9-11"], 20, { tipo: "situaciones" });
+
+// --- Idiomas (desde los 6: primero se afianza la propia lengua) ---
+Object.keys(IDIOMAS).forEach((l) => {
+  Object.keys(VOCAB_IDIOMAS).forEach((cat) => {
+    S(`idi-${l}-${cat}`, `${IDIOMAS[l].bandera} ${VOCAB_IDIOMAS[cat].nombre} en ${IDIOMAS[l].nombre.toLowerCase()}`,
+      IDIOMAS[l].bandera, "idiomas", "idioma", ["6-8", "9-11"], 20, { idioma: l, cat, pInv: 0 }, { pInv: 60 });
+  });
+});
 
 const TOTAL_NIVELES = SERIES.reduce((a, s) => a + s.niveles, 0);
 // <<< SERIES
@@ -1302,10 +1716,31 @@ function nombreDeJuego(id) {
   return r ? `${r.serie.icono} ${r.serie.nombre} · Nivel ${r.nivel}` : String(id);
 }
 
+// Desbloqueo adelantado: si domina su etapa en un área (15+ niveles con 80%+
+// de acierto promedio), se le abre el contenido de la etapa SIGUIENTE en esa área.
+const ORDEN_BANDA = { "3-5": 0, "6-8": 1, "9-11": 2 };
+const BANDA_SIG = { "3-5": "6-8", "6-8": "9-11", "9-11": null };
+function areasAdelantadas(sesiones, rango) {
+  const mejor = {};
+  sesiones.forEach((s) => { const r = s.puntos / s.maximo; if (mejor[s.juego] == null || r > mejor[s.juego]) mejor[s.juego] = r; });
+  const res = {};
+  Object.keys(AREAS).forEach((area) => { res[area] = false; });
+  if (!BANDA_SIG[rango]) return res;
+  Object.keys(AREAS).forEach((area) => {
+    let cant = 0, suma = 0;
+    Object.keys(mejor).forEach((id) => {
+      const r = buscarSeriePorNivel(id);
+      if (r && r.serie.area === area && r.serie.edades.includes(rango)) { cant++; suma += mejor[id]; }
+    });
+    res[area] = cant >= 15 && suma / cant >= 0.8;
+  });
+  return res;
+}
+
 // ============================================================
 // Análisis de progreso (lectura honesta, sin promesas)
 // ============================================================
-function analizarProgreso(sesiones, seriesDisp) {
+function analizarProgreso(sesiones, seriesDisp, rango, edadAnios) {
   const porArea = {};
   Object.keys(AREAS).forEach((a) => { porArea[a] = { jugadas: 0, prom: 0, antes: [], ahora: [] }; });
   const mitad = Math.floor(sesiones.length / 2);
@@ -1356,6 +1791,7 @@ function analizarProgreso(sesiones, seriesDisp) {
       if (d.jugadas < 4) return;
       if (d.tendencia !== null && d.tendencia >= 10) frases.push(`En ${AREAS[a].nombre} pasó de un ${Math.max(0, d.prom - d.tendencia)}% a un ${d.prom}% de acierto: está mejorando claramente con la práctica.`);
       else if (d.tendencia !== null && d.tendencia <= -10) frases.push(`En ${AREAS[a].nombre} bajó el acierto últimamente: puede ser cansancio o niveles nuevos más difíciles. Conviene acompañarle en una sesión.`);
+      else if (d.prom >= 85 && d.jugadas >= 8) frases.push(`🚀 En ${AREAS[a].nombre} domina los niveles (${d.prom}% de acierto): la app le está acelerando el avance — con puntaje excelente puede saltear niveles y llegar antes a desafíos mayores.`);
       else frases.push(`En ${AREAS[a].nombre} sostiene un ${d.prom}% de acierto: rendimiento estable dentro de su etapa.`);
     });
     const menos = Object.keys(AREAS).reduce((a, b) => (porArea[a].jugadas <= porArea[b].jugadas ? a : b));
@@ -1364,11 +1800,44 @@ function analizarProgreso(sesiones, seriesDisp) {
     if (cubiertos > 0) frases.push(`Ya superó ${cubiertos} de los ${total.toLocaleString("es-AR")} niveles disponibles para su etapa: hay contenido de sobra para no repetirse nunca.`);
     if (ritmo > 0) frases.push(`A este ritmo (${ritmo} niveles por día) avanza unos ${Math.round(ritmo * 30)} niveles nuevos por mes, con dificultad que sube de a poco.`);
   }
-  return { porArea, racha, ritmo, cubiertos, total, frases, jugadas: sesiones.length };
+  // adelanto: niveles de una etapa superior a la suya, jugados y superados
+  if (rango && edadAnios != null) {
+    const porAdel = {};
+    sesiones.forEach((s) => {
+      const r = buscarSeriePorNivel(s.juego);
+      if (!r || r.serie.edades.includes(rango)) return;
+      const banda = r.serie.edades.find((e) => (ORDEN_BANDA[e] || 0) > (ORDEN_BANDA[rango] || 0));
+      if (!banda) return;
+      if (!porAdel[r.serie.area]) porAdel[r.serie.area] = { cant: 0, suma: 0, banda };
+      porAdel[r.serie.area].cant++;
+      porAdel[r.serie.area].suma += s.puntos / s.maximo;
+    });
+    const adel = Object.keys(porAdel).filter((a) => porAdel[a].cant >= 3);
+    adel.forEach((a) => {
+      const d = porAdel[a];
+      frases.unshift(`🚀 ¡Va adelantado! Con ${edadAnios} años está jugando niveles de ${AREAS[a].nombre} de la etapa ${d.banda} — contenido pensado para chicos de ${d.banda} años — con un ${Math.round((d.suma / d.cant) * 100)}% de acierto. Dominó su propia etapa y la app le abrió estos desafíos.`);
+    });
+    if (adel.length > 0) frases.push(`Nota importante sobre el adelanto: describe el contenido de esta app que domina, no es una medición de inteligencia ni una «edad mental» — eso solo pueden evaluarlo profesionales con pruebas estandarizadas. Es una gran señal para seguir alimentando su curiosidad.`);
+  }
+
+  // señales para conversar con el pediatra (NO diagnóstico)
+  const alertas = [];
+  Object.keys(AREAS).forEach((a) => {
+    const d = porArea[a];
+    if (d.jugadas >= 10 && d.prom <= 35 && (d.tendencia === null || d.tendencia < 8)) {
+      alertas.push(`En ${AREAS[a].nombre} (${AREAS[a].desc.toLowerCase()}), los primeros niveles de su etapa le están costando de forma sostenida: ${d.prom}% de acierto en ${d.jugadas} partidas, sin mejora clara todavía.`);
+    }
+  });
+  return { porArea, racha, ritmo, cubiertos, total, frases, alertas, jugadas: sesiones.length };
 }
 
 function ResultadoPlan({ puntos, maximo, siguiente, ultimo, onSeguir, onSalir }) {
   const [cuenta, setCuenta] = useState(4);
+  useEffect(() => {
+    const ratio0 = maximo > 0 ? puntos / maximo : 0;
+    sonido(ratio0 >= 0.8 ? "fanfarria" : "estrella");
+    hablar(ratio0 >= 0.8 ? "¡Excelente! Vamos por el siguiente." : "¡Muy bien! Seguimos.", AUDIO_ON);
+  }, []); // eslint-disable-line
   useEffect(() => {
     if (cuenta <= 0) { onSeguir(); return; }
     const t = setTimeout(() => setCuenta(cuenta - 1), 1000);
@@ -1424,6 +1893,11 @@ function Resultado({ puntos, maximo, onRepetir, onSalir }) {
   const ratio = maximo > 0 ? puntos / maximo : 0;
   const estrellas = ratio >= 0.8 ? 3 : ratio >= 0.5 ? 2 : 1;
   const mensaje = estrellas === 3 ? "¡Increíble!" : estrellas === 2 ? "¡Muy bien!" : "¡Buen intento!";
+  useEffect(() => {
+    if (estrellas === 3) { sonido("fanfarria"); hablar("¡Increíble! ¡Tres estrellas! ¡Sos una estrella vos!", AUDIO_ON); }
+    else if (estrellas === 2) { sonido("estrella"); hablar("¡Muy bien! ¡Dos estrellas! Casi perfecto.", AUDIO_ON); }
+    else { sonido("acierto"); hablar("¡Buen intento! Cada vez te sale mejor.", AUDIO_ON); }
+  }, []); // eslint-disable-line
   return (
     <div className="flex flex-col items-center gap-5 py-8 sm:gap-6 sm:py-10">
       <div className="text-6xl sm:text-7xl">{estrellas === 3 ? "🏆" : estrellas === 2 ? "🎉" : "💪"}</div>
@@ -1559,6 +2033,10 @@ function AppNinos({ alSelector, permisos = { mic: true, videos: true }, alRevisa
   const [claveJuego, setClaveJuego] = useState(0);
   const [plan, setPlan] = useState(null); // { lista: [ids de nivel], idx }
   const [serieAbierta, setSerieAbierta] = useState(null);
+  const [vistosHoy, setVistosHoy] = useState(0);
+  const [videoActivo, setVideoActivo] = useState(null);
+  const [maxInput, setMaxInput] = useState(2);
+  const [sonidoOn, setSonidoOn] = useState(true);
 
   const [nombreInput, setNombreInput] = useState("");
   const [nacInput, setNacInput] = useState("");
@@ -1589,6 +2067,10 @@ function AppNinos({ alSelector, permisos = { mic: true, videos: true }, alRevisa
       }
       const pr = await leer("pequemundo:premio");
       const pp = await leer("pequemundo:pinpadres");
+      const so = await leer("pequemundo:sonido");
+      const sonidoV = so === null ? true : !!so;
+      setSonidoOn(sonidoV);
+      setAudioOn(sonidoV);
       if (pr) setPremio(pr);
       if (pp) setPinPadres(pp);
       setPerfiles(lista);
@@ -1598,6 +2080,9 @@ function AppNinos({ alSelector, permisos = { mic: true, videos: true }, alRevisa
 
   const activar = async (p) => {
     const s = (await leer(`pequemundo:sesiones:${p.id}`)) || [];
+    const v = await leer(`pequemundo:vistos:${p.id}`);
+    setVistosHoy(v && v.fecha === new Date().toDateString() ? v.cant : 0);
+    setVideoActivo(null);
     setActivo(p);
     setSesiones(s);
     setPendiente(null);
@@ -1654,6 +2139,34 @@ function AppNinos({ alSelector, permisos = { mic: true, videos: true }, alRevisa
     sesiones.forEach((s) => { const r = s.puntos / s.maximo; if (m[s.juego] == null || r > m[s.juego]) m[s.juego] = r; });
     return m;
   };
+  const progresoSerie = (s, mejor) => {
+    let c = 0;
+    for (let k = 1; k <= s.niveles; k++) if (mejor[idNivel(s, k)] != null) c++;
+    return c / s.niveles;
+  };
+  const nivelDesbloqueado = (s, k, mejor) =>
+    k === 1 || mejor[idNivel(s, k - 1)] != null ||
+    (k >= 3 && mejor[idNivel(s, k - 2)] != null && mejor[idNivel(s, k - 2)] >= 0.85); // aprendizaje rápido: saltea un nivel
+  const proximoNivel = (s, mejor) => {
+    for (let k = 1; k <= s.niveles; k++) {
+      if (nivelDesbloqueado(s, k, mejor) && mejor[idNivel(s, k)] == null) return k;
+    }
+    return 1 + Math.floor(Math.random() * s.niveles);
+  };
+  const alternarSonido = () => {
+    const v = !sonidoOn;
+    setSonidoOn(v);
+    setAudioOn(v);
+    guardar("pequemundo:sonido", v);
+    if (v) { sonido("acierto"); hablar("¡Sonido activado!", true); }
+    else { try { if (window.speechSynthesis) window.speechSynthesis.cancel(); } catch (e) { /* nada */ } }
+  };
+  const registrarVisto = (url) => {
+    const n = vistosHoy + 1;
+    setVistosHoy(n);
+    guardar(`pequemundo:vistos:${activo.id}`, { fecha: new Date().toDateString(), cant: n });
+    setVideoActivo(url);
+  };
 
   const abrirNivel = (serie, k) => {
     const id = idNivel(serie, k);
@@ -1668,26 +2181,14 @@ function AppNinos({ alSelector, permisos = { mic: true, videos: true }, alRevisa
 
   const iniciarPlan = (seriesDisp, cuantos) => {
     const mejor = mejorPorNivel();
-    const progresoSerie = (s) => {
-      let c = 0;
-      for (let k = 1; k <= s.niveles; k++) if (mejor[idNivel(s, k)] != null) c++;
-      return c / s.niveles;
-    };
-    const proximoNivel = (s) => {
-      for (let k = 1; k <= s.niveles; k++) {
-        const desbloqueado = k === 1 || mejor[idNivel(s, k - 1)] != null;
-        if (desbloqueado && mejor[idNivel(s, k)] == null) return k;
-      }
-      return 1 + Math.floor(Math.random() * s.niveles);
-    };
     const lista = [];
     const areas = Object.keys(AREAS);
     const usadas = new Set();
     let i = 0;
     while (lista.length < cuantos && i < 80) {
       const area = areas[i % areas.length];
-      const cand = seriesDisp.filter((s) => s.area === area && !usadas.has(s.id)).sort((a, b) => progresoSerie(a) - progresoSerie(b));
-      if (cand.length > 0) { const s = cand[0]; usadas.add(s.id); lista.push(idNivel(s, proximoNivel(s))); }
+      const cand = seriesDisp.filter((s) => s.area === area && !usadas.has(s.id)).sort((a, b) => progresoSerie(a, mejor) - progresoSerie(b, mejor));
+      if (cand.length > 0) { const s = cand[0]; usadas.add(s.id); lista.push(idNivel(s, proximoNivel(s, mejor))); }
       i++;
     }
     if (lista.length === 0) return;
@@ -1702,7 +2203,8 @@ function AppNinos({ alSelector, permisos = { mic: true, videos: true }, alRevisa
       setPlan(null);
       setResultado(null);
       setPantalla("menu");
-      hablar("¡Plan del día completo! Excelente trabajo.", true);
+      sonido("fanfarria");
+      hablar("¡Plan del día completo! ¡Excelente trabajo!", AUDIO_ON);
       return;
     }
     setPlan({ ...plan, idx: prox });
@@ -1712,7 +2214,7 @@ function AppNinos({ alSelector, permisos = { mic: true, videos: true }, alRevisa
   const salirPlan = () => { setPlan(null); setResultado(null); setPantalla("menu"); };
 
   const descargarInforme = (disponibles) => {
-    const an = analizarProgreso(sesiones, disponibles);
+    const an = analizarProgreso(sesiones, disponibles, rango, edadAnios);
     const f = new Date().toLocaleDateString("es-AR");
     const filas = Object.keys(AREAS).map((a) => {
       const d = an.porArea[a];
@@ -1732,6 +2234,7 @@ th{background:#f1f5f9}.caja{background:#fef9c3;border-radius:12px;padding:14px;f
 <table><tr><th>Área</th><th>Partidas</th><th>Acierto promedio</th><th>Tendencia</th></tr>${filas}</table>
 <h2>Lectura del progreso</h2>
 ${an.frases.map((x) => `<p>• ${x}</p>`).join("")}
+${an.alertas.length ? `<h2>Para conversar en el próximo control pediátrico</h2>${an.alertas.map((x) => `<p>• ${x}</p>`).join("")}<p><b>Importante:</b> esto no es un diagnóstico ni una detección de retraso madurativo — ninguna app puede hacer eso. Las evaluaciones del desarrollo las realiza el pediatra con controles y herramientas validadas. Es una observación del juego para conversar en el control, junto con lo que la familia observa en casa.</p>` : ""}
 <h2>Cómo seguir en casa</h2>
 <p>Sesiones cortas y frecuentes (10-15 minutos), jugar juntos cuando se pueda, elogiar el esfuerzo y la estrategia, leer juntos todos los días y llevar el área Ahorrar a la vida real con una alcancía física. La guía completa está en el panel de padres de la app.</p>
 <div class="caja"><b>Nota de honestidad científica.</b> Este informe describe el desempeño de ${activo.nombre} <b>dentro de la app y comparado con su propio historial</b>. No es una evaluación del desarrollo, no calcula «edad mental» ni predice notas o resultados futuros: eso no puede hacerlo ninguna app con seriedad — las evaluaciones del desarrollo usan pruebas estandarizadas administradas por profesionales, y el futuro de un niño no se predice desde un juego. Las habilidades que se ejercitan acá están asociadas en estudios poblacionales con buenos resultados educativos, pero son tendencias generales, no promesas individuales. Ante cualquier inquietud sobre el desarrollo, consulte al pediatra.</div>
@@ -1753,6 +2256,7 @@ ${an.frases.map((x) => `<p>• ${x}</p>`).join("")}
   const abrirPanel = () => {
     setPinPA(""); setPinPA2(""); setErrorPin(null);
     setMetaInput(premio.meta || 5);
+    setMaxInput(premio.maxDia || 2);
     const vs = premio.videos || [];
     setVideosSel(vs.filter((u) => URLS_CATALOGO.has(u)));
     setVideosTxt(vs.filter((u) => !URLS_CATALOGO.has(u)).join("\n"));
@@ -1762,7 +2266,7 @@ ${an.frases.map((x) => `<p>• ${x}</p>`).join("")}
   const guardarPremio = (sel = videosSel) => {
     const propios = videosTxt.split("\n").map((l) => l.trim()).filter((l) => l && idYoutube(l));
     const videos = [...sel, ...propios.filter((u) => !sel.includes(u))];
-    const cfg = { meta: Math.min(20, Math.max(1, Number(metaInput) || 5)), videos };
+    const cfg = { ...premio, meta: Math.min(20, Math.max(1, Number(metaInput) || 5)), maxDia: Math.min(6, Math.max(1, Number(maxInput) || 2)), videos };
     setPremio(cfg);
     guardar("pequemundo:premio", cfg);
   };
@@ -1905,8 +2409,12 @@ ${an.frases.map((x) => `<p>• ${x}</p>`).join("")}
   const rango = rangoDeEdad(Math.min(Math.max(edadAnios, 3), 11));
   const cumple = esCumpleHoy(activo.nacimiento);
   const jugadasHoy = sesiones.filter((s) => esHoy(s.fecha)).length;
-  const metaHoy = premio.meta || 5;
-  const logrado = jugadasHoy >= metaHoy;
+  const metaVideo = premio.meta || 5;          // niveles para ganar CADA video
+  const maxDia = premio.maxDia || 2;           // videos máximos por día
+  const ganados = Math.min(maxDia, Math.floor(jugadasHoy / metaVideo));
+  const dispVideos = Math.max(0, ganados - vistosHoy);
+  const faltanProx = ganados >= maxDia ? 0 : metaVideo - (jugadasHoy % metaVideo);
+  const guiado = premio.guiado !== false;
 
   // ---------- pantalla de juego ----------
   if (pantalla === "juego" && juegoActivo) {
@@ -1944,7 +2452,8 @@ ${an.frases.map((x) => `<p>• ${x}</p>`).join("")}
                 {motor === "atrapa" && <JuegoAtrapa params={juegoActivo.params} alTerminar={terminarJuego} />}
                 {motor === "alcancia" && <JuegoAlcancia params={juegoActivo.params} edad={rango} alTerminar={terminarJuego} />}
                 {motor === "pronuncia" && <JuegoPronuncia params={juegoActivo.params} edad={rango} alTerminar={terminarJuego} permitirMic={permisos.mic} />}
-                {motor !== "memoria" && motor !== "atrapa" && motor !== "alcancia" && motor !== "pronuncia" && (
+                {motor === "trazar" && <JuegoTrazar params={juegoActivo.params} alTerminar={terminarJuego} />}
+                {motor !== "memoria" && motor !== "atrapa" && motor !== "alcancia" && motor !== "pronuncia" && motor !== "trazar" && (
                   <JuegoRondas
                     generar={GENERADORES[motor](juegoActivo.params, rango)}
                     colorTexto={juegoActivo.serie.colorTexto}
@@ -1959,55 +2468,90 @@ ${an.frases.map((x) => `<p>• ${x}</p>`).join("")}
     );
   }
 
-  // ---------- premio (YouTube habilitado por objetivo) ----------
+  // ---------- premio: un video por vez, se gana jugando ----------
   if (pantalla === "premio") {
-    const ids = (premio.videos || []).map(idYoutube).filter(Boolean);
+    const habilitados = (premio.videos || []).filter((u) => idYoutube(u));
     return (
       <div className="min-h-screen bg-sky-100 p-3 sm:p-4">
         <div className="mx-auto flex max-w-lg flex-col gap-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <button onClick={() => setPantalla("menu")} className="flex items-center gap-1 rounded-full bg-white px-4 py-2 font-black text-slate-600 shadow active:scale-95">
+            <button onClick={() => { setVideoActivo(null); setPantalla("menu"); }} className="flex items-center gap-1 rounded-full bg-white px-4 py-2 font-black text-slate-600 shadow active:scale-95">
               <ArrowLeft /> Volver
             </button>
-            <span className="text-lg font-black text-slate-700">🎁 Tu premio</span>
+            <span className="text-lg font-black text-slate-700">🎬 Mis videos</span>
           </div>
-          {!logrado ? (
+
+          <div className="flex flex-wrap justify-center gap-2 text-xs font-black">
+            <span className="rounded-full bg-white px-3 py-1 text-slate-600 shadow">🏅 Ganados hoy: {ganados}/{maxDia}</span>
+            <span className="rounded-full bg-white px-3 py-1 text-slate-600 shadow">👀 Vistos: {vistosHoy}</span>
+            <span className="rounded-full bg-white px-3 py-1 text-slate-600 shadow">🎁 Para ver: {dispVideos}</span>
+          </div>
+
+          {!permisos.videos ? (
+            <div className="rounded-3xl bg-white p-6 text-center shadow-md">
+              <p className="text-5xl">🎉</p>
+              <p className="mt-2 text-xl font-black text-slate-700">¡Muy bien, {activo.nombre}!</p>
+              <p className="mt-1 font-bold text-slate-500">Los videos están desactivados en el consentimiento de tus papás. ¡Igual sos un campeón! 🏆</p>
+            </div>
+          ) : videoActivo ? (
+            <>
+              <div className="overflow-hidden rounded-3xl bg-white p-2 shadow-md">
+                <p className="px-2 py-1 text-sm font-black text-slate-600">{TITULO_VIDEO[videoActivo] || "Tu video"} <span className="font-bold text-slate-400">· {durTexto(videoActivo)}</span></p>
+                <iframe
+                  className="aspect-video w-full rounded-2xl"
+                  src={`https://www.youtube-nocookie.com/embed/${idYoutube(videoActivo)}?rel=0&modestbranding=1`}
+                  title={TITULO_VIDEO[videoActivo] || "Video premio"}
+                  allow="accelerometer; encrypted-media; picture-in-picture"
+                  allowFullScreen
+                />
+              </div>
+              <button onClick={() => setVideoActivo(null)}
+                className="rounded-full bg-slate-200 px-6 py-3 font-black text-slate-700 active:scale-95">Terminé de verlo</button>
+              <p className="rounded-2xl bg-white p-3 text-center text-xs text-slate-400">Cuando termine, {dispVideos > 0 ? "te queda otro para ver" : faltanProx > 0 && ganados < maxDia ? `jugá ${faltanProx} ${faltanProx === 1 ? "nivel" : "niveles"} más para ganar otro` : "mañana hay más"}. 💛</p>
+            </>
+          ) : ganados === 0 ? (
             <div className="rounded-3xl bg-white p-6 text-center shadow-md">
               <p className="text-5xl">🔒</p>
               <p className="mt-2 text-xl font-black text-slate-700">Todavía no, {activo.nombre}</p>
-              <p className="mt-1 font-bold text-slate-500">Completá {metaHoy - jugadasHoy} {metaHoy - jugadasHoy === 1 ? "juego más" : "juegos más"} y se abre el premio de hoy.</p>
+              <p className="mt-1 font-bold text-slate-500">Completá {faltanProx} {faltanProx === 1 ? "nivel" : "niveles"} y ganás tu primer video de hoy.</p>
             </div>
-          ) : !permisos.videos ? (
+          ) : dispVideos > 0 ? (
+            habilitados.length === 0 ? (
+              <div className="rounded-3xl bg-white p-6 text-center shadow-md">
+                <p className="text-5xl">🎉</p>
+                <p className="mt-2 text-xl font-black text-slate-700">¡Ganaste un video!</p>
+                <p className="mt-1 font-bold text-slate-500">Pedile a tu papá o mamá que elija los videos en el panel de padres.</p>
+              </div>
+            ) : (
+              <>
+                <div className="rounded-3xl bg-yellow-100 p-4 text-center">
+                  <p className="text-lg font-black text-amber-700">🎉 ¡Te ganaste {dispVideos === 1 ? "un video" : `${dispVideos} videos`}! Elegí UNO para ver ahora:</p>
+                </div>
+                {habilitados.map((u) => (
+                  <div key={u} className="flex items-center justify-between gap-3 rounded-3xl bg-white p-4 shadow-md">
+                    <div>
+                      <p className="text-sm font-black text-slate-700">{TITULO_VIDEO[u] || u}</p>
+                      <p className="text-xs font-bold text-slate-400">⏱️ {durTexto(u)}</p>
+                    </div>
+                    <button onClick={() => registrarVisto(u)}
+                      className="shrink-0 rounded-full bg-red-500 px-4 py-2 text-sm font-black text-white shadow active:scale-95">▶ Ver</button>
+                  </div>
+                ))}
+                <p className="rounded-2xl bg-white p-3 text-center text-xs text-slate-400">Al elegir uno se usa 1 premio. Para ver otro, ¡hay que seguir jugando! 🎮</p>
+              </>
+            )
+          ) : ganados < maxDia ? (
             <div className="rounded-3xl bg-white p-6 text-center shadow-md">
-              <p className="text-5xl">🎉</p>
-              <p className="mt-2 text-xl font-black text-slate-700">¡Objetivo del día cumplido, {activo.nombre}!</p>
-              <p className="mt-1 font-bold text-slate-500">Los videos están desactivados en el consentimiento de tus papás. ¡Igual sos un campeón! 🏆</p>
-            </div>
-          ) : ids.length === 0 ? (
-            <div className="rounded-3xl bg-white p-6 text-center shadow-md">
-              <p className="text-5xl">🎉</p>
-              <p className="mt-2 text-xl font-black text-slate-700">¡Objetivo del día cumplido!</p>
-              <p className="mt-1 font-bold text-slate-500">Pedile a tu papá o mamá que elija los videos del premio en el panel de padres.</p>
+              <p className="text-5xl">🎬</p>
+              <p className="mt-2 text-xl font-black text-slate-700">¡Ya viste tu video de hoy!</p>
+              <p className="mt-1 font-bold text-slate-500">Jugá {faltanProx} {faltanProx === 1 ? "nivel" : "niveles"} más y ganás otro (hoy podés ver hasta {maxDia}).</p>
             </div>
           ) : (
-            <>
-              <div className="rounded-3xl bg-yellow-100 p-4 text-center">
-                <p className="text-xl font-black text-amber-700">🎉 ¡Lo lograste, {activo.nombre}! Estos son tus videos de hoy:</p>
-              </div>
-              {(premio.videos || []).filter((u) => idYoutube(u)).map((u) => (
-                <div key={u} className="overflow-hidden rounded-3xl bg-white p-2 shadow-md">
-                  {TITULO_VIDEO[u] && <p className="px-2 py-1 text-sm font-black text-slate-600">{TITULO_VIDEO[u]}</p>}
-                  <iframe
-                    className="aspect-video w-full rounded-2xl"
-                    src={`https://www.youtube-nocookie.com/embed/${idYoutube(u)}?rel=0&modestbranding=1`}
-                    title={TITULO_VIDEO[u] || "Video premio"}
-                    allow="accelerometer; encrypted-media; picture-in-picture"
-                    allowFullScreen
-                  />
-                </div>
-              ))}
-              <p className="rounded-2xl bg-white p-3 text-center text-xs text-slate-400">Solo se muestran los videos que eligieron tus papás. 💛</p>
-            </>
+            <div className="rounded-3xl bg-white p-6 text-center shadow-md">
+              <p className="text-5xl">🌟</p>
+              <p className="mt-2 text-xl font-black text-slate-700">¡Completaste los {maxDia} videos de hoy!</p>
+              <p className="mt-1 font-bold text-slate-500">Mañana hay más. Ahora, ¡a jugar sin pantalla un rato! 🏃💨</p>
+            </div>
           )}
         </div>
       </div>
@@ -2044,8 +2588,11 @@ ${an.frases.map((x) => `<p>• ${x}</p>`).join("")}
           </div>
 
           {(() => {
-            const disponiblesPanel = SERIES.filter((s) => s.edades.includes(rango));
-            const an = analizarProgreso(sesiones, disponiblesPanel);
+            const adelantosPanel = areasAdelantadas(sesiones, rango);
+            const bandaSigPanel = BANDA_SIG[rango];
+            const disponiblesPanel = SERIES.filter((s) => s.edades.includes(rango) || (bandaSigPanel && adelantosPanel[s.area] && s.edades.includes(bandaSigPanel)));
+            const areasAdelPanel = Object.keys(AREAS).filter((a) => adelantosPanel[a]);
+            const an = analizarProgreso(sesiones, disponiblesPanel, rango, edadAnios);
             return (
               <div className="w-full rounded-3xl bg-white p-5 shadow-md sm:p-6">
                 <h3 className="text-lg font-black text-slate-800 sm:text-xl">🤖 Lectura del progreso</h3>
@@ -2054,6 +2601,9 @@ ${an.frases.map((x) => `<p>• ${x}</p>`).join("")}
                   <span className="rounded-full bg-sky-100 px-3 py-1 text-sky-700">🔥 Racha: {an.racha} {an.racha === 1 ? "día" : "días"}</span>
                   <span className="rounded-full bg-violet-100 px-3 py-1 text-violet-700">⚡ {an.ritmo} niveles/día</span>
                   <span className="rounded-full bg-emerald-100 px-3 py-1 text-emerald-700">🗺️ {an.cubiertos}/{an.total.toLocaleString("es-AR")} niveles</span>
+                  {areasAdelPanel.length > 0 && (
+                    <span className="rounded-full bg-indigo-100 px-3 py-1 text-indigo-700">🚀 Adelantado en {areasAdelPanel.map((a) => AREAS[a].nombre).join(", ")}</span>
+                  )}
                 </div>
                 <div className="mt-3 flex flex-col gap-2">
                   {an.frases.map((fr, i) => (
@@ -2070,6 +2620,18 @@ ${an.frases.map((x) => `<p>• ${x}</p>`).join("")}
                       className="rounded-full bg-slate-500 px-5 py-2 font-black text-white shadow active:scale-95">🔏 Privacidad y consentimiento</button>
                   )}
                 </div>
+                {an.alertas.length > 0 && (
+                  <div className="mt-3 rounded-2xl border-4 border-rose-200 bg-rose-50 p-4">
+                    <p className="font-black text-rose-700">👀 Para conversar en el próximo control pediátrico</p>
+                    {an.alertas.map((al, i) => <p key={i} className="mt-2 text-sm text-slate-600">• {al}</p>)}
+                    <p className="mt-3 text-xs font-bold text-slate-500">
+                      Importante: esto <b>NO es un diagnóstico</b> ni una detección de retraso madurativo — ninguna app puede
+                      hacer eso. Las evaluaciones del desarrollo las realiza el pediatra con controles y herramientas validadas.
+                      Esta es solo una observación del juego (que también puede deberse a desinterés, cansancio o simplemente
+                      su ritmo) para que la conversen en el próximo control, junto con lo que ustedes ven en casa.
+                    </p>
+                  </div>
+                )}
                 <p className="mt-3 rounded-2xl bg-amber-50 p-3 text-xs text-slate-500">
                   Esta lectura compara a su hijo <b>consigo mismo</b>. A propósito no calcula «edad mental» ni promete notas futuras:
                   eso requeriría evaluaciones profesionales estandarizadas y ninguna app puede predecir el futuro de un niño con seriedad.
@@ -2084,9 +2646,19 @@ ${an.frases.map((x) => `<p>• ${x}</p>`).join("")}
           <div className="w-full rounded-3xl bg-white p-5 shadow-md sm:p-6">
             <h3 className="text-lg font-black text-slate-800 sm:text-xl">🎁 Premio diario</h3>
             <p className="mt-1 text-sm text-slate-500">Cuando {activo.nombre} completa el objetivo del día, se le habilitan únicamente los videos de YouTube que ustedes elijan acá (uno por línea).</p>
-            <label className="mt-3 block text-sm font-black text-slate-600">Juegos por día para desbloquear el premio</label>
-            <input type="number" min={1} max={20} value={metaInput} onChange={(e) => setMetaInput(e.target.value)}
-              className="mt-1 w-24 rounded-2xl border-4 border-sky-200 px-3 py-2 text-lg font-black text-slate-700 outline-none focus:border-sky-400" />
+            <div className="mt-3 flex flex-wrap gap-4">
+              <div>
+                <label className="block text-sm font-black text-slate-600">Niveles para ganar CADA video</label>
+                <input type="number" min={1} max={20} value={metaInput} onChange={(e) => setMetaInput(e.target.value)}
+                  className="mt-1 w-24 rounded-2xl border-4 border-sky-200 px-3 py-2 text-lg font-black text-slate-700 outline-none focus:border-sky-400" />
+              </div>
+              <div>
+                <label className="block text-sm font-black text-slate-600">Videos máximos por día</label>
+                <input type="number" min={1} max={6} value={maxInput} onChange={(e) => setMaxInput(e.target.value)}
+                  className="mt-1 w-24 rounded-2xl border-4 border-sky-200 px-3 py-2 text-lg font-black text-slate-700 outline-none focus:border-sky-400" />
+              </div>
+            </div>
+            <p className="mt-2 text-xs text-slate-400">Así funciona: cada {"{"}niveles{"}"} jugados ganan 1 video, ven UNO por vez, y para el siguiente hay que volver a jugar. Cada video muestra su duración para que decidan con información.</p>
             <label className="mt-4 block text-sm font-black text-slate-600">Packs sugeridos — tocá para habilitar ✅</label>
             <p className="text-xs text-slate-400">Videos de canales infantiles conocidos, ya cargados. Solo se le muestran al peque los que ustedes activen.</p>
             <div className="mt-2 flex flex-col gap-3">
@@ -2107,7 +2679,7 @@ ${an.frases.map((x) => `<p>• ${x}</p>`).join("")}
                         return (
                           <button key={it.url} onClick={() => alternarVideo(it.url)}
                             className={`flex items-center justify-between gap-2 rounded-xl px-3 py-2 text-left text-xs font-bold active:scale-[0.98] ${on ? "bg-emerald-100 text-emerald-800" : "bg-white text-slate-600 shadow-sm"}`}>
-                            <span>{it.t}</span>
+                            <span>{it.t} <span className="opacity-60">· ⏱️ {it.dur ? `${it.dur} min` : "s/d"}</span></span>
                             <span className="shrink-0">{on ? "✅" : "＋"}</span>
                           </button>
                         );
@@ -2126,6 +2698,19 @@ ${an.frases.map((x) => `<p>• ${x}</p>`).join("")}
             <p className="mt-2 text-xs text-slate-400">Activados ahora: {videosSel.length + videosTxt.split("\n").filter((l) => idYoutube(l.trim())).length} videos. Los links del catálogo fueron verificados al armar la app, pero YouTube puede eliminarlos con el tiempo: si alguno no carga, desactivalo. La responsabilidad final sobre el contenido es siempre de ustedes.</p>
             <p className="mt-3 rounded-2xl bg-amber-50 p-3 text-xs text-slate-500">
               💡 Sugerencia: premios cortos (1 o 2 videos) y elegidos por ustedes. La pantalla como recompensa funciona mejor con límites claros, y este premio solo muestra lo que ustedes aprobaron: no abre YouTube libre.
+            </p>
+          </div>
+
+          <div className="w-full rounded-3xl bg-white p-5 shadow-md sm:p-6">
+            <h3 className="text-lg font-black text-slate-800 sm:text-xl">🧭 Cómo elige los juegos</h3>
+            <button onClick={() => { const cfg = { ...premio, guiado: !(premio.guiado !== false) }; setPremio(cfg); guardar("pequemundo:premio", cfg); }}
+              className={`mt-3 flex w-full items-center justify-between rounded-2xl p-4 text-left font-black active:scale-[0.99] ${premio.guiado !== false ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-600"}`}>
+              <span>{premio.guiado !== false ? "✨ Modo guiado (recomendado)" : "🗺️ Modo explorar"}</span>
+              <span className="text-xs">{premio.guiado !== false ? "Activado ✅ · tocá para cambiar" : "Tocá para volver al guiado"}</span>
+            </button>
+            <p className="mt-2 text-xs text-slate-400">
+              En modo guiado, el sistema elige los niveles justos para la edad y el progreso de cada peque (menos abrumador y mejor dosificado).
+              En modo explorar se muestra el catálogo completo de series para que naveguen libremente.
             </p>
           </div>
 
@@ -2161,8 +2746,7 @@ ${an.frases.map((x) => `<p>• ${x}</p>`).join("")}
     const estrellasDe = (r) => (r >= 0.8 ? 3 : r >= 0.5 ? 2 : 1);
     let siguiente = null;
     for (let k = 1; k <= s.niveles; k++) {
-      const desb = k === 1 || mejor[idNivel(s, k - 1)] != null;
-      if (desb && mejor[idNivel(s, k)] == null) { siguiente = k; break; }
+      if (nivelDesbloqueado(s, k, mejor) && mejor[idNivel(s, k)] == null) { siguiente = k; break; }
     }
     const completados = Object.keys(mejor).filter((id) => id.startsWith(s.id + "-n")).length;
     return (
@@ -2175,7 +2759,7 @@ ${an.frases.map((x) => `<p>• ${x}</p>`).join("")}
             <span className="text-base font-black text-slate-700 sm:text-lg">{s.icono} {s.nombre}</span>
           </div>
           <div className="rounded-3xl bg-white p-4 shadow-md">
-            <p className="text-sm font-bold text-slate-500">{completados} de {s.niveles} niveles superados. La dificultad sube de a poco y cada nivel es único: podés reintentar el mismo nivel las veces que quieras.</p>
+            <p className="text-sm font-bold text-slate-500">{completados} de {s.niveles} niveles superados. La dificultad sube de a poco y cada nivel es único. Con ⭐⭐⭐ ¡salteás un nivel! 🚀</p>
             {siguiente && (
               <button onClick={() => abrirNivel(s, siguiente)}
                 className="mt-3 w-full rounded-full bg-emerald-500 py-3 text-lg font-black text-white shadow-md active:scale-95">
@@ -2187,7 +2771,7 @@ ${an.frases.map((x) => `<p>• ${x}</p>`).join("")}
             {[...Array(s.niveles)].map((_, i) => {
               const k = i + 1;
               const r = mejor[idNivel(s, k)];
-              const desb = k === 1 || mejor[idNivel(s, k - 1)] != null;
+              const desb = nivelDesbloqueado(s, k, mejor);
               return (
                 <button key={k} disabled={!desb} onClick={() => abrirNivel(s, k)}
                   className={`flex aspect-square flex-col items-center justify-center rounded-2xl text-sm font-black shadow transition-transform active:scale-90 ${
@@ -2207,7 +2791,11 @@ ${an.frases.map((x) => `<p>• ${x}</p>`).join("")}
   }
 
   // ---------- menú principal ----------
-  const disponibles = SERIES.filter((s) => s.edades.includes(rango));
+  const adelantos = areasAdelantadas(sesiones, rango);
+  const bandaSig = BANDA_SIG[rango];
+  const disponibles = SERIES.filter((s) => s.edades.includes(rango) || (bandaSig && adelantos[s.area] && s.edades.includes(bandaSig)));
+  const esAdelantada = (s) => !s.edades.includes(rango);
+  const areasAdel = Object.keys(AREAS).filter((a) => adelantos[a]);
   const nivelesEtapa = disponibles.reduce((a, s) => a + s.niveles, 0);
   const mejorMenu = mejorPorNivel();
   const completadosDe = (s) => Object.keys(mejorMenu).filter((id) => id.startsWith(s.id + "-n")).length;
@@ -2224,6 +2812,8 @@ ${an.frases.map((x) => `<p>• ${x}</p>`).join("")}
               className="flex items-center gap-2 rounded-full bg-white px-4 py-2 font-black text-slate-600 shadow active:scale-95">
               <BarChart3 /> Padres
             </button>
+            <button onClick={alternarSonido} aria-label={sonidoOn ? "Silenciar" : "Activar sonido"}
+              className="rounded-full bg-white px-4 py-2 font-black text-slate-600 shadow active:scale-95">{sonidoOn ? "🔊" : "🔇"}</button>
             <button onClick={() => setPantalla("elegirPerfil")} aria-label="Cambiar de peque"
               className="rounded-full bg-white px-4 py-2 font-black text-slate-600 shadow active:scale-95">👤</button>
           </div>
@@ -2236,56 +2826,95 @@ ${an.frases.map((x) => `<p>• ${x}</p>`).join("")}
           </div>
         )}
 
-        <button onClick={() => iniciarPlan(disponibles, Math.min(Math.max(metaHoy, 3), 8))}
+        {areasAdel.length > 0 && (
+          <div className="rounded-3xl bg-indigo-100 p-4">
+            <p className="text-lg font-black text-indigo-700">🚀 ¡Nivel adelantado desbloqueado!</p>
+            <p className="text-sm font-bold text-indigo-600">Dominaste tu etapa en {areasAdel.map((a) => AREAS[a].nombre).join(", ")} y se abrieron desafíos de chicos más grandes. ¡A por ellos!</p>
+          </div>
+        )}
+
+        <button onClick={() => iniciarPlan(disponibles, Math.min(Math.max(metaVideo, 3), 8))}
           className="rounded-3xl bg-emerald-500 p-4 text-left shadow-md transition-transform active:scale-95">
           <div className="flex items-center justify-between">
             <span className="text-lg font-black text-white">🧭 Mi plan de hoy</span>
-            <span className="rounded-full bg-white/25 px-3 py-1 text-sm font-black text-white">{Math.min(Math.max(metaHoy, 3), 8)} niveles</span>
+            <span className="rounded-full bg-white/25 px-3 py-1 text-sm font-black text-white">{Math.min(Math.max(metaVideo, 3), 8)} niveles</span>
           </div>
           <p className="mt-1 text-sm font-bold text-emerald-50">La app elige niveles de todas las áreas y va pasando sola al siguiente. ¡Tocá y empezá!</p>
         </button>
 
         <button onClick={() => setPantalla("premio")}
-          className={`rounded-3xl p-4 text-left shadow-md transition-transform active:scale-95 ${logrado ? "bg-yellow-200" : "bg-white"}`}>
+          className={`rounded-3xl p-4 text-left shadow-md transition-transform active:scale-95 ${dispVideos > 0 ? "bg-yellow-200" : "bg-white"}`}>
           <div className="flex items-center justify-between">
-            <span className="text-lg font-black text-slate-700">{logrado ? "🎁 ¡Premio desbloqueado!" : "🎯 Objetivo de hoy"}</span>
-            <span className="font-black text-slate-500">{Math.min(jugadasHoy, metaHoy)}/{metaHoy}</span>
+            <span className="text-lg font-black text-slate-700">
+              {dispVideos > 0 ? `🎁 ¡Tenés ${dispVideos === 1 ? "un video" : `${dispVideos} videos`} para ver!`
+                : ganados >= maxDia ? "🎬 Videos de hoy completos"
+                : "🎯 Próximo video"}
+            </span>
+            <span className="font-black text-slate-500">🏅 {ganados}/{maxDia}</span>
           </div>
           <div className="mt-2 h-3 w-full overflow-hidden rounded-full bg-slate-100">
-            <div className={`h-full rounded-full ${logrado ? "bg-yellow-500" : "bg-sky-400"}`} style={{ width: `${Math.min(100, (jugadasHoy / metaHoy) * 100)}%` }} />
+            <div className={`h-full rounded-full ${dispVideos > 0 ? "bg-yellow-500" : "bg-sky-400"}`}
+              style={{ width: `${dispVideos > 0 || ganados >= maxDia ? 100 : ((jugadasHoy % metaVideo) / metaVideo) * 100}%` }} />
           </div>
-          <p className="mt-1 text-xs font-bold text-slate-400">{logrado ? "Tocá para ver tu premio" : `Completá ${metaHoy} niveles y se abre el premio 🎁`}</p>
+          <p className="mt-1 text-xs font-bold text-slate-400">
+            {dispVideos > 0 ? "Tocá para elegir cuál ver" : ganados >= maxDia ? "Mañana se renuevan 🌅" : `Te ${faltanProx === 1 ? "falta 1 nivel" : `faltan ${faltanProx} niveles`} para ganar un video 🎬`}
+          </p>
         </button>
 
-        {Object.keys(AREAS).map((clave) => {
-          const seriesArea = disponibles.filter((s) => s.area === clave);
-          if (seriesArea.length === 0) return null;
-          const a = AREAS[clave];
-          const nivelesArea = seriesArea.reduce((x, s) => x + s.niveles, 0);
-          return (
-            <section key={clave} className={`rounded-3xl ${a.suave} p-4 sm:p-5`}>
-              <h2 className={`mb-3 text-xl font-black sm:text-2xl ${a.texto}`}>{a.icono} {a.nombre} <span className="text-sm font-bold opacity-60">· {seriesArea.length} series · {nivelesArea.toLocaleString("es-AR")} niveles</span></h2>
-              <div className="grid grid-cols-2 gap-2 sm:gap-3">
-                {seriesArea.map((s) => {
-                  const c = completadosDe(s);
+        {guiado ? (
+          <section className="rounded-3xl bg-white p-4 shadow-md sm:p-5">
+            <h2 className="mb-1 text-xl font-black text-slate-700 sm:text-2xl">✨ Elegidos hoy para vos</h2>
+            <p className="mb-3 text-xs font-bold text-slate-400">La app eligió estos niveles según tu edad y tu progreso. ¡Cada día cambian!</p>
+            <div className="grid grid-cols-2 gap-2 sm:gap-3">
+              {Object.keys(AREAS).flatMap((clave) => {
+                const cand = disponibles.filter((s) => s.area === clave).sort((a, b) => progresoSerie(a, mejorMenu) - progresoSerie(b, mejorMenu)).slice(0, 2);
+                return cand.map((s) => {
+                  const k = proximoNivel(s, mejorMenu);
                   return (
-                    <button key={s.id} onClick={() => { setSerieAbierta(s); setPantalla("serie"); }}
-                      className="flex flex-col gap-1 rounded-2xl bg-white p-3 text-left shadow-md transition-transform active:scale-95">
+                    <button key={s.id} onClick={() => abrirNivel(s, k)}
+                      className={`flex flex-col gap-1 rounded-2xl ${AREAS[clave].suave} p-3 text-left shadow-sm transition-transform active:scale-95`}>
                       <span className="flex items-center gap-2">
-                        <span className="shrink-0 text-2xl sm:text-3xl">{s.icono}</span>
-                        <span className="text-sm font-black leading-tight text-slate-700 sm:text-base">{s.nombre}</span>
+                        <span className="shrink-0 text-2xl">{s.icono}</span>
+                        <span className="text-sm font-black leading-tight text-slate-700">{s.nombre}</span>
                       </span>
-                      <span className="text-[10px] font-bold text-slate-400">{c}/{s.niveles} niveles</span>
-                      <span className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
-                        <span className={`block h-full rounded-full ${a.color}`} style={{ width: `${(c / s.niveles) * 100}%` }} />
-                      </span>
+                      <span className={`text-[10px] font-black ${AREAS[clave].texto}`}>{AREAS[clave].icono} {AREAS[clave].nombre} · Nivel {k}{esAdelantada(s) ? " · 🚀 adelantado" : ""}</span>
                     </button>
                   );
-                })}
-              </div>
-            </section>
-          );
-        })}
+                });
+              })}
+            </div>
+          </section>
+        ) : (
+          Object.keys(AREAS).map((clave) => {
+            const seriesArea = disponibles.filter((s) => s.area === clave);
+            if (seriesArea.length === 0) return null;
+            const a = AREAS[clave];
+            const nivelesArea = seriesArea.reduce((x, s) => x + s.niveles, 0);
+            return (
+              <section key={clave} className={`rounded-3xl ${a.suave} p-4 sm:p-5`}>
+                <h2 className={`mb-3 text-xl font-black sm:text-2xl ${a.texto}`}>{a.icono} {a.nombre} <span className="text-sm font-bold opacity-60">· {seriesArea.length} series · {nivelesArea.toLocaleString("es-AR")} niveles</span></h2>
+                <div className="grid grid-cols-2 gap-2 sm:gap-3">
+                  {seriesArea.map((s) => {
+                    const c = completadosDe(s);
+                    return (
+                      <button key={s.id} onClick={() => { setSerieAbierta(s); setPantalla("serie"); }}
+                        className="flex flex-col gap-1 rounded-2xl bg-white p-3 text-left shadow-md transition-transform active:scale-95">
+                        <span className="flex items-center gap-2">
+                          <span className="shrink-0 text-2xl sm:text-3xl">{s.icono}</span>
+                          <span className="text-sm font-black leading-tight text-slate-700 sm:text-base">{s.nombre}</span>
+                        </span>
+                        <span className="text-[10px] font-bold text-slate-400">{c}/{s.niveles} niveles{esAdelantada(s) ? " · 🚀 adelantado" : ""}</span>
+                        <span className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
+                          <span className={`block h-full rounded-full ${a.color}`} style={{ width: `${(c / s.niveles) * 100}%` }} />
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </section>
+            );
+          })
+        )}
       </div>
     </div>
   );
