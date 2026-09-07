@@ -2853,6 +2853,8 @@ function AppNinos({ alSelector, permisos = { mic: true, videos: true }, alRevisa
   const [pinEdit, setPinEdit] = useState(null); // {id, val}
   const [duelo, setDuelo] = useState(null);
   const [modalModo, setModalModo] = useState(null);
+  const [planPago, setPlanPago] = useState({ tipo: "free" });
+  const [codigoPromo, setCodigoPromo] = useState("");
   const [bib, setBib] = useState(null); // biblioteca docente
   const [tareas, setTareas] = useState([]);
   const [tareaCod, setTareaCod] = useState("");
@@ -2896,6 +2898,8 @@ function AppNinos({ alSelector, permisos = { mic: true, videos: true }, alRevisa
       const sonidoV = so === null ? true : !!so;
       setSonidoOn(sonidoV);
       setAudioOn(sonidoV);
+      const pp2 = await leer("mentejuego:plan");
+      if (pp2 && pp2.tipo === "premium") setPlanPago(pp2);
       const mu = await leer("pequemundo:musica");
       const musicaV = mu === null ? true : !!mu;
       setMusicaOnEstado(musicaV);
@@ -3024,7 +3028,8 @@ function AppNinos({ alSelector, permisos = { mic: true, videos: true }, alRevisa
     } catch (e) { /* nada */ }
   };
 
-  const abrirNivel = (serie, k) => {
+  const abrirNivel = (serie, k, libre) => {
+    if (!esPremium && !libre && jugadasHoy >= LIMITE_FREE) { setModalModo("limite"); return; }
     const id = idNivel(serie, k);
     setSemilla(semillaDe(id));
     setJuegoActivo({ serie, nivel: k, id, params: paramsNivel(serie, k) });
@@ -3032,7 +3037,7 @@ function AppNinos({ alSelector, permisos = { mic: true, videos: true }, alRevisa
     setClaveJuego((c) => c + 1);
     setPantalla("juego");
   };
-  const abrirNivelPorId = (id) => { const r = buscarSeriePorNivel(id); if (r) abrirNivel(r.serie, r.nivel); };
+  const abrirNivelPorId = (id, libre) => { const r = buscarSeriePorNivel(id); if (r) abrirNivel(r.serie, r.nivel, libre); };
   const bandaDe = (p) => rangoDeEdad(Math.min(Math.max(calcularEdad(p.nacimiento), 3), 11));
   const prepararDuelo = async (rival) => {
     const ses2 = (await leer(`pequemundo:sesiones:${rival.id}`)) || [];
@@ -3119,7 +3124,7 @@ function AppNinos({ alSelector, permisos = { mic: true, videos: true }, alRevisa
     });
     if (lista.length === 0) return;
     setPlan({ lista, idx: 0, tareaId: t.id, titulo: t.titulo });
-    abrirNivelPorId(lista[0]);
+    abrirNivelPorId(lista[0], true); // la tarea de la seño funciona SIEMPRE, con o sin pago
   };
   const seguirPlan = () => {
     if (!plan) return;
@@ -3141,7 +3146,7 @@ function AppNinos({ alSelector, permisos = { mic: true, videos: true }, alRevisa
       return;
     }
     setPlan({ ...plan, idx: prox });
-    abrirNivelPorId(plan.lista[prox]);
+    abrirNivelPorId(plan.lista[prox], !!plan.tareaId);
   };
 
   const salirPlan = () => { setPlan(null); setResultado(null); setPantalla("menu"); };
@@ -3387,6 +3392,7 @@ ${an.alertas.length ? `<h2>Para conversar en el próximo control pediátrico</h2
               <button onClick={() => { try { navigator.clipboard.writeText(bib.codigo); sonido("acierto"); } catch (e) { /* nada */ } }}
                 className="rounded-full bg-cyan-600 py-3 font-black text-white active:scale-95">📋 Copiar código</button>
               <button onClick={hojaTarea} className="rounded-full bg-emerald-500 py-3 font-black text-white active:scale-95">🖨️ Descargar hoja para las familias</button>
+              <p className="rounded-xl bg-emerald-50 p-2 text-xs font-bold text-emerald-700">🤝 Tu tarea funciona COMPLETA para todos tus alumnos, tengan o no suscripción paga: en la escuela nadie queda afuera.</p>
               <p className="text-xs text-slate-400">Compartí el código por WhatsApp o en papel. Las familias lo cargan en Padres → «📚 Tarea de la seño», y a cada peque la app le propone SUS próximos niveles de esos juegos. Cuando el peque la completa, en el panel de su familia figura ✅ con fecha.</p>
               <button onClick={() => setBib({ ...bib, fase: "buscar", sel: [], codigo: null })} className="text-sm font-bold text-slate-400">➕ Armar otra tarea</button>
             </div>
@@ -3494,6 +3500,8 @@ ${an.alertas.length ? `<h2>Para conversar en el próximo control pediátrico</h2
   const edadAnios = calcularEdad(activo.nacimiento);
   const rango = rangoDeEdad(Math.min(Math.max(edadAnios, 3), 11));
   const modoSolito = activo.solito != null ? !!activo.solito : edadAnios <= 5;
+  const esPremium = planPago.tipo === "premium";
+  const LIMITE_FREE = 15; // niveles por día en el plan gratuito (tareas de la seño y duelos NO cuentan)
   const esClase = String(activo.id).startsWith("clase");
   const alternarLectura = () => {
     const v = !modoSolito;
@@ -3507,7 +3515,7 @@ ${an.alertas.length ? `<h2>Para conversar en el próximo control pediátrico</h2
   const cumple = esCumpleHoy(activo.nacimiento);
   const jugadasHoy = sesiones.filter((s) => esHoy(s.fecha)).length;
   const metaVideo = premio.meta || 5;          // niveles para ganar CADA video
-  const maxDia = premio.maxDia || 2;           // videos máximos por día
+  const maxDia = esPremium ? (premio.maxDia || 2) : 1; // gratis: 1 video premio por día
   const ganados = Math.min(maxDia, Math.floor(jugadasHoy / metaVideo));
   const dispVideos = Math.max(0, ganados - vistosHoy);
   const faltanProx = ganados >= maxDia ? 0 : metaVideo - (jugadasHoy % metaVideo);
@@ -4089,6 +4097,51 @@ h1{color:#b45309;letter-spacing:2px}h2{font-size:40px;margin:12px 0;color:#1e293
           </div>
 
           <div className="w-full rounded-3xl bg-white p-5 shadow-md sm:p-6">
+            <h3 className="text-lg font-black text-slate-800 sm:text-xl">💎 Suscripción</h3>
+            <p className={`mt-2 rounded-2xl p-3 text-sm font-black ${esPremium ? "bg-violet-100 text-violet-700" : "bg-slate-100 text-slate-600"}`}>
+              Plan actual: {esPremium ? "💎 Premium" : "🌱 Gratuito"}{esPremium && planPago.demo ? " (demo)" : ""}
+            </p>
+            <div className="mt-3 grid grid-cols-2 gap-2 text-xs font-bold text-slate-600">
+              <div className="rounded-2xl bg-slate-50 p-3">
+                <p className="font-black text-slate-700">🌱 Gratuito, para siempre</p>
+                <p className="mt-1">✅ 15 niveles por día, las 7 áreas</p>
+                <p>✅ 📚 Tareas de la seño COMPLETAS</p>
+                <p>✅ 👥 Duelos · 🏅 Logros · 🎧 Solito</p>
+                <p>✅ Inglés · 1 video premio/día</p>
+                <p>✅ Informes y alertas para padres</p>
+              </div>
+              <div className="rounded-2xl bg-violet-50 p-3">
+                <p className="font-black text-violet-700">💎 Premium</p>
+                <p className="mt-1">⭐ Niveles SIN límite diario</p>
+                <p>⭐ Los 5 idiomas completos</p>
+                <p>⭐ ∞ Práctica libre infinita</p>
+                <p>⭐ Hasta 6 videos premio/día</p>
+                <p>⭐ Prioridad en funciones nuevas</p>
+              </div>
+            </div>
+            <div className="mt-3 rounded-2xl bg-violet-100 p-3 text-sm font-black text-violet-800">
+              <p>1 hijo: $12.000/mes · 2 hijos: $18.000/mes</p>
+              <p>Familia (3 a 5 hijos): $24.000/mes</p>
+              <p className="text-xs font-bold text-violet-600">Anual: pagás 10 meses (2 de regalo) · Aula completa: 20% de descuento para todas las familias</p>
+            </div>
+            <p className="mt-2 rounded-2xl bg-emerald-50 p-3 text-xs font-bold text-emerald-700">
+              🤝 Promesa inclusiva: las tareas de la seño, los duelos y el desarrollo diario esencial funcionan SIEMPRE,
+              pague o no pague la familia. Y cada 20 suscripciones regalamos 1 beca Premium completa.
+            </p>
+            <div className="mt-3 flex gap-2">
+              <input value={codigoPromo} onChange={(e) => setCodigoPromo(e.target.value.toUpperCase())} placeholder="Código (probá PRUEBA30)"
+                className="min-w-0 flex-1 rounded-2xl border-4 border-violet-200 px-3 py-2 font-black text-slate-700 outline-none focus:border-violet-400" />
+              <button onClick={() => {
+                  if (codigoPromo.trim() === "PRUEBA30") { const p2 = { tipo: "premium", demo: true }; setPlanPago(p2); guardar("mentejuego:plan", p2); sonido("fanfarria"); setCodigoPromo(""); }
+                  else if (esPremium) { const p2 = { tipo: "free" }; setPlanPago(p2); guardar("mentejuego:plan", p2); setCodigoPromo(""); }
+                  else sonido("error");
+                }}
+                className="shrink-0 rounded-full bg-violet-500 px-4 py-2 text-sm font-black text-white active:scale-95">{esPremium ? "Volver a Gratis" : "Activar"}</button>
+            </div>
+            <p className="mt-2 text-xs text-slate-400">El pago real (MercadoPago, tarjeta) llega con la versión online. El código de prueba te deja ver hoy la experiencia Premium completa. Precios de lanzamiento sujetos a revisión periódica.</p>
+          </div>
+
+          <div className="w-full rounded-3xl bg-white p-5 shadow-md sm:p-6">
             <h3 className="text-lg font-black text-slate-800 sm:text-xl">📚 Tarea de la seño</h3>
             {tareas.length > 0 && (
               <div className="mt-2 flex flex-col gap-1">
@@ -4268,10 +4321,17 @@ h1{color:#b45309;letter-spacing:2px}h2{font-size:40px;margin:12px 0;color:#1e293
                 ▶ Jugar nivel {siguiente}
               </button>
             )}
-            <button onClick={() => abrirInfinito(s)}
-              className="mt-2 w-full rounded-full bg-violet-500 py-3 font-black text-white shadow-md active:scale-95">
-              ∞ Práctica libre (dificultad máxima, siempre distinta)
-            </button>
+            {esPremium ? (
+              <button onClick={() => abrirInfinito(s)}
+                className="mt-2 w-full rounded-full bg-violet-500 py-3 font-black text-white shadow-md active:scale-95">
+                ∞ Práctica libre (dificultad máxima, siempre distinta)
+              </button>
+            ) : (
+              <button onClick={() => setModalModo("limite")}
+                className="mt-2 w-full rounded-full bg-slate-200 py-3 font-black text-slate-500 active:scale-95">
+                ∞ Práctica libre · 🔒 con Premium
+              </button>
+            )}
           </div>
           <div className="grid grid-cols-5 gap-2">
             {[...Array(s.niveles)].map((_, i) => {
@@ -4302,7 +4362,9 @@ h1{color:#b45309;letter-spacing:2px}h2{font-size:40px;margin:12px 0;color:#1e293
   // ---------- menú principal ----------
   const adelantos = areasAdelantadas(sesiones, rango);
   const bandaSig = BANDA_SIG[rango];
-  const disponibles = SERIES.filter((s) => s.edades.includes(rango) || (bandaSig && adelantos[s.area] && s.edades.includes(bandaSig)));
+  const disponibles = SERIES.filter((s) =>
+    (s.edades.includes(rango) || (bandaSig && adelantos[s.area] && s.edades.includes(bandaSig))) &&
+    (esPremium || s.area !== "idiomas" || s.id.startsWith("idi-en")));
   const esAdelantada = (s) => !s.edades.includes(rango);
   const areasAdel = Object.keys(AREAS).filter((a) => adelantos[a]);
   const nivelesEtapa = disponibles.reduce((a, s) => a + s.niveles, 0);
@@ -4335,7 +4397,20 @@ h1{color:#b45309;letter-spacing:2px}h2{font-size:40px;margin:12px 0;color:#1e293
         {modalModo && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setModalModo(null)}>
             <div className="w-full max-w-sm rounded-3xl bg-white p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-              {modalModo === "solito" ? (
+              {modalModo === "limite" ? (
+                <>
+                  <p className="text-xl font-black text-slate-800">{jugadasHoy >= LIMITE_FREE ? "🌙 ¡Cuánto jugaste hoy!" : "💎 Función Premium"}</p>
+                  <p className="mt-2 text-sm font-bold text-slate-600">
+                    {jugadasHoy >= LIMITE_FREE
+                      ? `Completaste tus ${LIMITE_FREE} niveles gratuitos de hoy. ¡Mañana se renuevan! Las 📚 tareas de la seño y los 👥 duelos funcionan siempre, así que si tenés una tarea pendiente, ¡dale!`
+                      : "La práctica infinita es parte de Premium. ¡Pero tus niveles de hoy y las tareas de la seño te esperan!"}
+                  </p>
+                  <p className="mt-2 rounded-xl bg-violet-50 p-2 text-xs font-bold text-slate-500">
+                    💎 Para los papás: con Premium no hay límite diario, se abren los 5 idiomas y la práctica infinita. Está en Padres → Suscripción.
+                  </p>
+                  <button onClick={() => setModalModo(null)} className="mt-4 w-full rounded-full bg-sky-500 py-3 font-black text-white active:scale-95">¡Dale! 👍</button>
+                </>
+              ) : modalModo === "solito" ? (
                 <>
                   <p className="text-xl font-black text-slate-800">{modoSolito ? "🎧 Modo Solito" : "📖 Modo Acompañado"} <span className="text-xs font-bold text-emerald-600">· activado</span></p>
                   <p className="mt-2 text-sm font-bold text-slate-600">
