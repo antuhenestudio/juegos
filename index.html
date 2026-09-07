@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Mente en Juego — Estimulación cognitiva para cada etapa</title>
-  <meta name="description" content="PequeMundo: más de 100 juegos para chicos de 3 a 11 años con plan diario, perfiles por hijo, pronunciación con voz, catálogo de premios e informes. MenteActiva: ejercicios accesibles para adultos." />
+  <meta name="description" content="PequeMundo: más de 100 juegos para chicos de 3 a 11 años con consentimiento parental por país, plan diario, perfiles por hijo, pronunciación con voz, informes y premios. MenteActiva: ejercicios accesibles para adultos." />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧠</text></svg>" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
@@ -328,6 +328,20 @@ const PALABRAS_DIFICIL = [
   { e: "🧙", p: "bruja", s: ["bru", "ja"] }, { e: "🌍", p: "planeta", s: ["pla", "ne", "ta"] },
 ];
 const BANCO_SILABAS = [...VOCABULARIO, ...PALABRAS_MEDIO, ...PALABRAS_DIFICIL];
+
+// ---------- región: cada país nombra las cosas a su manera ----------
+const TXT = { plata: "plata" };
+function aplicarRegion(pais) {
+  const cambiar = (lista, de, a, sil) => {
+    const it = lista.find((x) => x.p === de || x.p === a);
+    if (it) { it.p = a; it.s = sil; }
+  };
+  TXT.plata = ["ar", "uy"].includes(pais) ? "plata" : "dinero";
+  if (["ar", "uy", "cl"].includes(pais)) cambiar(PALABRAS_DIFICIL, "fresa", "frutilla", ["fru", "ti", "lla"]);
+  else cambiar(PALABRAS_DIFICIL, "frutilla", "fresa", ["fre", "sa"]);
+  if (["mx", "es", "pe"].includes(pais)) cambiar(PALABRAS_MEDIO, "banana", "plátano", ["plá", "ta", "no"]);
+  else cambiar(PALABRAS_MEDIO, "plátano", "banana", ["ba", "na", "na"]);
+}
 const PACK_NATURALEZA = ["sol", "arbol", "flor", "luna", "estrella", "manzana"];
 const PACK_COSAS = ["casa", "auto", "pelota", "globo", "gato", "pez"];
 const PACK_TODO = ["sol", "gato", "pez", "flor", "pelota", "auto", "estrella", "manzana"];
@@ -689,7 +703,7 @@ const GENERADORES = {
     const elegidas = [...Array(cant)].map(() => p.valores[azar(p.valores.length)]);
     const resp = elegidas.reduce((a, b) => a + b, 0);
     return {
-      pregunta: (<><Consigna>¿Cuánta plata hay? 💵</Consigna><Tarjeta>
+      pregunta: (<><Consigna>¿Cuánta {TXT.plata} hay? 💵</Consigna><Tarjeta>
         <div className="flex max-w-sm flex-wrap items-center justify-center gap-2">
           {elegidas.map((v, i) => <Dinero key={i} valor={v} edad={edad} chico />)}
         </div></Tarjeta></>),
@@ -989,9 +1003,9 @@ function JuegoAlcancia({ params, edad, alTerminar }) {
   );
 }
 
-function JuegoPronuncia({ params, edad, alTerminar }) {
+function JuegoPronuncia({ params, edad, alTerminar, permitirMic = true }) {
   const TOTAL = 6;
-  const SR = typeof window !== "undefined" ? (window.SpeechRecognition || window.webkitSpeechRecognition) : null;
+  const SR = permitirMic && typeof window !== "undefined" ? (window.SpeechRecognition || window.webkitSpeechRecognition) : null;
   const [items] = useState(() => mezclar(params.banco).slice(0, TOTAL));
   const [idx, setIdx] = useState(0);
   const [puntos, setPuntos] = useState(0);
@@ -1466,7 +1480,7 @@ function CampoPin({ valor, setValor, placeholder = "PIN de 4 números" }) {
   );
 }
 
-function AppNinos({ alSelector }) {
+function AppNinos({ alSelector, permisos = { mic: true, videos: true }, alRevisar }) {
   const [pantalla, setPantalla] = useState("cargando");
   const [perfiles, setPerfiles] = useState([]);
   const [activo, setActivo] = useState(null);
@@ -1838,7 +1852,7 @@ ${an.frases.map((x) => `<p>• ${x}</p>`).join("")}
                 {motor === "memoria" && <JuegoMemoria params={juegoActivo.params} edad={rango} alTerminar={terminarJuego} />}
                 {motor === "atrapa" && <JuegoAtrapa params={juegoActivo.params} alTerminar={terminarJuego} />}
                 {motor === "alcancia" && <JuegoAlcancia params={juegoActivo.params} edad={rango} alTerminar={terminarJuego} />}
-                {motor === "pronuncia" && <JuegoPronuncia params={juegoActivo.params} edad={rango} alTerminar={terminarJuego} />}
+                {motor === "pronuncia" && <JuegoPronuncia params={juegoActivo.params} edad={rango} alTerminar={terminarJuego} permitirMic={permisos.mic} />}
                 {motor !== "memoria" && motor !== "atrapa" && motor !== "alcancia" && motor !== "pronuncia" && (
                   <JuegoRondas
                     generar={GENERADORES[motor](juegoActivo.params, rango)}
@@ -1871,6 +1885,12 @@ ${an.frases.map((x) => `<p>• ${x}</p>`).join("")}
               <p className="text-5xl">🔒</p>
               <p className="mt-2 text-xl font-black text-slate-700">Todavía no, {activo.nombre}</p>
               <p className="mt-1 font-bold text-slate-500">Completá {metaHoy - jugadasHoy} {metaHoy - jugadasHoy === 1 ? "juego más" : "juegos más"} y se abre el premio de hoy.</p>
+            </div>
+          ) : !permisos.videos ? (
+            <div className="rounded-3xl bg-white p-6 text-center shadow-md">
+              <p className="text-5xl">🎉</p>
+              <p className="mt-2 text-xl font-black text-slate-700">¡Objetivo del día cumplido, {activo.nombre}!</p>
+              <p className="mt-1 font-bold text-slate-500">Los videos están desactivados en el consentimiento de tus papás. ¡Igual sos un campeón! 🏆</p>
             </div>
           ) : ids.length === 0 ? (
             <div className="rounded-3xl bg-white p-6 text-center shadow-md">
@@ -1954,6 +1974,10 @@ ${an.frases.map((x) => `<p>• ${x}</p>`).join("")}
                     className="rounded-full bg-sky-500 px-5 py-2 font-black text-white shadow active:scale-95">📄 Descargar informe</button>
                   <button onClick={() => setPantalla("guia")}
                     className="rounded-full bg-violet-500 px-5 py-2 font-black text-white shadow active:scale-95">📖 Guía para enseñar</button>
+                  {alRevisar && (
+                    <button onClick={alRevisar}
+                      className="rounded-full bg-slate-500 px-5 py-2 font-black text-white shadow active:scale-95">🔏 Privacidad y consentimiento</button>
+                  )}
                 </div>
                 <p className="mt-3 rounded-2xl bg-amber-50 p-3 text-xs text-slate-500">
                   Esta lectura compara a su hijo <b>consigo mismo</b>. A propósito no calcula «edad mental» ni promete notas futuras:
@@ -2659,12 +2683,163 @@ function AppAdultos({ alSelector }) {
 }
 
 // ============================================================
+// Consentimiento parental por país
+// (Textos de referencia con normas reales y verificables de cada
+//  país. NO constituyen asesoramiento legal: antes de un
+//  lanzamiento comercial deben ser revisados por asesoría legal
+//  local. Los datos de la app viven solo en el dispositivo.)
+// ============================================================
+const PAISES = [
+  { id: "ar", nombre: "Argentina", bandera: "🇦🇷", trato: "vos", marco: "Ley 25.326 de Protección de los Datos Personales y Ley 26.061 de Protección Integral de los Derechos de las Niñas, Niños y Adolescentes" },
+  { id: "uy", nombre: "Uruguay", bandera: "🇺🇾", trato: "vos", marco: "Ley 18.331 de Protección de Datos Personales" },
+  { id: "cl", nombre: "Chile", bandera: "🇨🇱", trato: "tu", marco: "Ley 19.628 sobre Protección de la Vida Privada" },
+  { id: "mx", nombre: "México", bandera: "🇲🇽", trato: "tu", marco: "Ley Federal de Protección de Datos Personales en Posesión de los Particulares" },
+  { id: "co", nombre: "Colombia", bandera: "🇨🇴", trato: "tu", marco: "Ley 1581 de 2012 de Protección de Datos Personales" },
+  { id: "pe", nombre: "Perú", bandera: "🇵🇪", trato: "tu", marco: "Ley 29733 de Protección de Datos Personales" },
+  { id: "es", nombre: "España", bandera: "🇪🇸", trato: "tu", marco: "Reglamento (UE) 2016/679 (RGPD) y Ley Orgánica 3/2018 (LOPDGDD); en España la edad mínima para el consentimiento digital propio es de 14 años" },
+  { id: "us", nombre: "Estados Unidos", bandera: "🇺🇸", trato: "tu", marco: "COPPA (Children's Online Privacy Protection Act), que exige consentimiento parental verificable para menores de 13 años" },
+  { id: "br", nombre: "Brasil", bandera: "🇧🇷", trato: "pt", marco: "LGPD — Lei Geral de Proteção de Dados (Lei nº 13.709/2018)" },
+  { id: "xx", nombre: "Otro país", bandera: "🌎", trato: "tu", marco: "las normas de protección de datos personales y de protección de la infancia vigentes en su país" },
+];
+
+const TEXTOS_CONSENT = {
+  vos: {
+    titulo: "Consentimiento de madre, padre o tutor",
+    intro: "Antes de empezar necesitamos tu autorización. Esta app está pensada para que la configure una persona adulta responsable del niño o de la niña.",
+    datos: "📱 Los datos que cargás (nombres, fechas de nacimiento, PIN y progreso de juego) se guardan únicamente en este dispositivo. La app no tiene servidores propios y no envía, vende ni comparte esos datos con nadie.",
+    derechos: "🗑️ Podés borrar perfiles y datos cuando quieras desde el panel de padres, y podés cambiar este consentimiento en cualquier momento.",
+    mic: "Permitir el micrófono en los juegos de pronunciación (opcional). El audio se procesa con el servicio de voz del navegador, que es un tercero. Sin esto, los juegos funcionan igual.",
+    videos: "Permitir los videos de premio de YouTube (opcional). Al reproducirlos rigen las condiciones y cookies de YouTube. Solo se muestran los videos que vos actives.",
+    acepto: "Declaro ser mayor de edad y responsable legal del niño o la niña, y acepto el funcionamiento descripto.",
+    marco: "Marco normativo de referencia",
+    boton: "Aceptar y continuar",
+    pais: "¿Desde qué país usás la app?",
+    plantilla: "Texto de referencia. Antes de un lanzamiento comercial debe revisarlo asesoría legal del país correspondiente.",
+  },
+  tu: {
+    titulo: "Consentimiento de madre, padre o tutor",
+    intro: "Antes de empezar necesitamos tu autorización. Esta app está pensada para que la configure una persona adulta responsable del niño o de la niña.",
+    datos: "📱 Los datos que ingresas (nombres, fechas de nacimiento, PIN y progreso de juego) se guardan únicamente en este dispositivo. La app no tiene servidores propios y no envía, vende ni comparte esos datos con nadie.",
+    derechos: "🗑️ Puedes borrar perfiles y datos cuando quieras desde el panel de padres, y puedes cambiar este consentimiento en cualquier momento.",
+    mic: "Permitir el micrófono en los juegos de pronunciación (opcional). El audio se procesa con el servicio de voz del navegador, que es un tercero. Sin esto, los juegos funcionan igual.",
+    videos: "Permitir los videos de premio de YouTube (opcional). Al reproducirlos rigen las condiciones y cookies de YouTube. Solo se muestran los videos que tú actives.",
+    acepto: "Declaro ser mayor de edad y responsable legal del niño o la niña, y acepto el funcionamiento descrito.",
+    marco: "Marco normativo de referencia",
+    boton: "Aceptar y continuar",
+    pais: "¿Desde qué país usas la app?",
+    plantilla: "Texto de referencia. Antes de un lanzamiento comercial debe revisarlo asesoría legal del país correspondiente.",
+  },
+  pt: {
+    titulo: "Consentimento de mãe, pai ou responsável",
+    intro: "Antes de começar, precisamos da sua autorização. Este app foi pensado para ser configurado por um adulto responsável pela criança.",
+    datos: "📱 Os dados inseridos (nomes, datas de nascimento, PIN e progresso) ficam armazenados somente neste dispositivo. O app não possui servidores próprios e não envia, vende nem compartilha esses dados.",
+    derechos: "🗑️ Você pode apagar perfis e dados quando quiser no painel dos pais, e pode alterar este consentimento a qualquer momento.",
+    mic: "Permitir o microfone nos jogos de pronúncia (opcional). O áudio é processado pelo serviço de voz do navegador, que é um terceiro. Sem isso, os jogos funcionam normalmente.",
+    videos: "Permitir os vídeos de prêmio do YouTube (opcional). Ao reproduzi-los valem os termos e cookies do YouTube. Só aparecem os vídeos que você ativar.",
+    acepto: "Declaro ser maior de idade e responsável legal pela criança, e aceito o funcionamento descrito.",
+    marco: "Marco normativo de referência",
+    boton: "Aceitar e continuar",
+    pais: "De qual país você usa o app?",
+    plantilla: "Texto de referência. Antes de um lançamento comercial, deve ser revisado por assessoria jurídica local.",
+  },
+};
+
+function ConsentimientoScreen({ inicial, alAceptar }) {
+  const [pais, setPais] = useState(inicial ? inicial.pais : null);
+  const [acepta, setAcepta] = useState(false);
+  const [mic, setMic] = useState(inicial ? !!inicial.mic : true);
+  const [videos, setVideos] = useState(inicial ? !!inicial.videos : true);
+  const p = PAISES.find((x) => x.id === pais);
+  const t = p ? TEXTOS_CONSENT[p.trato] : TEXTOS_CONSENT.tu;
+
+  if (!pais) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-6 bg-gradient-to-b from-sky-100 to-stone-100 p-6">
+        <div className="text-center">
+          <div className="text-5xl">🔏</div>
+          <h1 className="mt-2 text-2xl font-black text-slate-800 sm:text-3xl">{TEXTOS_CONSENT.tu.pais}</h1>
+          <p className="mt-1 text-sm font-bold text-slate-500">Adaptamos el consentimiento, las leyes de referencia y algunas palabras a tu país.</p>
+        </div>
+        <div className="grid w-full max-w-md grid-cols-2 gap-3">
+          {PAISES.map((x) => (
+            <button key={x.id} onClick={() => setPais(x.id)}
+              className="flex items-center gap-2 rounded-2xl bg-white p-4 text-left font-black text-slate-700 shadow-md transition-transform active:scale-95">
+              <span className="text-3xl">{x.bandera}</span>{x.nombre}
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-gradient-to-b from-sky-100 to-stone-100 p-4 sm:p-6">
+      <div className="flex w-full max-w-md flex-col gap-3 rounded-3xl bg-white p-5 shadow-lg sm:p-6">
+        <div className="flex items-center justify-between">
+          <h1 className="text-xl font-black text-slate-800 sm:text-2xl">🔏 {t.titulo}</h1>
+          <button onClick={() => setPais(null)} className="rounded-full bg-slate-100 px-3 py-1 text-sm font-black text-slate-600">{p.bandera} cambiar</button>
+        </div>
+        <p className="text-sm text-slate-600">{t.intro}</p>
+        <p className="rounded-2xl bg-slate-50 p-3 text-sm text-slate-600">{t.datos}</p>
+        <p className="rounded-2xl bg-slate-50 p-3 text-sm text-slate-600">{t.derechos}</p>
+        <p className="rounded-2xl bg-amber-50 p-3 text-xs text-slate-600"><b>{t.marco} — {p.nombre}:</b> {p.marco}.</p>
+
+        <label className="flex cursor-pointer items-start gap-3 rounded-2xl bg-slate-50 p-3">
+          <input type="checkbox" checked={mic} onChange={(e) => setMic(e.target.checked)} className="mt-1 h-5 w-5 accent-violet-500" />
+          <span className="text-sm text-slate-600">🎙️ {t.mic}</span>
+        </label>
+        <label className="flex cursor-pointer items-start gap-3 rounded-2xl bg-slate-50 p-3">
+          <input type="checkbox" checked={videos} onChange={(e) => setVideos(e.target.checked)} className="mt-1 h-5 w-5 accent-red-500" />
+          <span className="text-sm text-slate-600">🎬 {t.videos}</span>
+        </label>
+        <label className="flex cursor-pointer items-start gap-3 rounded-2xl border-4 border-emerald-100 bg-emerald-50 p-3">
+          <input type="checkbox" checked={acepta} onChange={(e) => setAcepta(e.target.checked)} className="mt-1 h-5 w-5 accent-emerald-600" />
+          <span className="text-sm font-bold text-slate-700">✅ {t.acepto}</span>
+        </label>
+
+        <button disabled={!acepta}
+          onClick={() => alAceptar({ pais, mic, videos, fecha: new Date().toISOString(), version: 1 })}
+          className="rounded-full bg-emerald-500 py-3 text-xl font-black text-white shadow-lg transition-transform active:scale-95 disabled:opacity-40">
+          {t.boton}
+        </button>
+        <p className="text-center text-[10px] leading-snug text-slate-400">{t.plantilla}</p>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
 // Selector de módulo
 // ============================================================
 function App() {
   const [modo, setModo] = useState("selector");
+  const [consent, setConsent] = useState(undefined); // undefined = cargando, null = falta
+  const [revisando, setRevisando] = useState(false);
 
-  if (modo === "nino") return <AppNinos alSelector={() => setModo("selector")} />;
+  useEffect(() => {
+    (async () => {
+      const c = await leer("mentejuego:consentimiento");
+      if (c && c.pais) aplicarRegion(c.pais);
+      setConsent(c || null);
+    })();
+  }, []);
+
+  if (consent === undefined) {
+    return <div className="flex min-h-screen items-center justify-center bg-sky-100 text-2xl font-black text-sky-600">Cargando…</div>;
+  }
+
+  if (consent === null || revisando) {
+    return (
+      <ConsentimientoScreen
+        inicial={consent}
+        alAceptar={(c) => { guardar("mentejuego:consentimiento", c); aplicarRegion(c.pais); setConsent(c); setRevisando(false); }}
+      />
+    );
+  }
+
+  const permisos = { mic: !!consent.mic, videos: !!consent.videos };
+
+  if (modo === "nino") return <AppNinos alSelector={() => setModo("selector")} permisos={permisos} alRevisar={() => setRevisando(true)} />;
   if (modo === "adulto") return <AppAdultos alSelector={() => setModo("selector")} />;
 
   return (
